@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Local backups created during incremental development
+*.bak
+*.bak_*
+*.before_*.bak
+
+# Local environments and editor files
+.venv/
+venv/
+.env
+.vscode/
+.idea/

@@ -1,0 +1,16 @@
+numpy
+gymnasium
+torch
+
+matplotlib
+pygame
+
+pandas
+tqdm
+PyYAML
+
+tensorboard
+
+shapely
+
+pytest
