@@ -121,7 +121,8 @@ CONFIG = {
     "training_output_dir": "outputs/masac",
     "training_log_interval_steps": 100,
     "training_eval_interval_steps": 5_000,
-    "training_eval_episodes": 5,
+    "training_eval_episodes": 1,
+    "training_eval_seed_offset": 10_000,
     "training_checkpoint_interval_steps": 5_000,
     "training_checkpoint_include_replay": False,
     "training_enable_csv": True,
@@ -130,12 +131,6 @@ CONFIG = {
     "training_wandb_entity": "uav_search_paper",
     "training_wandb_project": "uav_search_target",
     "training_wandb_mode": "offline",
-
-    # Monitoring convenience score shown in W&B (0..100, higher is better).
-    # This is a project dashboard score, not a paper evaluation metric.
-    "monitor_quality_success_weight": 0.60,
-    "monitor_quality_delivery_weight": 0.25,
-    "monitor_quality_confirmation_weight": 0.15,
 
     # Hybrid MATD3 (CTDE + discrete destination adaptation).
     "matd3_hidden_dims": (256, 256),
