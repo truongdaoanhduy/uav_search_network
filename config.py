@@ -1,4 +1,6 @@
 CONFIG = {
+    "seed": 44,
+
     "map_size": 5000,
     "num_uavs": 6,
     "num_targets": 10,
@@ -72,4 +74,26 @@ CONFIG = {
     "uavnetsim_packet_lifetime_s": 10.0,
     "uavnetsim_max_queue_size": 200,
     "uavnetsim_obstacle_polygon_sides": 16,
+
+    # Environment observation.
+    "belief_patch_cells": 11,
+
+    # Mission-level energy model. These are project baseline values,
+    # not UavNetSim propulsion parameters.
+    "energy_idle_power_w": 20.0,
+    "energy_hover_power_w": 120.0,
+    "energy_speed_sq_coeff": 0.5,
+    "energy_accel_sq_coeff": 2.0,
+
+    # Cooperative team reward.
+    "reward_info_gain": 0.01,
+    "reward_confirmation": 20.0,
+    "reward_delivery": 50.0,
+    "reward_false_confirmation": 5.0,
+    "reward_blocked": 0.2,
+    "reward_boundary": 0.05,
+    "reward_expired_report": 10.0,
+    "reward_energy_per_kj": 0.01,
+    "reward_step_penalty": 0.01,
+    "reward_all_delivered_bonus": 100.0,
 }
