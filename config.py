@@ -128,7 +128,7 @@ CONFIG = {
     "training_enable_tensorboard": True,
     "training_enable_wandb": False,
     "training_wandb_entity": "uav_search_paper",
-    "training_wandb_project": "uav-search-marl-monitoring",
+    "training_wandb_project": "uav_search_target",
     "training_wandb_mode": "offline",
 
     # Monitoring convenience score shown in W&B (0..100, higher is better).
@@ -159,7 +159,7 @@ CONFIG = {
 
     # MATD3 experiment output/logging.
     "matd3_training_output_dir": "outputs/matd3",
-    "matd3_wandb_project": "uav-search-marl-monitoring",
+    "matd3_wandb_project": "uav_search_target",
 
     # Kaggle runtime integration.
     "kaggle_wandb_secret_names": (
