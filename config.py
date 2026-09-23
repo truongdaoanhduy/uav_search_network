@@ -28,16 +28,20 @@ CONFIG = {
 
     "belief_prior": 0.5,
     "confirmation_threshold": 0.99,
-    # "fine_altitude": 50.0,
+    "fine_altitude": 50.0,
+    "verified_empty_belief": 0.01,
 
     "safety_distance": 30,
+    "obstacle_clearance_m": 30.0,
     "launch_min_spacing_m": 45.0,
 
     "report_bytes": 1_000_000,
     "buffer_bytes": 3_000_000,
+    "pending_buffer_bytes": 3_000_000,
     "report_ttl": 300.0,
 
     "camera_full_fov_deg": 90,
+    "sensing_obstacle_occlusion": True,
 
     "launch_radius_m": 300,
 
@@ -53,6 +57,8 @@ CONFIG = {
     "tx_power_max_w": 0.4,
 
     "comm_bandwidth_hz": 10_000_000.0,
+    "comm_max_link_rate_bps": 2_000_000.0,
+    "comm_snr_threshold_db": 6.0,
     "comm_noise_power_dbm": -110.0,
     "comm_reference_gain_db": -70.0,
     "comm_reference_distance_m": 1.0,
@@ -76,7 +82,10 @@ CONFIG = {
     "uavnetsim_obstacle_polygon_sides": 16,
 
     # Environment observation.
-    "belief_patch_cells": 11,
+    "belief_patch_cells": 13,
+    "belief_coarse_cells": 10,
+    "observation_nearest_obstacles": 3,
+    "critic_belief_grid_cells": 10,
 
     # Mission-level energy model. These are project baseline values,
     # not UavNetSim propulsion parameters.
@@ -86,20 +95,23 @@ CONFIG = {
     "energy_accel_sq_coeff": 2.0,
 
     # Cooperative team reward.
-    "reward_info_gain": 0.01,
+    # Potential-based belief-certainty shaping scale.
+    "reward_info_gain": 10.0,
+    "reward_shaping_gamma": 0.99,
     "reward_confirmation": 20.0,
     "reward_delivery": 50.0,
     "reward_false_confirmation": 5.0,
     "reward_blocked": 0.2,
     "reward_boundary": 0.05,
     "reward_expired_report": 10.0,
+    "reward_dropped_report": 10.0,
     "reward_energy_per_kj": 0.01,
     "reward_step_penalty": 0.01,
     "reward_all_delivered_bonus": 100.0,
 
     # Hybrid multi-agent SAC (CTDE).
     "masac_hidden_dims": (256, 256),
-    "masac_replay_capacity": 100_000,
+    "masac_replay_capacity": 50_000,
     "masac_batch_size": 256,
     "masac_gamma": 0.99,
     "masac_tau": 0.005,
@@ -134,7 +146,7 @@ CONFIG = {
 
     # Hybrid MATD3 (CTDE + discrete destination adaptation).
     "matd3_hidden_dims": (256, 256),
-    "matd3_replay_capacity": 100_000,
+    "matd3_replay_capacity": 50_000,
     "matd3_batch_size": 256,
     "matd3_gamma": 0.99,
     "matd3_tau": 0.005,
