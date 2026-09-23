@@ -116,4 +116,17 @@ CONFIG = {
     "masac_learning_starts": 2_000,
     "masac_updates_per_step": 1,
     "masac_gradient_clip_norm": 10.0,
+
+    # Training experiment infrastructure.
+    "training_output_dir": "outputs/masac",
+    "training_log_interval_steps": 100,
+    "training_eval_interval_steps": 5_000,
+    "training_eval_episodes": 5,
+    "training_checkpoint_interval_steps": 5_000,
+    "training_checkpoint_include_replay": False,
+    "training_enable_csv": True,
+    "training_enable_tensorboard": True,
+    "training_enable_wandb": False,
+    "training_wandb_project": "uav-search-masac",
+    "training_wandb_mode": "offline",
 }
