@@ -129,4 +129,35 @@ CONFIG = {
     "training_enable_wandb": False,
     "training_wandb_project": "uav-search-masac",
     "training_wandb_mode": "offline",
+
+    # Hybrid MATD3 (CTDE + discrete destination adaptation).
+    "matd3_hidden_dims": (256, 256),
+    "matd3_replay_capacity": 100_000,
+    "matd3_batch_size": 256,
+    "matd3_gamma": 0.99,
+    "matd3_tau": 0.005,
+    "matd3_actor_lr": 3e-4,
+    "matd3_critic_lr": 3e-4,
+    "matd3_policy_delay": 2,
+    "matd3_target_policy_noise": 0.2,
+    "matd3_target_noise_clip": 0.5,
+    "matd3_exploration_noise": 0.1,
+    "matd3_discrete_epsilon_start": 1.0,
+    "matd3_discrete_epsilon_end": 0.05,
+    "matd3_discrete_epsilon_decay_steps": 100_000,
+    "matd3_gumbel_temperature": 1.0,
+    "matd3_learning_starts": 2_000,
+    "matd3_updates_per_step": 1,
+    "matd3_gradient_clip_norm": 10.0,
+
+    # MATD3 experiment output/logging.
+    "matd3_training_output_dir": "outputs/matd3",
+    "matd3_wandb_project": "uav-search-matd3",
+
+    # Kaggle runtime integration.
+    "kaggle_wandb_secret_names": (
+        "WANDB_API_KEY",
+        "wandb_key",
+        "WANDB_KEY",
+    ),
 }
