@@ -56,4 +56,20 @@ CONFIG = {
     "comm_reference_distance_m": 1.0,
     "comm_path_loss_exponent": 2.0,
     "comm_nlos_additional_loss_db": 19.0,
+
+    # Network backend used by the future environment.
+    "network_backend": "simple",
+
+    # UavNetSim backend (optional external simulator).
+    # Leave path as None and pass repo_path=... to UavNetSimBackend,
+    # or set the UAVNETSIM_PATH environment variable.
+    "uavnetsim_path": None,
+    "uavnetsim_mac_protocol": "CSMA_CA",
+    "uavnetsim_channel_mode": "a2a",
+    "uavnetsim_los_model": "free_space",
+    "uavnetsim_nlos_model": "urban",
+    "uavnetsim_payload_bytes": 1024,
+    "uavnetsim_packet_lifetime_s": 10.0,
+    "uavnetsim_max_queue_size": 200,
+    "uavnetsim_obstacle_polygon_sides": 16,
 }
