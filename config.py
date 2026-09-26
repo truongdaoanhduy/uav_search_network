@@ -4,7 +4,7 @@ CONFIG = {
     "map_size": 5000,
     "num_uavs": 6,
     "num_targets": 10,
-    "num_obstacles": 6,
+    "num_obstacles": 20,
 
     "altitude_min": 0,
     "altitude_max": 150,
@@ -12,7 +12,7 @@ CONFIG = {
     "max_accel": 2.0,
 
     "dt": 1,
-    "max_steps": 600,
+    "max_steps": 800,
 
     "gcs_position": [2500, 0, 0.0],
     "gcs_exclusion_radius_m": 200,
@@ -121,6 +121,7 @@ CONFIG = {
     "masac_log_std_min": -5.0,
     "masac_log_std_max": 2.0,
     "masac_gumbel_temperature": 1.0,
+    # Multiplier for SAC continuous target entropy -|A|.
     "masac_continuous_target_entropy_scale": 1.0,
     "masac_discrete_target_entropy_ratio": 0.98,
     "masac_initial_alpha_continuous": 0.2,
@@ -131,12 +132,35 @@ CONFIG = {
 
     # Training experiment infrastructure.
     "training_output_dir": "outputs/masac",
+    # Laptop profile: 2 CPU workers slightly beat 4 with lower memory use.
+    "training_num_envs": 2,
+    "training_vector_context": "fork",
+    "training_vector_shared_memory": True,
+    "training_overlap_env_and_updates": True,
+
+    # Default: parallel CPU simulation plus batched CUDA actor/critic work.
+    # GPU sensing remains opt-in: measured T4 runs were slower with it.
+    # Explicit "torch_threaded" also enables that experimental collector.
+    "training_vector_backend": "auto",
+    "training_cuda_num_envs": 4,
+    "training_torch_sensing_enabled": False,
+    "training_torch_sensing_device": "auto",
+    # float64 preserves the current CPU sensing semantics/trajectory.
+    # float32 is faster on T4 but is an explicitly non-reference mode.
+    "training_torch_sensing_dtype": "float64",
+    "training_torch_sensing_batch_timeout_s": 0.002,
+    # Avoid nondeterministic scheduling/competition between env CUDA work
+    # and learner CUDA work until a measured deterministic overlap path wins.
+    "training_torch_overlap_env_and_updates": False,
+
     "training_log_interval_steps": 100,
     "training_eval_interval_steps": 5_000,
     "training_eval_episodes": 1,
     "training_eval_seed_offset": 10_000,
-    "training_checkpoint_interval_steps": 5_000,
-    "training_checkpoint_include_replay": False,
+    # Exact rolling latest.pt checkpoints include replay + worker state;
+    # use a wider interval to limit multi-GB checkpoint I/O.
+    "training_checkpoint_interval_steps": 50_000,
+    "training_checkpoint_include_replay": True,
     "training_enable_csv": True,
     "training_enable_tensorboard": True,
     "training_enable_wandb": False,
