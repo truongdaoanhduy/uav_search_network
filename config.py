@@ -80,6 +80,40 @@ CONFIG = {
     "uavnetsim_packet_lifetime_s": 10.0,
     "uavnetsim_max_queue_size": 200,
     "uavnetsim_obstacle_polygon_sides": 16,
+    # Pin the radio/MAC constants used by the installed UavNetSim version so
+    # the CPU validator and CUDA training surrogate stay on the same contract.
+    "uavnetsim_carrier_frequency_hz": 2_400_000_000.0,
+    "uavnetsim_bandwidth_hz": 22_000_000.0,
+    "uavnetsim_bit_rate_bps": 2_000_000.0,
+    "uavnetsim_sinr_threshold_db": 6.0,
+    "uavnetsim_cca_threshold_dbm": -82.0,
+    "uavnetsim_thermal_noise_density_dbm_hz": -174.0,
+    "uavnetsim_receiver_noise_figure_db": 7.0,
+    "uavnetsim_max_retransmission_attempt": 5,
+
+    # GPU-native training approximation of UavNetSim's packet/MAC costs.
+    # "simple" preserves the original tensor link model. "packet_approx"
+    # adds packet queue limits and expected CSMA/CA airtime. "uavnetsim_gpu"
+    # additionally uses UavNetSim's A2A path-gain law, simultaneous-link SINR
+    # interference, ACK/backoff service cost, queue limits, relay custody and
+    # GCS delivery, all as batched CUDA tensor math. It deliberately remains a
+    # deterministic time-slotted surrogate rather than pretending SimPy's
+    # event scheduler itself has been ported to CUDA. Use real UavNetSim for
+    # packet-event validation and protocol-library experiments.
+    "full_gpu_network_model": "uavnetsim_gpu",
+    "full_gpu_packet_ack_bits": 240,
+    "full_gpu_packet_sifs_us": 10.0,
+    "full_gpu_packet_slot_us": 20.0,
+    "full_gpu_packet_cw_min": 31,
+    "full_gpu_packet_difs_us": 50.0,
+    # Empirical shared-channel efficiency per additional simultaneous sender.
+    # 0.8 matches the current UavNetSim CSMA/CA calibration reasonably well
+    # for 1-4 concurrent GCS uplinks in the fixed seed-44 validation scene.
+    "full_gpu_packet_contention_decay": 0.8,
+    # Use exact simultaneous-transmitter SINR for the richer GPU surrogate.
+    "full_gpu_network_interference": True,
+    # Keep the deterministic expected-backoff model reproducible across runs.
+    "full_gpu_network_expected_backoff": True,
 
     # Environment observation.
     "belief_patch_cells": 13,
@@ -153,6 +187,41 @@ CONFIG = {
     # and learner CUDA work until a measured deterministic overlap path wins.
     "training_torch_overlap_env_and_updates": False,
 
+    # Optional CUDA learner acceleration. Disabled by default until benchmarked
+    # for speed, stability, and same-seed reproducibility on the active GPU.
+    "training_amp_enabled": False,
+    "training_amp_dtype": "float16",
+
+    # Full-GPU path in test_gpu.ipynb. The mission environment, replay,
+    # inference, and learner tensors stay on one CUDA device. On the current
+    # Kaggle Tesla T4, an earlier extended env-only sweep reached about
+    # 617/1008/1481 transitions/s at 256/512/1024 envs and OOMed at 2048.
+    # Later full-training runs did succeed at 2048 envs, so treat that OOM as
+    # historical rather than a current hard limit. Re-sweep for active code/hardware.
+    # Use 512 as a lower-memory fallback for larger replay/checkpoints.
+    # Re-sweep when the GPU, UAV count, map, observation contract, or replay
+    # capacity changes.
+    # Device mode for test_gpu.ipynb: auto, cpu, or gpu. Auto uses CUDA
+    # when available and otherwise runs the same tensor path on CPU for audit.
+    "full_gpu_execution_mode": "auto",
+    "full_gpu_device": "cuda:0",
+    # Automatic single-node GPU selection. With >=2 visible CUDA devices the
+    # production wrapper launches two NCCL/DDP ranks (one process/GPU), each
+    # with its own environment shard and learner replica; with one visible GPU
+    # it falls back to the existing single-GPU path.
+    "full_gpu_auto_multi_gpu": True,
+    "full_gpu_max_gpus": 2,
+    "full_gpu_multi_gpu_strategy": "ddp",
+    "full_gpu_num_envs": 1024,
+    "full_gpu_benchmark_env_counts": (
+        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+    ),
+    "full_gpu_benchmark_vector_steps": 200,
+    # Fixed-size rejection pools keep world generation tensorized. Multiple
+    # rounds make placement robust without moving the geometry to NumPy/CPU.
+    "full_gpu_world_candidates": 256,
+    "full_gpu_world_sampling_rounds": 4,
+
     "training_log_interval_steps": 100,
     "training_eval_interval_steps": 5_000,
     "training_eval_episodes": 1,
@@ -163,10 +232,14 @@ CONFIG = {
     "training_checkpoint_include_replay": True,
     "training_enable_csv": True,
     "training_enable_tensorboard": True,
-    "training_enable_wandb": False,
+    "training_enable_wandb": True,
     "training_wandb_entity": "uav_search_paper",
     "training_wandb_project": "uav_search_target",
-    "training_wandb_mode": "offline",
+    "training_wandb_mode": "online",
+    # GPU training logs a single W&B run from rank 0. The display name is
+    # exactly: <ALGORITHM>-seed<SEED>-<WANDB_RUN_ID>.
+    "training_wandb_required": True,
+    "training_wandb_name_format": "{algorithm}-seed{seed}-{id}",
 
     # Hybrid MATD3 (CTDE + discrete destination adaptation).
     "matd3_hidden_dims": (256, 256),

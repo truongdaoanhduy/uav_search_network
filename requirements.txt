@@ -1,16 +1,21 @@
-numpy
+numpy==2.2.6
 gymnasium
 torch
 
 matplotlib
 pygame
-
 pandas
 tqdm
 PyYAML
-
 tensorboard
-
 shapely
-
 pytest
+wandb
+jupyter
+nbformat
+kaggle>=2.2
+
+# Optional packet-level network backend used by CPU/GPU parity benchmarks.
+uavnetsim @ git+https://github.com/Zihao-Felix-Zhou/UavNetSim.git@04daafb815eb377409b40b285574eeb62b9a8d58
+
+cloudpickle>=3.1
