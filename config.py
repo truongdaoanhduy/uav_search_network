@@ -233,6 +233,9 @@ CONFIG = {
     "training_enable_csv": True,
     "training_enable_tensorboard": True,
     "training_enable_wandb": True,
+    # Keep W&B focused on experiment metrics. Disable automatic CPU/RAM/GPU
+    # telemetry panels (power, clocks, memory, ECC errors, etc.).
+    "training_wandb_disable_system_stats": True,
     "training_wandb_entity": "uav_search_paper",
     "training_wandb_project": "uav_search_target",
     "training_wandb_mode": "online",
