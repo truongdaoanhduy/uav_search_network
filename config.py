@@ -231,7 +231,10 @@ CONFIG = {
     "training_eval_seed_offset": 10_000,
     # Paper-style reward curves are logged as windowed means over completed
     # episodes. A small bin gives a smooth curve without 50k W&B log calls.
-    "training_reward_curve_bin_episodes": 128,
+    # Log one W&B history point for every completed episode. With 4096
+    # parallel envs, completions arrive in batches, but each episode receives
+    # its own monotonically increasing episodes_completed x-axis value.
+    "training_reward_curve_bin_episodes": 1,
     # 2D is the default evaluation visualization: it is much cheaper than 3D
     # rendering and still shows search trajectories, coverage, targets,
     # obstacles, GCS, and successful communication links.
