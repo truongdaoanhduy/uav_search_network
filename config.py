@@ -3,8 +3,8 @@ CONFIG = {
 
     "map_size": 5000,
     "num_uavs": 6,
-    "num_targets": 10,
-    "num_obstacles": 20,
+    "num_targets": 50,
+    "num_obstacles": 30,
 
     "altitude_min": 0,
     "altitude_max": 150,
@@ -12,7 +12,7 @@ CONFIG = {
     "max_accel": 2.0,
 
     "dt": 1,
-    "max_steps": 800,
+    "max_steps": 1000,
 
     "gcs_position": [2500, 0, 0.0],
     "gcs_exclusion_radius_m": 200,
@@ -135,13 +135,13 @@ CONFIG = {
     "reward_confirmation": 20.0,
     "reward_delivery": 50.0,
     "reward_false_confirmation": 5.0,
-    "reward_blocked": 0.2,
+    "reward_blocked": 1.0,
     "reward_boundary": 0.05,
     "reward_expired_report": 10.0,
     "reward_dropped_report": 10.0,
     "reward_energy_per_kj": 0.01,
     "reward_step_penalty": 0.01,
-    "reward_all_delivered_bonus": 100.0,
+    "reward_all_delivered_bonus": 500.0,
 
     # Hybrid multi-agent SAC (CTDE).
     "masac_hidden_dims": (256, 256),
