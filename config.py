@@ -224,11 +224,28 @@ CONFIG = {
 
     "training_log_interval_steps": 100,
     "training_eval_interval_steps": 5_000,
+    # In episode-target GPU runs, evaluation follows completed episodes rather
+    # than raw transitions so W&B produces meaningful learning curves.
+    "training_eval_interval_episodes": 5_000,
     "training_eval_episodes": 1,
     "training_eval_seed_offset": 10_000,
+    # Paper-style reward curves are logged as windowed means over completed
+    # episodes. A small bin gives a smooth curve without 50k W&B log calls.
+    "training_reward_curve_bin_episodes": 128,
+    # 2D is the default evaluation visualization: it is much cheaper than 3D
+    # rendering and still shows search trajectories, coverage, targets,
+    # obstacles, GCS, and successful communication links.
+    "training_visualize_2d": True,
+    "training_visualization_interval_episodes": 10_000,
+    "training_visualization_trajectory_stride": 10,
+    "training_visualization_max_link_edges": 64,
     # Exact rolling latest.pt checkpoints include replay + worker state;
     # use a wider interval to limit multi-GB checkpoint I/O.
     "training_checkpoint_interval_steps": 50_000,
+    # DDP episode-target runs save model/optimizer checkpoints periodically.
+    # They intentionally omit the sharded replay/environment state and are
+    # therefore model-resume checkpoints, not bit-exact simulator resumes.
+    "training_checkpoint_interval_episodes": 5_000,
     "training_checkpoint_include_replay": True,
     "training_enable_csv": True,
     "training_enable_tensorboard": True,
