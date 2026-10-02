@@ -65,6 +65,14 @@ def load_notebook_engine(
     module.__file__ = str(notebook_path)
     module.__package__ = None
     sys.modules[module_name] = module
+
+    # This module is created dynamically from notebook declarations and is not
+    # importable by name in fresh torchrun worker processes. Without explicit
+    # by-value registration, cloudpickle records worker functions by reference
+    # and child processes fail with ModuleNotFoundError.
+    import cloudpickle
+
+    cloudpickle.register_pickle_by_value(module)
     namespace: dict[str, Any] = module.__dict__
 
     old_cwd = Path.cwd()
