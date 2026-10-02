@@ -12,7 +12,7 @@ omegaconf>=2.3,<2.4
 tensorboard
 shapely
 pytest
-wandb
+wandb>=0.26,<0.27
 huggingface_hub>=1.28,<2.0
 jupyter
 nbformat
