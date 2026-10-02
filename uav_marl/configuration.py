@@ -161,12 +161,13 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
             "GPU episode-budget full-flow currently requires "
             "runtime.fused_adam=false"
         )
-    if execution_mode == "gpu" and _get(
-        plain, "runtime.update_to_data_ratio"
-    ) is not None:
+    train_freq = int(_get(plain, "algorithm.train_freq"))
+    gradient_steps = int(_get(plain, "algorithm.gradient_steps"))
+    if train_freq < 1:
+        raise ValueError("algorithm.train_freq must be >= 1")
+    if gradient_steps == 0 or gradient_steps < -1:
         raise ValueError(
-            "override algorithm.updates_per_step instead of "
-            "runtime.update_to_data_ratio for GPU full-flow"
+            "algorithm.gradient_steps must be -1 or a positive integer"
         )
 
     backend = str(
@@ -419,6 +420,12 @@ def apply_to_legacy_config(
         if key == "hidden_dims":
             value = tuple(value)
         legacy_config[f"{prefix}_{key}"] = deepcopy(value)
+
+    # Preserve the historical key for older notebook helpers while making the
+    # modern resolved config explicit and library-like.
+    legacy_config[f"{prefix}_updates_per_step"] = int(
+        algorithm_cfg["gradient_steps"]
+    )
 
     legacy_config["training_output_dir"] = f"outputs/{algorithm.name}"
     if algorithm.name == "matd3":

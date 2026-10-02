@@ -15,5 +15,6 @@ discrete_epsilon_end: 0.05
 discrete_epsilon_decay_steps: 100000
 gumbel_temperature: 1.0
 learning_starts: 2000
-updates_per_step: 1.0
+train_freq: 1
+gradient_steps: 1
 gradient_clip_norm: 10.0

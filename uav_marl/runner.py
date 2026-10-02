@@ -72,9 +72,6 @@ def run_experiment(
         ),
         compile_mode=_cfg_value(plain, "runtime.compile_mode"),
         fused_adam=bool(_cfg_value(plain, "runtime.fused_adam")),
-        update_to_data_ratio=_cfg_value(
-            plain, "runtime.update_to_data_ratio"
-        ),
         enable_wandb=True,
         execution_mode=str(
             _cfg_value(plain, "runtime.execution_mode")

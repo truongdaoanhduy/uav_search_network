@@ -164,7 +164,12 @@ CONFIG = {
     "masac_initial_alpha_continuous": 0.2,
     "masac_initial_alpha_discrete": 0.2,
     "masac_learning_starts": 2_000,
-    "masac_updates_per_step": 1,
+    # Library-style off-policy schedule: collect one vector step, then one
+    # gradient step. Set gradient_steps=-1 only when intentionally matching
+    # gradient updates to the number of newly collected transitions.
+    "masac_train_freq": 1,
+    "masac_gradient_steps": 1,
+    "masac_updates_per_step": 1,  # deprecated compatibility alias
     "masac_gradient_clip_norm": 10.0,
 
     # Training experiment infrastructure.
@@ -319,7 +324,9 @@ CONFIG = {
     "matd3_discrete_epsilon_decay_steps": 100_000,
     "matd3_gumbel_temperature": 1.0,
     "matd3_learning_starts": 2_000,
-    "matd3_updates_per_step": 1,
+    "matd3_train_freq": 1,
+    "matd3_gradient_steps": 1,
+    "matd3_updates_per_step": 1,  # deprecated compatibility alias
     "matd3_gradient_clip_norm": 10.0,
 
     # MATD3 experiment output/logging.

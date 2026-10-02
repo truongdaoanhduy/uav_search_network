@@ -181,7 +181,14 @@ def test_single_gpu_full_flow_rejects_unsupported_runtime_optimizer_switches():
 
     cfg = compose_cfg(
         "runtime=vast_1gpu",
-        "runtime.update_to_data_ratio=0.5",
+        "algorithm.gradient_steps=0",
     )
-    with pytest.raises(ValueError, match="algorithm.updates_per_step"):
+    with pytest.raises(ValueError, match="gradient_steps"):
+        validate_config(cfg)
+
+    cfg = compose_cfg(
+        "runtime=vast_1gpu",
+        "algorithm.train_freq=0",
+    )
+    with pytest.raises(ValueError, match="train_freq"):
         validate_config(cfg)

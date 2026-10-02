@@ -8,7 +8,6 @@ max_gpus: 2
 multi_gpu_strategy: ddp
 compile_mode: null
 fused_adam: false
-update_to_data_ratio: null
 vector:
   context: fork
   shared_memory: true
