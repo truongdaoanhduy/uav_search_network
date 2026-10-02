@@ -20,21 +20,9 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 
-# Hydra configs/ is the user-facing source of truth. config.py is a compatibility mapping.
-if not Path("config.py").is_file() and Path("/kaggle/input").is_dir():
-    _gpu_config_candidates = sorted(
-        Path("/kaggle/input").glob("**/config.py")
-    )
-    if len(_gpu_config_candidates) != 1:
-        raise FileNotFoundError(
-            "config.py is required. Upload it alongside test_gpu.ipynb or "
-            "attach exactly one Kaggle input containing config.py. Found "
-            f"{len(_gpu_config_candidates)} candidates."
-        )
-    _gpu_config_dir = str(_gpu_config_candidates[0].parent)
-    if _gpu_config_dir not in sys.path:
-        sys.path.insert(0, _gpu_config_dir)
-
+# Hydra configs/ is the user-facing source of truth. config.py is a
+# compatibility mapping imported through the Python module path; production
+# code must not depend on the process current working directory.
 from config import CONFIG
 
 
