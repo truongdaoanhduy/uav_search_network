@@ -102,6 +102,14 @@ def load_notebook_engine(
             except ValueError:
                 pass
 
+    # The distributed trainer serializes notebook-defined workers with
+    # cloudpickle before launching torchrun. This module exists only in-memory,
+    # so serializing it by reference would make child interpreters fail with
+    # ModuleNotFoundError. Register the dynamic module for by-value pickling.
+    import cloudpickle
+
+    cloudpickle.register_pickle_by_value(module)
+
     required = {
         "train_full_gpu_auto",
         "postprocess_checkpoint_cpu",
