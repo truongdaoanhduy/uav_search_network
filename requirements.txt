@@ -13,7 +13,7 @@ tensorboard
 shapely
 pytest
 wandb
-huggingface_hub>=1.28
+huggingface_hub>=1.28,<2.0
 jupyter
 nbformat
 kaggle>=2.2
