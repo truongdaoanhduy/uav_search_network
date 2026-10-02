@@ -296,6 +296,13 @@ def run_cpu_postprocess_from_handoff(
 
     completion = {
         "visualization_complete": True,
+        "algorithm": str(payload["algorithm"]),
+        "seed": int(payload["seed"]),
+        "network_backend": str(payload["network_backend"]),
+        "experiment": str(payload["experiment"]),
+        "source_provider": str(payload["source_provider"]),
+        "source_git_commit": payload.get("source_git_commit"),
+        "source_wandb_run_id": payload.get("source_wandb_run_id"),
         "source_handoff": str(find_handoff(handoff)),
         "source_checkpoint_sha256": str(payload["checkpoint_sha256"]),
         **result,

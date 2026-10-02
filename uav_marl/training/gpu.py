@@ -1347,10 +1347,13 @@ class GpuUavNetSimBridge:
         destinations = self._tensor_numpy(destination_idx[0], np.int64)
         powers = self._tensor_numpy(power_action[0, :, 0], np.float64)
         if energy_budget_j is None:
-            energy_budget = np.full(
-                self.env.num_uavs,
-                np.inf,
-                dtype=np.float64,
+            # A missing explicit communication budget means "use the current
+            # battery state as the finite upper bound". UavNetSimBackend
+            # intentionally rejects +/-inf so validators and direct bridge
+            # callers obey the same energy contract as the full environment.
+            energy_budget = self._tensor_numpy(
+                self.env.battery[0],
+                np.float64,
             )
         else:
             energy_budget = self._tensor_numpy(
@@ -1497,12 +1500,32 @@ class GpuUavNetSimBridge:
         attempted = torch.zeros(
             1, self.env.num_uavs, device=self.env.device, dtype=torch.bool
         )
+        bytes_attempted = torch.zeros(
+            1, self.env.num_uavs, device=self.env.device
+        )
         bytes_tx = torch.zeros(
             1, self.env.num_uavs, device=self.env.device
         )
-        for sender, result in zip(sender_for_result, results):
+        link_ok = torch.zeros(
+            1, self.env.num_uavs, device=self.env.device, dtype=torch.bool
+        )
+        for sender, intent, result in zip(
+            sender_for_result,
+            intents,
+            results,
+        ):
             attempted[0, sender] = True
-            bytes_tx[0, sender] = float(result.get("tx_bytes", 0))
+            bytes_attempted[0, sender] = float(
+                intent.requested_bytes
+            )
+            bytes_tx[0, sender] = float(
+                result.get("tx_bytes", 0)
+            )
+            link_ok[0, sender] = bool(
+                int(result.get("injected_bytes", 0)) > 0
+                or int(result.get("tx_bytes", 0)) > 0
+                or str(result.get("status", "")) == "in_flight"
+            )
 
         self._sync_cpu_to_gpu()
         after_cpu_to_gpu = time.perf_counter()
@@ -1525,13 +1548,42 @@ class GpuUavNetSimBridge:
         ).view(1, self.env.num_uavs)
         self._last_results = results
         self._last_metrics = self.backend.metrics()
+        packet_payload_bytes = max(
+            1,
+            int(CONFIG["uavnetsim_payload_bytes"]),
+        )
+        packets_tx = torch.where(
+            bytes_tx > 0.0,
+            torch.ceil(bytes_tx / float(packet_payload_bytes)),
+            torch.zeros_like(bytes_tx),
+        )
+        zero_per_env = torch.zeros(
+            1,
+            device=self.env.device,
+            dtype=self.env.positions.dtype,
+        )
         return {
             "new_delivery": torch.tensor(
                 [new_delivery], device=self.env.device, dtype=torch.long
             ),
             "comm_energy": comm_energy,
             "attempted": attempted,
+            "bytes_attempted": bytes_attempted,
             "bytes_tx": bytes_tx,
+            "packets_tx": packets_tx,
+            # Detailed PHY/delay KPIs for the real UavNetSim path come from
+            # backend.metrics(). These tensors keep the external-network
+            # adapter schema identical to FullGpuUAVBatchEnv._network().
+            "delivery_latency_sum_s": zero_per_env.clone(),
+            "delivery_latency_count": zero_per_env.clone(),
+            "delivery_latency_max_s": zero_per_env.clone(),
+            "channel_contenders": attempted.sum(-1).to(
+                self.env.positions.dtype
+            ),
+            "link_ok": link_ok,
+            "sinr_db": torch.full_like(bytes_tx, float("nan")),
+            "nlos": torch.zeros_like(attempted),
+            "interference_w": torch.zeros_like(bytes_tx),
         }
 
     def metrics(self):

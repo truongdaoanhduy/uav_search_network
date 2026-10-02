@@ -13,6 +13,7 @@ from uav_marl.handoff import (
     HANDOFF_FILENAME,
     create_training_handoff,
     load_training_handoff,
+    run_cpu_postprocess_from_handoff,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,3 +147,62 @@ def test_generated_kernels_keep_repo_checkout_out_of_kaggle_working(tmp_path):
     assert 'Path("/tmp/uav_search_network")' in cpu_script
     assert 'Path("/kaggle/working/uav_search_network")' not in gpu_script
     assert 'Path("/kaggle/working/uav_search_network")' not in cpu_script
+
+
+def test_cpu_completion_manifest_keeps_training_provenance(tmp_path, monkeypatch):
+    checkpoint = tmp_path / "source.pt"
+    checkpoint.write_bytes(b"checkpoint")
+
+    training = create_training_handoff(
+        {
+            "final_checkpoint_path": str(checkpoint),
+            "wandb_run_id": "run123",
+            "wandb_run_url": "https://example.invalid/run123",
+        },
+        _cfg(),
+        repo=tmp_path,
+    )
+
+    image = tmp_path / "fake.png"
+    video = tmp_path / "fake.mp4"
+    manifest = tmp_path / "fake_manifest.json"
+
+    def fake_postprocess_checkpoint_cpu(**kwargs):
+        image.write_bytes(b"png")
+        video.write_bytes(b"mp4")
+        manifest.write_text("{}")
+        return {
+            "image_path": str(image),
+            "video_path": str(video),
+            "manifest_path": str(manifest),
+            "wandb_run_url": kwargs.get("source_run_id"),
+        }
+
+    import uav_marl.evaluation as evaluation
+
+    monkeypatch.setattr(
+        evaluation,
+        "postprocess_checkpoint_cpu",
+        fake_postprocess_checkpoint_cpu,
+    )
+
+    output_dir = tmp_path / "postprocess"
+    result = run_cpu_postprocess_from_handoff(
+        training["handoff_path"],
+        repo=tmp_path,
+        output_dir=output_dir,
+        log_wandb=False,
+        upload_huggingface=False,
+    )
+    completion = json.loads(
+        (output_dir / "cpu_visualization_complete.json").read_text()
+    )
+
+    assert result["algorithm"] == "masac"
+    assert completion["algorithm"] == "masac"
+    assert completion["seed"] == 44
+    assert completion["network_backend"] == "simple"
+    assert completion["experiment"] == "smoke"
+    assert completion["source_provider"] == "local"
+    assert completion["source_wandb_run_id"] == "run123"
+    assert "source_git_commit" in completion
