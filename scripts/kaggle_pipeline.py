@@ -266,7 +266,7 @@ def _gpu_script(
 
         COMMIT = {commit!r}
         REPO_URL = "https://github.com/truongdaoanhduy/uav_search_network.git"
-        REPO = Path("/kaggle/working/uav_search_network")
+        REPO = Path("/tmp/uav_search_network")
         if REPO.exists():
             subprocess.run(["rm", "-rf", str(REPO)], check=True)
         subprocess.run(["git", "clone", "--quiet", REPO_URL, str(REPO)], check=True)
@@ -304,7 +304,7 @@ def _cpu_script(*, commit: str) -> str:
 
         COMMIT = {commit!r}
         REPO_URL = "https://github.com/truongdaoanhduy/uav_search_network.git"
-        REPO = Path("/kaggle/working/uav_search_network")
+        REPO = Path("/tmp/uav_search_network")
         if REPO.exists():
             subprocess.run(["rm", "-rf", str(REPO)], check=True)
         subprocess.run(["git", "clone", "--quiet", REPO_URL, str(REPO)], check=True)

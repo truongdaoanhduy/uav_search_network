@@ -124,3 +124,25 @@ def test_kaggle_pipeline_builds_gpu_then_cpu_kernel(tmp_path):
 def test_default_experiment_uses_separate_cpu_session():
     cfg = _cfg()
     assert cfg["experiment"]["visualization"]["session"] == "separate_cpu"
+
+
+def test_generated_kernels_keep_repo_checkout_out_of_kaggle_working(tmp_path):
+    gpu_dir, cpu_dir, _, _ = build_kernels(
+        tmp_path,
+        username="demo-user",
+        commit="b" * 40,
+        algorithm="masac",
+        runtime="kaggle_2xt4",
+        experiment="smoke",
+        seed=44,
+        gpu_kernel_slug="gpu-clean-output",
+        cpu_kernel_slug="cpu-clean-output",
+        machine_shape="NvidiaTeslaT4",
+        overrides=[],
+    )
+    gpu_script = next(gpu_dir.glob("*.py")).read_text()
+    cpu_script = next(cpu_dir.glob("*.py")).read_text()
+    assert 'Path("/tmp/uav_search_network")' in gpu_script
+    assert 'Path("/tmp/uav_search_network")' in cpu_script
+    assert 'Path("/kaggle/working/uav_search_network")' not in gpu_script
+    assert 'Path("/kaggle/working/uav_search_network")' not in cpu_script
