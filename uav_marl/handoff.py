@@ -244,10 +244,9 @@ def run_cpu_postprocess_from_handoff(
     )
     restore_legacy_config_from_handoff(payload)
 
-    from .notebook_engine import load_notebook_engine
+    from .evaluation import postprocess_checkpoint_cpu
 
-    namespace = load_notebook_engine(repo)
-    postprocess_fn = namespace["postprocess_checkpoint_cpu"]
+    postprocess_fn = postprocess_checkpoint_cpu
 
     if log_wandb is None:
         log_wandb = bool(

@@ -1,6 +1,6 @@
 # LEGACY COMPATIBILITY CONFIG. New experiments should use train.py + configs/.
 # The composable runner resolves Task/Reward/Algorithm/Runtime/Experiment and
-# applies the resolved values to this dictionary before loading the notebook engine.
+# applies resolved values to this dictionary before constructing production Python modules.
 CONFIG = {
     "seed": 44,
 

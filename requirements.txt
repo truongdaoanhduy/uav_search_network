@@ -23,5 +23,4 @@ kaggle>=2.2
 # GPU training environment cannot have NumPy/Torch silently replaced. For a
 # local authoritative CPU backend, install requirements-uavnetsim.txt as well.
 
-cloudpickle>=3.1
 wandb-workspaces

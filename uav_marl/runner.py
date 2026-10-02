@@ -14,7 +14,7 @@ from .configuration import (
     validate_config,
 )
 from .handoff import create_training_handoff
-from .notebook_engine import load_notebook_engine
+from .training import train_full_gpu_auto
 
 
 def _cfg_value(cfg: dict[str, Any], path: str) -> Any:
@@ -44,8 +44,7 @@ def run_experiment(
             "resolved_config": plain,
         }
 
-    namespace = load_notebook_engine(repo_path)
-    train_fn = namespace["train_full_gpu_auto"]
+    train_fn = train_full_gpu_auto
 
     total_episodes = int(
         _cfg_value(plain, "experiment.total_episodes")
