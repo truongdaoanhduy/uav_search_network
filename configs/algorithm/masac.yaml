@@ -1,0 +1,19 @@
+name: masac
+hidden_dims: [256, 256]
+replay_capacity: 50000
+batch_size: 256
+gamma: 0.99
+tau: 0.005
+actor_lr: 0.0003
+critic_lr: 0.0003
+alpha_lr: 0.0003
+log_std_min: -5.0
+log_std_max: 2.0
+gumbel_temperature: 1.0
+continuous_target_entropy_scale: 1.0
+discrete_target_entropy_ratio: 0.98
+initial_alpha_continuous: 0.2
+initial_alpha_discrete: 0.2
+learning_starts: 2000
+updates_per_step: 1.0
+gradient_clip_norm: 10.0

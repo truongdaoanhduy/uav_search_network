@@ -1,0 +1,19 @@
+name: matd3
+hidden_dims: [256, 256]
+replay_capacity: 50000
+batch_size: 256
+gamma: 0.99
+tau: 0.005
+actor_lr: 0.0003
+critic_lr: 0.0003
+policy_delay: 2
+target_policy_noise: 0.2
+target_noise_clip: 0.5
+exploration_noise: 0.1
+discrete_epsilon_start: 1.0
+discrete_epsilon_end: 0.05
+discrete_epsilon_decay_steps: 100000
+gumbel_temperature: 1.0
+learning_starts: 2000
+updates_per_step: 1.0
+gradient_clip_norm: 10.0

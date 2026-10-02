@@ -1,3 +1,6 @@
+# LEGACY COMPATIBILITY CONFIG. New experiments should use train.py + configs/.
+# The composable runner resolves Task/Reward/Algorithm/Runtime/Experiment and
+# applies the resolved values to this dictionary before loading the notebook engine.
 CONFIG = {
     "seed": 44,
 
@@ -229,12 +232,35 @@ CONFIG = {
     "training_eval_interval_episodes": 5_000,
     "training_eval_episodes": 1,
     "training_eval_seed_offset": 10_000,
-    # Paper-style reward curves are logged as windowed means over completed
-    # episodes. A small bin gives a smooth curve without 50k W&B log calls.
-    # Log one W&B history point for every completed episode. With 4096
-    # parallel envs, completions arrive in batches, but each episode receives
-    # its own monotonically increasing episodes_completed x-axis value.
+    # Keep expensive reference evaluation/rendering out of the optimizer loop.
+    # The full-flow launcher MUST run one deterministic CPU post-process after
+    # training finishes, so every completed production run has PNG + MP4 output.
+    "training_inline_evaluation": False,
+    "training_inline_visualization": False,
+    "training_auto_postprocess_visualization": True,
+    "training_auto_postprocess_required": True,
+    "training_auto_postprocess_render_video": True,
+    # Visualization files stay in the job/local output; W&B remains metrics-only.
+    "training_auto_postprocess_log_wandb_media": False,
+    "training_auto_postprocess_upload_huggingface": False,
+    "training_auto_postprocess_output_dir": "post_train_visualization",
+    # Keep episode/* scientifically raw: one W&B history point per completed
+    # episode. Paper-style curves are a separate aggregated/smoothed view so
+    # visualization never destroys or replaces the underlying observations.
     "training_reward_curve_bin_episodes": 1,
+    # paper/* is a presentation-only series: average 256 completed episodes
+    # (~195 points over 50k episodes), then apply a moderate EMA. This closely
+    # matches paper-style learning curves while keeping episode/* fully raw.
+    # beta=0.85 smooths visible spikes without hiding long-term degradation.
+    "training_paper_curve_bin_episodes": 256,
+    "training_paper_curve_ema_beta": 0.85,
+    # Publication-style rendering only. episode metrics remain unsmoothed raw data.
+    # A faint raw trace plus a bold EMA keeps every episode visible and auditable.
+    "paper_plot_ema_beta": 0.95,
+    "paper_plot_raw_alpha": 0.12,
+    "paper_plot_raw_linewidth": 0.9,
+    "paper_plot_main_linewidth": 2.6,
+    "paper_plot_band_alpha": 0.16,
     # 2D is the default evaluation visualization: it is much cheaper than 3D
     # rendering and still shows search trajectories, coverage, targets,
     # obstacles, GCS, and successful communication links.
@@ -250,6 +276,12 @@ CONFIG = {
     # therefore model-resume checkpoints, not bit-exact simulator resumes.
     "training_checkpoint_interval_episodes": 5_000,
     "training_checkpoint_include_replay": True,
+    # Keep periodic checkpoints in Kaggle output, but avoid repeatedly uploading
+    # ~tens-of-MB files while GPUs are reserved. Publish only the final model as
+    # a W&B model artifact; CPU post-processing can mirror it to Hugging Face.
+    "training_upload_periodic_checkpoints_wandb": False,
+    "training_publish_final_checkpoint_wandb_artifact": True,
+    "training_final_checkpoint_artifact_alias": "final",
     "training_enable_csv": True,
     "training_enable_tensorboard": True,
     "training_enable_wandb": True,
@@ -259,6 +291,12 @@ CONFIG = {
     "training_wandb_entity": "uav_search_paper",
     "training_wandb_project": "uav_search_target",
     "training_wandb_mode": "online",
+    # Full-flow training is always online in W&B. Debug/unit helpers may be used
+    # directly without W&B, but train_full_gpu_auto rejects offline/disabled runs.
+    "training_wandb_require_online_gpu": True,
+    # When a production run executes on Kaggle, resolve the authenticated Kaggle
+    # username and expose it as the W&B config column kaggle_account.
+    "training_require_kaggle_account_name": True,
     # GPU training logs a single W&B run from rank 0. The display name is
     # exactly: <ALGORITHM>-seed<SEED>-<WANDB_RUN_ID>.
     "training_wandb_required": True,
@@ -294,4 +332,19 @@ CONFIG = {
         "wandb_key",
         "WANDB_KEY",
     ),
+    # CPU post-process / checkpoint mirroring. Set these as Kaggle Secrets on
+    # the CPU account; never hard-code tokens in the notebook.
+    "kaggle_hf_token_secret_names": (
+        "HF_TOKEN",
+        "HUGGINGFACE_TOKEN",
+        "HUGGING_FACE_HUB_TOKEN",
+    ),
+    "kaggle_hf_repo_secret_names": (
+        "HF_REPO_ID",
+        "HUGGINGFACE_REPO_ID",
+    ),
+    "postprocess_cpu_eval_episodes": 1,
+    "postprocess_cpu_video_fps": 8,
+    "postprocess_cpu_upload_huggingface": True,
+    "postprocess_hf_private_repo": True,
 }

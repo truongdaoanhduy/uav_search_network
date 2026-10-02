@@ -1,0 +1,31 @@
+provider: local
+execution_mode: cpu
+device: cpu
+num_envs: 2
+network_backend: simple
+auto_multi_gpu: false
+max_gpus: 0
+multi_gpu_strategy: ddp
+compile_mode: null
+fused_adam: false
+update_to_data_ratio: null
+vector:
+  context: fork
+  shared_memory: true
+  overlap_env_and_updates: true
+  backend: auto
+  cuda_num_envs: 4
+torch_sensing:
+  enabled: false
+  device: auto
+  dtype: float64
+  batch_timeout_s: 0.002
+  overlap_env_and_updates: false
+amp:
+  enabled: false
+  dtype: float16
+gpu:
+  benchmark_env_counts: [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+  benchmark_vector_steps: 200
+  world_candidates: 256
+  world_sampling_rounds: 4

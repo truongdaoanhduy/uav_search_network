@@ -1,0 +1,31 @@
+provider: kaggle
+execution_mode: gpu
+device: cuda:0
+num_envs: 4096
+network_backend: uavnetsim_gpu
+auto_multi_gpu: true
+max_gpus: 2
+multi_gpu_strategy: ddp
+compile_mode: null
+fused_adam: false
+update_to_data_ratio: null
+vector:
+  context: fork
+  shared_memory: true
+  overlap_env_and_updates: true
+  backend: auto
+  cuda_num_envs: 4
+torch_sensing:
+  enabled: false
+  device: auto
+  dtype: float64
+  batch_timeout_s: 0.002
+  overlap_env_and_updates: false
+amp:
+  enabled: false
+  dtype: float16
+gpu:
+  benchmark_env_counts: [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+  benchmark_vector_steps: 200
+  world_candidates: 256
+  world_sampling_rounds: 4

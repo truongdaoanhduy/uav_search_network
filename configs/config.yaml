@@ -1,0 +1,18 @@
+defaults:
+  - task: uav_search
+  - reward: paper_v1
+  - algorithm: masac
+  - runtime: kaggle_2xt4
+  - experiment: paper_50k
+  - override hydra/job_logging: disabled
+  - _self_
+
+seed: 44
+dry_run: false
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: .
+  output_subdir: null
