@@ -1,9 +1,4 @@
-import sys
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 import pytest
 from hydra import compose, initialize_config_dir
@@ -16,7 +11,8 @@ from uav_marl.configuration import (
 )
 from uav_marl.runner import run_experiment
 
-CONFIG_DIR = str((Path(__file__).resolve().parents[1] / "configs").resolve())
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG_DIR = str((ROOT / "configs").resolve())
 
 
 def compose_cfg(*overrides):
