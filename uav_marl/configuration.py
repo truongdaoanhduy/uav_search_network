@@ -211,6 +211,14 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
             "production full-flow requires visualization.required=true"
         )
 
+    visualization_session = str(
+        _get(plain, "experiment.visualization.session")
+    ).strip().lower()
+    if visualization_session not in {"separate_cpu", "same_session"}:
+        raise ValueError(
+            "experiment.visualization.session must be separate_cpu or same_session"
+        )
+
     return plain
 
 
@@ -348,6 +356,7 @@ _EXPERIMENT_MAP = {
     "training_inline_visualization": "experiment.visualization.inline",
     "training_auto_postprocess_visualization": "experiment.visualization.enabled",
     "training_auto_postprocess_required": "experiment.visualization.required",
+    "training_postprocess_mode": "experiment.visualization.session",
     "training_auto_postprocess_render_video": "experiment.visualization.render_video",
     "training_auto_postprocess_log_wandb_media": "experiment.visualization.upload_media_to_wandb",
     "training_auto_postprocess_output_dir": "experiment.visualization.output_dir",

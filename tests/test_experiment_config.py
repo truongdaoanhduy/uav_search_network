@@ -103,19 +103,21 @@ def test_offline_wandb_is_rejected_for_full_flow():
     with pytest.raises(ValueError, match="W&B|wandb"):
         validate_config(cfg)
 
-def test_runner_hides_transition_ceiling_from_user_api(monkeypatch):
+def test_runner_hides_transition_ceiling_from_user_api(monkeypatch, tmp_path):
     cfg = compose_cfg(
         "runtime=vast_1gpu",
         "algorithm=masac",
         "experiment.total_episodes=123",
     )
     captured = {}
+    checkpoint = tmp_path / "fake.pt"
+    checkpoint.write_bytes(b"checkpoint")
 
     def fake_train(**kwargs):
         captured.update(kwargs)
         return {
             "wandb_run_id": "fake",
-            "final_checkpoint_path": "/tmp/fake.pt",
+            "final_checkpoint_path": str(checkpoint),
         }
 
     monkeypatch.setattr(

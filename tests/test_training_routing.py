@@ -53,6 +53,7 @@ def _namespace(devices):
             "full_gpu_auto_multi_gpu": True,
             "training_wandb_require_online_gpu": True,
             "training_wandb_mode": "online",
+            "training_postprocess_mode": "separate_cpu",
             "full_gpu_multi_gpu_strategy": "ddp",
             "masac_train_freq": 1,
             "masac_gradient_steps": 1,
@@ -89,7 +90,9 @@ def test_one_gpu_episode_budget_uses_full_metrics_distributed_worker():
         target_episodes=50_000,
         device="cuda:0",
     )
-    assert out["visualization_complete"] is True
+    assert out["visualization_complete"] is False
+    assert out["visualization_pending"] is True
+    assert out["postprocess_mode"] == "separate_cpu"
     assert len(calls) == 1
     kind, kwargs = calls[0]
     assert kind == "distributed"
@@ -116,7 +119,9 @@ def test_two_gpu_episode_budget_uses_world_size_two():
         target_episodes=50_000,
         device="cuda:0",
     )
-    assert out["visualization_complete"] is True
+    assert out["visualization_complete"] is False
+    assert out["visualization_pending"] is True
+    assert out["postprocess_mode"] == "separate_cpu"
     assert len(calls) == 1
     kind, kwargs = calls[0]
     assert kind == "distributed"
@@ -125,3 +130,24 @@ def test_two_gpu_episode_budget_uses_world_size_two():
         torch.device("cuda:0"),
         torch.device("cuda:1"),
     ]
+
+
+def test_same_session_mode_still_supports_legacy_inline_postprocess():
+    ns, calls = _namespace([torch.device("cuda:0")])
+    ns["CONFIG"]["training_postprocess_mode"] = "same_session"
+    out = ns["train_full_gpu_auto"](
+        repo=ROOT,
+        algorithm="masac",
+        num_envs=32,
+        total_transitions=128,
+        seed=44,
+        network_backend="uavnetsim_gpu",
+        max_gpus=1,
+        auto_multi_gpu=False,
+        enable_wandb=True,
+        execution_mode="gpu",
+        target_episodes=4,
+        device="cuda:0",
+    )
+    assert out["visualization_complete"] is True
+    assert len(calls) == 1

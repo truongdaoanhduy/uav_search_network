@@ -14,6 +14,7 @@ evaluation:
 visualization:
   inline: false
   enabled: true
+  session: separate_cpu
   render_2d: true
   interval_episodes: 10000
   required: true

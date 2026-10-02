@@ -6,3 +6,7 @@ wandb/
 
 # Local secrets
 key.txt
+
+# Generated split-session artifacts
+uav_training_handoff/
+pipeline_outputs/

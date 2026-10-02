@@ -238,12 +238,14 @@ CONFIG = {
     "training_eval_episodes": 1,
     "training_eval_seed_offset": 10_000,
     # Keep expensive reference evaluation/rendering out of the optimizer loop.
-    # The full-flow launcher MUST run one deterministic CPU post-process after
-    # training finishes, so every completed production run has PNG + MP4 output.
+    # Production GPU jobs stop after publishing/copying the final checkpoint.
+    # The launcher starts a separate CPU-only session for deterministic
+    # reference evaluation + PNG/MP4 so visualization does not consume GPU quota.
     "training_inline_evaluation": False,
     "training_inline_visualization": False,
     "training_auto_postprocess_visualization": True,
     "training_auto_postprocess_required": True,
+    "training_postprocess_mode": "separate_cpu",
     "training_auto_postprocess_render_video": True,
     # Visualization files stay in the job/local output; W&B remains metrics-only.
     "training_auto_postprocess_log_wandb_media": False,

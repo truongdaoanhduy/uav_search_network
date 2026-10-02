@@ -35,11 +35,35 @@ experiment.total_episodes is the user-facing budget. The runner derives the
 legacy transition ceiling internally from total episodes, number of vector
 environments and max episode steps.
 
-Full-flow training requires W&B online. After the final checkpoint, CPU
-reference evaluation and PNG/MP4 visualization run in the same machine and
-session. Kaggle stays on the same Kaggle account. Vast stays on the same Vast
-instance. Visualization media is local by default, while the final checkpoint
-is published as a W&B model artifact.
+Full-flow training requires W&B online. Production visualization is now split
+into a separate CPU session by default. The GPU job trains, writes/publishes the
+final checkpoint, creates a verified handoff package, and then exits. Only after
+the GPU kernel reaches COMPLETE does the launcher start a CPU-only Kaggle kernel
+with enable_gpu=false. The CPU kernel consumes the GPU kernel output through
+kernel_sources, verifies the checkpoint SHA256, runs the authoritative CPU
+reference evaluation, and renders PNG/MP4. Visualization media stays out of W&B
+by default, while the final model checkpoint can still be published as a W&B
+artifact.
+
+Automated Kaggle GPU -> CPU pipeline:
+  python scripts/kaggle_pipeline.py --algorithm masac --experiment paper_50k
+
+MATD3:
+  python scripts/kaggle_pipeline.py --algorithm matd3 --experiment paper_50k
+
+The launcher:
+1. checks Kaggle GPU quota and chooses an account;
+2. updates/runs one persistent private GPU kernel;
+3. waits until the GPU kernel is COMPLETE;
+4. starts a second private CPU-only kernel with the GPU output attached;
+5. waits for CPU visualization to complete;
+6. downloads and verifies the completion manifest, PNG and MP4 locally.
+
+The CPU visualization kernel does not need W&B credentials to obtain the
+checkpoint because it reads the GPU kernel output directly. Kaggle API/CLI
+versions do not automatically inherit interactive Notebook Secrets, so W&B
+credential transport for an API-launched GPU job is treated as a separate
+credential concern rather than being embedded in source or in the handoff.
 
 The base requirements intentionally do not install the full UavNetSim dependency
 tree because GPU training uses uavnetsim_gpu. Kaggle CPU post-processing

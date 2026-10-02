@@ -13,6 +13,7 @@ from .configuration import (
     describe_run,
     validate_config,
 )
+from .handoff import create_training_handoff
 from .notebook_engine import load_notebook_engine
 
 
@@ -89,4 +90,21 @@ def run_experiment(
         LEGACY_CONFIG["_resolved_config_sha256"]
     )
     result["derived_transition_ceiling"] = int(total_transitions)
+
+    visualization_session = str(
+        _cfg_value(
+            plain,
+            "experiment.visualization.session",
+        )
+    ).strip().lower()
+    if visualization_session == "separate_cpu":
+        result = create_training_handoff(
+            result,
+            plain,
+            repo=repo_path,
+        )
+    elif visualization_session != "same_session":
+        raise ValueError(
+            "experiment.visualization.session must be separate_cpu or same_session"
+        )
     return result
