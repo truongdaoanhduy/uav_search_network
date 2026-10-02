@@ -18,8 +18,10 @@ jupyter
 nbformat
 kaggle>=2.2
 
-# Optional packet-level network backend used by CPU/GPU parity benchmarks.
-uavnetsim @ git+https://github.com/Zihao-Felix-Zhou/UavNetSim.git@04daafb815eb377409b40b285574eeb62b9a8d58
+# The authoritative CPU UavNetSim backend is intentionally not installed here.
+# Kaggle post-processing bootstraps the pinned simulator with --no-deps so the
+# GPU training environment cannot have NumPy/Torch silently replaced. For a
+# local authoritative CPU backend, install requirements-uavnetsim.txt as well.
 
 cloudpickle>=3.1
 wandb-workspaces

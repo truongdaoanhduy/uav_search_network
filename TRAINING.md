@@ -41,6 +41,12 @@ session. Kaggle stays on the same Kaggle account. Vast stays on the same Vast
 instance. Visualization media is local by default, while the final checkpoint
 is published as a W&B model artifact.
 
+The base requirements intentionally do not install the full UavNetSim dependency
+tree because GPU training uses uavnetsim_gpu. Kaggle CPU post-processing
+bootstraps the pinned reference simulator with --no-deps to preserve the trained
+CUDA/NumPy environment. For local authoritative CPU/reference evaluation, run:
+  pip install -r requirements-uavnetsim.txt
+
 Adding a new algorithm
 
 1. Add configs/algorithm/NAME.yaml.

@@ -1,0 +1,4 @@
+# Optional authoritative packet-level CPU/reference backend.
+# Install after the base requirements when running CPU UavNetSim locally.
+-r requirements.txt
+uavnetsim @ git+https://github.com/Zihao-Felix-Zhou/UavNetSim.git@04daafb815eb377409b40b285574eeb62b9a8d58
