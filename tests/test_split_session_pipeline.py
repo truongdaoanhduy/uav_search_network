@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from uav_marl.handoff import (
     load_training_handoff,
     run_cpu_postprocess_from_handoff,
 )
+from uav_marl.training.gpu import _train_full_gpu_ddp_worker
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = str((ROOT / "configs").resolve())
@@ -206,3 +208,9 @@ def test_cpu_completion_manifest_keeps_training_provenance(tmp_path, monkeypatch
     assert completion["source_provider"] == "local"
     assert completion["source_wandb_run_id"] == "run123"
     assert "source_git_commit" in completion
+
+def test_ddp_final_artifact_is_attached_after_result_initialization():
+    source = inspect.getsource(_train_full_gpu_ddp_worker)
+    result_init = source.index('result = {')
+    artifact_attach = source.index('result["final_checkpoint_artifact"]')
+    assert result_init < artifact_attach

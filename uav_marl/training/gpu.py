@@ -8166,6 +8166,7 @@ def _train_full_gpu_ddp_worker(
                     str(final_checkpoint_path)
                 )
 
+            final_checkpoint_artifact = None
             if (
                 wandb_run is not None
                 and bool(
@@ -8221,7 +8222,7 @@ def _train_full_gpu_ddp_worker(
                 wandb_run.summary[
                     "final/checkpoint_artifact"
                 ] = artifact_ref
-                result["final_checkpoint_artifact"] = artifact_ref
+                final_checkpoint_artifact = artifact_ref
 
             result = {
                 "kind": "full_gpu_ddp",
@@ -8317,6 +8318,10 @@ def _train_full_gpu_ddp_worker(
                     else None
                 ),
             }
+            if final_checkpoint_artifact is not None:
+                result["final_checkpoint_artifact"] = (
+                    final_checkpoint_artifact
+                )
             Path(result_path).write_text(
                 json.dumps(
                     result,
