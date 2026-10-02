@@ -14,8 +14,15 @@ from .configuration import (
     validate_config,
 )
 from .handoff import create_training_handoff
-from .training import train_full_gpu_auto
 
+
+
+
+def _load_train_full_gpu_auto():
+    """Load the production trainer after resolved CONFIG has been applied."""
+    from .training import train_full_gpu_auto
+
+    return train_full_gpu_auto
 
 def _cfg_value(cfg: dict[str, Any], path: str) -> Any:
     current: Any = cfg
@@ -44,7 +51,11 @@ def run_experiment(
             "resolved_config": plain,
         }
 
-    train_fn = train_full_gpu_auto
+    # Import production training only after the resolved Hydra configuration
+    # has been applied to the compatibility CONFIG. Some migrated modules keep
+    # module-level constants derived from CONFIG, so import order is part of
+    # the experiment contract.
+    train_fn = _load_train_full_gpu_auto()
 
     total_episodes = int(
         _cfg_value(plain, "experiment.total_episodes")

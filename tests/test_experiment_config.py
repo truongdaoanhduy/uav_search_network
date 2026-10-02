@@ -121,8 +121,8 @@ def test_runner_hides_transition_ceiling_from_user_api(monkeypatch, tmp_path):
         }
 
     monkeypatch.setattr(
-        "uav_marl.runner.train_full_gpu_auto",
-        fake_train,
+        "uav_marl.runner._load_train_full_gpu_auto",
+        lambda: fake_train,
     )
 
     result = run_experiment(cfg, repo=ROOT)

@@ -8297,10 +8297,12 @@ def _train_full_gpu_ddp_worker(
 # --- frozen notebook cell 274 ---
 def _write_ddp_launcher_script(path):
     script = r"""import argparse
+import pickle
 import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--repo", required=True)
+parser.add_argument("--config-path", required=True)
 parser.add_argument("--algorithm", required=True)
 parser.add_argument("--num-envs", type=int, required=True)
 parser.add_argument("--total-transitions", type=int, required=True)
@@ -8312,6 +8314,16 @@ parser.add_argument("--target-episodes", type=int, default=0)
 args = parser.parse_args()
 
 sys.path.insert(0, args.repo)
+
+# Restore the parent's fully resolved experiment config before importing any
+# production module that may derive module-level constants from CONFIG.
+from config import CONFIG
+with open(args.config_path, "rb") as handle:
+    config_snapshot = pickle.load(handle)
+if not isinstance(config_snapshot, dict):
+    raise TypeError("DDP config snapshot must be a dictionary")
+CONFIG.clear()
+CONFIG.update(config_snapshot)
 
 from uav_marl.training.gpu import _train_full_gpu_ddp_worker
 
@@ -8423,6 +8435,12 @@ def train_full_gpu_ddp(
     temp_dir = Path(
         tempfile.mkdtemp(prefix="uav_ddp_")
     )
+    import pickle
+
+    config_snapshot_path = temp_dir / "resolved_config.pkl"
+    with config_snapshot_path.open("wb") as handle:
+        pickle.dump(dict(CONFIG), handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     launcher = _write_ddp_launcher_script(
         temp_dir / "uav_ddp_runner.py",
     )
@@ -8437,6 +8455,8 @@ def train_full_gpu_ddp(
         str(launcher),
         "--repo",
         str(Path(repo).resolve()),
+        "--config-path",
+        str(config_snapshot_path),
         "--algorithm",
         str(algorithm),
         "--num-envs",
