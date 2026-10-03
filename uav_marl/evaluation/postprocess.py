@@ -553,7 +553,6 @@ def postprocess_checkpoint_cpu(
                 "algorithm": algorithm,
                 "seed": seed,
                 "kaggle": resolve_kaggle_account(),
-                "kaggle_account": resolve_kaggle_account(),
                 "source_run_id": source_run_id,
                 "artifact_ref": artifact_ref,
                 "execution_device": "cpu",
@@ -751,8 +750,6 @@ def postprocess_checkpoint_cpu(
                     format="mp4",
                 )
             wandb_run.log(payload)
-            wandb_run.summary["kaggle"] = resolve_kaggle_account()
-            wandb_run.summary["kaggle_account"] = resolve_kaggle_account()
             wandb_run.summary["execution_platform"] = (
                 "kaggle" if running_on_kaggle() else "None"
             )

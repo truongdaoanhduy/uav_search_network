@@ -4543,8 +4543,6 @@ def _init_gpu_wandb_run(
     run.summary[
         "episodes_completed"
     ] = 0
-    run.summary["kaggle"] = str(kaggle_account)
-    run.summary["kaggle_account"] = str(kaggle_account)
     run.summary["execution_platform"] = str(execution_platform)
 
     run.config.update(
@@ -4554,7 +4552,6 @@ def _init_gpu_wandb_run(
             ).lower(),
             "seed": int(seed),
             "kaggle": str(kaggle_account),
-            "kaggle_account": str(kaggle_account),
             "execution_platform": execution_platform,
             "experiment": CONFIG.get("_experiment_name"),
             "resolved_config_sha256": CONFIG.get(
@@ -9181,7 +9178,7 @@ def train_full_gpu_auto(
         )
 
     # Resolve the account before expensive training starts. On Kaggle this is
-    # also the value recorded in the W&B run-config column kaggle_account.
+    # also the value recorded in the W&B run-config column kaggle.
     resolve_kaggle_account()
 
     def finish_full_flow(training_result):
