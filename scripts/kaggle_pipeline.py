@@ -252,6 +252,7 @@ def _gpu_script(
     experiment: str,
     seed: int,
     overrides: list[str],
+    wandb_credential_dataset: str | None = None,
 ) -> str:
     override_literals = json.dumps(list(overrides))
     return textwrap.dedent(
@@ -266,6 +267,7 @@ def _gpu_script(
         os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
         COMMIT = {commit!r}
+        WANDB_CREDENTIAL_DATASET = {wandb_credential_dataset!r}
         REPO_URL = "https://github.com/truongdaoanhduy/uav_search_network.git"
         REPO = Path("/tmp/uav_search_network")
         if REPO.exists():
@@ -276,6 +278,25 @@ def _gpu_script(
             [sys.executable, "-m", "pip", "install", "-q", "-r", str(REPO / "requirements.txt")],
             check=True,
         )
+
+        if WANDB_CREDENTIAL_DATASET:
+            dataset_slug = str(WANDB_CREDENTIAL_DATASET).split("/", 1)[-1]
+            preferred = Path("/kaggle/input") / dataset_slug / "wandb_api_key.txt"
+            if preferred.is_file():
+                key_path = preferred
+            else:
+                matches = sorted(Path("/kaggle/input").rglob("wandb_api_key.txt"))
+                if len(matches) != 1:
+                    raise RuntimeError(
+                        "expected exactly one W&B credential file, found "
+                        + repr([str(path) for path in matches])
+                    )
+                key_path = matches[0]
+            api_key = key_path.read_text().strip()
+            if not api_key:
+                raise RuntimeError("W&B credential file is empty")
+            os.environ["WANDB_API_KEY"] = api_key
+            os.environ.setdefault("WANDB_SILENT", "true")
 
         command = [
             sys.executable,
@@ -389,6 +410,7 @@ def build_kernels(
     cpu_kernel_slug: str,
     machine_shape: str,
     overrides: list[str],
+    gpu_dataset_sources: list[str] | None = None,
     cpu_log_wandb: bool = False,
     cpu_dataset_sources: list[str] | None = None,
 ) -> tuple[Path, Path, str, str]:
@@ -402,6 +424,11 @@ def build_kernels(
 
     gpu_code = f"{gpu_kernel_slug}.py"
     cpu_code = f"{cpu_kernel_slug}.py"
+    gpu_dataset_sources = list(gpu_dataset_sources or [])
+    if len(gpu_dataset_sources) > 1:
+        raise ValueError(
+            "GPU W&B credential supports at most one dataset source"
+        )
     (gpu_dir / gpu_code).write_text(
         _gpu_script(
             commit=commit,
@@ -410,6 +437,9 @@ def build_kernels(
             experiment=experiment,
             seed=seed,
             overrides=overrides,
+            wandb_credential_dataset=(
+                gpu_dataset_sources[0] if gpu_dataset_sources else None
+            ),
         )
     )
     cpu_dataset_sources = list(cpu_dataset_sources or [])
@@ -434,6 +464,7 @@ def build_kernels(
         code_file=gpu_code,
         enable_gpu=True,
         machine_shape=machine_shape,
+        dataset_sources=gpu_dataset_sources,
     )
     _write_metadata(
         cpu_dir,
@@ -528,6 +559,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gpu-kernel-slug", default="uav-marl-gpu-train")
     parser.add_argument("--cpu-kernel-slug", default="uav-marl-cpu-visualize")
     parser.add_argument(
+        "--gpu-credential-dataset",
+        default=None,
+        help=(
+            "Optional private Kaggle dataset ref containing wandb_api_key.txt "
+            "for GPU training when Kaggle Secrets are unavailable."
+        ),
+    )
+    parser.add_argument(
         "--cpu-log-wandb",
         action="store_true",
         help="Log authoritative CPU evaluation metrics/media to W&B online.",
@@ -596,6 +635,11 @@ def main() -> int:
         cpu_kernel_slug=cpu_slug,
         machine_shape=args.machine_shape,
         overrides=list(args.overrides),
+        gpu_dataset_sources=(
+            [str(args.gpu_credential_dataset)]
+            if args.gpu_credential_dataset
+            else []
+        ),
         cpu_log_wandb=bool(args.cpu_log_wandb),
         cpu_dataset_sources=(
             [str(args.cpu_credential_dataset)]
@@ -611,6 +655,11 @@ def main() -> int:
         "gpu_kernel": gpu_ref,
         "cpu_kernel": cpu_ref,
         "gpu_enable_gpu": True,
+        "gpu_credential_dataset": (
+            str(args.gpu_credential_dataset)
+            if args.gpu_credential_dataset
+            else None
+        ),
         "cpu_enable_gpu": False,
         "cpu_log_wandb": bool(args.cpu_log_wandb),
         "cpu_credential_dataset": (

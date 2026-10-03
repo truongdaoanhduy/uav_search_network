@@ -279,3 +279,29 @@ def test_cpu_completion_distinguishes_training_and_evaluation_backends():
     assert '"evaluation_network_backend"' in source
     postprocess_source = (ROOT / "uav_marl" / "evaluation" / "postprocess.py").read_text()
     assert '"evaluation_backend": str(eval_backend)' in postprocess_source
+
+
+def test_kaggle_gpu_kernel_can_read_private_wandb_credential_dataset(tmp_path):
+    credential_ref = "demo-user/private-wandb-credential"
+    gpu_dir, _cpu_dir, gpu_ref, _cpu_ref = build_kernels(
+        tmp_path,
+        username="demo-user",
+        commit="e" * 40,
+        algorithm="masac",
+        runtime="kaggle_2xt4",
+        experiment="smoke",
+        seed=44,
+        gpu_kernel_slug="gpu-wandb-dataset",
+        cpu_kernel_slug="cpu-unused",
+        machine_shape="NvidiaTeslaT4",
+        overrides=[],
+        gpu_dataset_sources=[credential_ref],
+    )
+    gpu_meta = json.loads((gpu_dir / "kernel-metadata.json").read_text())
+    gpu_script = next(gpu_dir.glob("*.py")).read_text()
+    assert gpu_ref == "demo-user/gpu-wandb-dataset"
+    assert gpu_meta["enable_gpu"] is True
+    assert gpu_meta["dataset_sources"] == [credential_ref]
+    assert "wandb_api_key.txt" in gpu_script
+    assert 'os.environ["WANDB_API_KEY"] = api_key' in gpu_script
+    compile(gpu_script, "<gpu-wandb-dataset>", "exec")
