@@ -214,3 +214,54 @@ def test_ddp_final_artifact_is_attached_after_result_initialization():
     result_init = source.index('result = {')
     artifact_attach = source.index('result["final_checkpoint_artifact"]')
     assert result_init < artifact_attach
+
+
+def test_kaggle_cpu_kernel_can_log_wandb_with_private_credential_dataset(tmp_path):
+    credential_ref = "demo-user/private-wandb-credential"
+    gpu_dir, cpu_dir, gpu_ref, cpu_ref = build_kernels(
+        tmp_path,
+        username="demo-user",
+        commit="c" * 40,
+        algorithm="masac",
+        runtime="kaggle_2xt4",
+        experiment="smoke",
+        seed=44,
+        gpu_kernel_slug="existing-gpu-run",
+        cpu_kernel_slug="cpu-authoritative-eval",
+        machine_shape="NvidiaTeslaT4",
+        overrides=[],
+        cpu_log_wandb=True,
+        cpu_dataset_sources=[credential_ref],
+    )
+
+    cpu_meta = json.loads((cpu_dir / "kernel-metadata.json").read_text())
+    cpu_script = next(cpu_dir.glob("*.py")).read_text()
+
+    assert gpu_ref == "demo-user/existing-gpu-run"
+    assert cpu_ref == "demo-user/cpu-authoritative-eval"
+    assert cpu_meta["enable_gpu"] is False
+    assert cpu_meta["kernel_sources"] == [gpu_ref]
+    assert cpu_meta["dataset_sources"] == [credential_ref]
+    assert "wandb_api_key.txt" in cpu_script
+    assert 'command.append("--log-wandb")' in cpu_script
+    assert 'os.environ["WANDB_API_KEY"] = api_key' in cpu_script
+    compile(cpu_script, "<cpu-authoritative-eval>", "exec")
+
+
+def test_kaggle_cpu_wandb_requires_one_credential_dataset(tmp_path):
+    with pytest.raises(ValueError, match="credential dataset"):
+        build_kernels(
+            tmp_path,
+            username="demo-user",
+            commit="d" * 40,
+            algorithm="masac",
+            runtime="kaggle_2xt4",
+            experiment="smoke",
+            seed=44,
+            gpu_kernel_slug="existing-gpu-run",
+            cpu_kernel_slug="cpu-authoritative-eval",
+            machine_shape="NvidiaTeslaT4",
+            overrides=[],
+            cpu_log_wandb=True,
+            cpu_dataset_sources=[],
+        )

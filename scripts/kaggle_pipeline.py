@@ -221,6 +221,7 @@ def _write_metadata(
     enable_gpu: bool,
     machine_shape: str,
     kernel_sources: list[str] | None = None,
+    dataset_sources: list[str] | None = None,
 ) -> None:
     metadata = {
         "id": ref,
@@ -233,7 +234,7 @@ def _write_metadata(
         "enable_tpu": False,
         "enable_internet": True,
         "machine_shape": machine_shape if enable_gpu else "",
-        "dataset_sources": [],
+        "dataset_sources": list(dataset_sources or []),
         "competition_sources": [],
         "kernel_sources": list(kernel_sources or []),
         "model_sources": [],
@@ -295,14 +296,26 @@ def _gpu_script(
     ).strip() + "\n"
 
 
-def _cpu_script(*, commit: str) -> str:
+def _cpu_script(
+    *,
+    commit: str,
+    log_wandb: bool = False,
+    wandb_credential_dataset: str | None = None,
+) -> str:
+    if log_wandb and not wandb_credential_dataset:
+        raise ValueError(
+            "wandb_credential_dataset is required when CPU W&B logging is enabled"
+        )
     return textwrap.dedent(
         f"""
+        import os
         import subprocess
         import sys
         from pathlib import Path
 
         COMMIT = {commit!r}
+        LOG_WANDB = {bool(log_wandb)!r}
+        WANDB_CREDENTIAL_DATASET = {wandb_credential_dataset!r}
         REPO_URL = "https://github.com/truongdaoanhduy/uav_search_network.git"
         REPO = Path("/tmp/uav_search_network")
         if REPO.exists():
@@ -321,6 +334,25 @@ def _cpu_script(*, commit: str) -> str:
                 f"available={{torch.cuda.is_available()}} count={{torch.cuda.device_count()}}"
             )
 
+        if LOG_WANDB:
+            dataset_slug = str(WANDB_CREDENTIAL_DATASET).split("/", 1)[-1]
+            preferred = Path("/kaggle/input") / dataset_slug / "wandb_api_key.txt"
+            if preferred.is_file():
+                key_path = preferred
+            else:
+                matches = sorted(Path("/kaggle/input").rglob("wandb_api_key.txt"))
+                if len(matches) != 1:
+                    raise RuntimeError(
+                        "expected exactly one W&B credential file, found "
+                        + repr([str(path) for path in matches])
+                    )
+                key_path = matches[0]
+            api_key = key_path.read_text().strip()
+            if not api_key:
+                raise RuntimeError("W&B credential file is empty")
+            os.environ["WANDB_API_KEY"] = api_key
+            os.environ.setdefault("WANDB_SILENT", "true")
+
         command = [
             sys.executable,
             str(REPO / "visualize.py"),
@@ -331,6 +363,8 @@ def _cpu_script(*, commit: str) -> str:
             "--repo",
             str(REPO),
         ]
+        if LOG_WANDB:
+            command.append("--log-wandb")
         print("CPU_VISUALIZATION_COMMAND", " ".join(command), flush=True)
         subprocess.run(command, cwd=REPO, check=True)
 
@@ -355,6 +389,8 @@ def build_kernels(
     cpu_kernel_slug: str,
     machine_shape: str,
     overrides: list[str],
+    cpu_log_wandb: bool = False,
+    cpu_dataset_sources: list[str] | None = None,
 ) -> tuple[Path, Path, str, str]:
     gpu_ref = f"{username}/{gpu_kernel_slug}"
     cpu_ref = f"{username}/{cpu_kernel_slug}"
@@ -376,8 +412,19 @@ def build_kernels(
             overrides=overrides,
         )
     )
+    cpu_dataset_sources = list(cpu_dataset_sources or [])
+    if cpu_log_wandb and len(cpu_dataset_sources) != 1:
+        raise ValueError(
+            "CPU W&B logging requires exactly one credential dataset source"
+        )
     (cpu_dir / cpu_code).write_text(
-        _cpu_script(commit=commit)
+        _cpu_script(
+            commit=commit,
+            log_wandb=bool(cpu_log_wandb),
+            wandb_credential_dataset=(
+                cpu_dataset_sources[0] if cpu_log_wandb else None
+            ),
+        )
     )
 
     _write_metadata(
@@ -396,6 +443,7 @@ def build_kernels(
         enable_gpu=False,
         machine_shape="",
         kernel_sources=[gpu_ref],
+        dataset_sources=cpu_dataset_sources,
     )
     return gpu_dir, cpu_dir, gpu_ref, cpu_ref
 
@@ -479,6 +527,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--machine-shape", default="NvidiaTeslaT4")
     parser.add_argument("--gpu-kernel-slug", default="uav-marl-gpu-train")
     parser.add_argument("--cpu-kernel-slug", default="uav-marl-cpu-visualize")
+    parser.add_argument(
+        "--cpu-log-wandb",
+        action="store_true",
+        help="Log authoritative CPU evaluation metrics/media to W&B online.",
+    )
+    parser.add_argument(
+        "--cpu-credential-dataset",
+        default=None,
+        help=(
+            "Private Kaggle dataset ref containing wandb_api_key.txt. "
+            "Required with --cpu-log-wandb."
+        ),
+    )
     parser.add_argument("--poll-seconds", type=int, default=20)
     parser.add_argument("--gpu-timeout-seconds", type=int, default=12 * 3600)
     parser.add_argument("--cpu-timeout-seconds", type=int, default=3 * 3600)
@@ -535,6 +596,12 @@ def main() -> int:
         cpu_kernel_slug=cpu_slug,
         machine_shape=args.machine_shape,
         overrides=list(args.overrides),
+        cpu_log_wandb=bool(args.cpu_log_wandb),
+        cpu_dataset_sources=(
+            [str(args.cpu_credential_dataset)]
+            if args.cpu_credential_dataset
+            else []
+        ),
     )
 
     plan = {
@@ -545,6 +612,12 @@ def main() -> int:
         "cpu_kernel": cpu_ref,
         "gpu_enable_gpu": True,
         "cpu_enable_gpu": False,
+        "cpu_log_wandb": bool(args.cpu_log_wandb),
+        "cpu_credential_dataset": (
+            str(args.cpu_credential_dataset)
+            if args.cpu_credential_dataset
+            else None
+        ),
         "algorithm": args.algorithm,
         "runtime": args.runtime,
         "experiment": args.experiment,
