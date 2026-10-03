@@ -4660,7 +4660,10 @@ class _MasacPolicyActionCudaGraph:
                 power_action = torch.tanh(pre_tanh[..., 3:4])
                 continuous = torch.cat((motion_action, power_action), dim=-1)
 
-                masked_logits = masked_categorical_logits(logits, flat_masks)
+                valid_mask = flat_masks > 0.5
+                masked_logits = logits.masked_fill(
+                    ~valid_mask, torch.finfo(logits.dtype).min
+                )
                 uniform = torch.rand_like(masked_logits).clamp_(1e-6, 1.0 - 1e-6)
                 gumbel_noise = -torch.log(-torch.log(uniform))
                 destination = torch.argmax(
