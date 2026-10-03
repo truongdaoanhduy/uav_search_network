@@ -2364,7 +2364,7 @@ def evaluate_masac(
 
         episode_return = 0.0
         diagnostics = (
-            new_episode_diagnostics()
+            new_episode_diagnostics(env=env)
         )
 
         while True:
@@ -2838,7 +2838,7 @@ def modeled_collision_violations(env):
 
 
 # --- frozen notebook cell 177 ---
-def new_episode_diagnostics():
+def new_episode_diagnostics(env=None):
     grid_n = int(
         np.ceil(
             float(CONFIG["map_size"])
@@ -2866,6 +2866,28 @@ def new_episode_diagnostics():
         "obstacle_collision_violations": 0,
         "collision_steps": 0,
         "network_snapshot": {},
+        "distance_total_m": 0.0,
+        "previous_uav_positions": (
+            None
+            if env is None
+            else np.stack(
+                [
+                    np.asarray(
+                        uav.position,
+                        dtype=np.float64,
+                    ).copy()
+                    for uav in env.uavs
+                ],
+                axis=0,
+            )
+        ),
+        "first_confirmation_step": None,
+        "all_confirmation_step": None,
+        "first_delivery_step": None,
+        "target_confirmation_steps": {},
+        "confirmation_to_delivery_latency_sum_s": 0.0,
+        "confirmation_to_delivery_latency_max_s": 0.0,
+        "confirmation_to_delivery_latency_count": 0,
         "coverage_grid": np.zeros(
             (grid_n, grid_n),
             dtype=bool,
@@ -3025,6 +3047,77 @@ def update_episode_diagnostics(
         ]
     )
 
+    step = int(info.get("step", 0))
+    dt_seconds = float(CONFIG["dt"])
+    newly_confirmed_ids = [
+        int(target_id)
+        for target_id in info.get(
+            "newly_confirmed_target_ids",
+            [],
+        )
+    ]
+    newly_delivered_ids = [
+        int(target_id)
+        for target_id in info.get(
+            "newly_delivered_target_ids",
+            [],
+        )
+    ]
+
+    for target_id in newly_confirmed_ids:
+        diagnostics[
+            "target_confirmation_steps"
+        ].setdefault(
+            target_id,
+            step,
+        )
+    if (
+        newly_confirmed_ids
+        and diagnostics[
+            "first_confirmation_step"
+        ] is None
+    ):
+        diagnostics[
+            "first_confirmation_step"
+        ] = step
+
+    if (
+        newly_delivered_ids
+        and diagnostics[
+            "first_delivery_step"
+        ] is None
+    ):
+        diagnostics[
+            "first_delivery_step"
+        ] = step
+    for target_id in newly_delivered_ids:
+        confirmation_step = diagnostics[
+            "target_confirmation_steps"
+        ].get(target_id)
+        if confirmation_step is None:
+            continue
+        latency_s = max(
+            0.0,
+            float(step - confirmation_step)
+            * dt_seconds,
+        )
+        diagnostics[
+            "confirmation_to_delivery_latency_sum_s"
+        ] += latency_s
+        diagnostics[
+            "confirmation_to_delivery_latency_max_s"
+        ] = max(
+            float(
+                diagnostics[
+                    "confirmation_to_delivery_latency_max_s"
+                ]
+            ),
+            latency_s,
+        )
+        diagnostics[
+            "confirmation_to_delivery_latency_count"
+        ] += 1
+
     for key, value in info.get(
         "reward_components",
         {},
@@ -3135,6 +3228,50 @@ def update_episode_diagnostics(
     )
 
     if env is not None:
+        current_positions = np.stack(
+            [
+                np.asarray(
+                    uav.position,
+                    dtype=np.float64,
+                )
+                for uav in env.uavs
+            ],
+            axis=0,
+        )
+        previous_positions = diagnostics.get(
+            "previous_uav_positions"
+        )
+        if previous_positions is not None:
+            diagnostics[
+                "distance_total_m"
+            ] += float(
+                np.linalg.norm(
+                    current_positions
+                    - np.asarray(
+                        previous_positions,
+                        dtype=np.float64,
+                    ),
+                    axis=1,
+                ).sum()
+            )
+        diagnostics[
+            "previous_uav_positions"
+        ] = current_positions.copy()
+
+        if (
+            diagnostics[
+                "all_confirmation_step"
+            ] is None
+            and env.targets
+            and all(
+                bool(target.confirmed)
+                for target in env.targets
+            )
+        ):
+            diagnostics[
+                "all_confirmation_step"
+            ] = step
+
         collision = modeled_collision_violations(
             env
         )
@@ -3585,6 +3722,22 @@ def finalize_episode_diagnostics(
         np.mean(battery_values)
     )
 
+    first_confirmation_step = diagnostics[
+        "first_confirmation_step"
+    ]
+    all_confirmation_step = diagnostics[
+        "all_confirmation_step"
+    ]
+    first_delivery_step = diagnostics[
+        "first_delivery_step"
+    ]
+    dt_seconds = float(CONFIG["dt"])
+    confirmation_delivery_count = int(
+        diagnostics[
+            "confirmation_to_delivery_latency_count"
+        ]
+    )
+
     reward_components = {
         str(key): float(value)
         for key, value in diagnostics[
@@ -3864,6 +4017,28 @@ def finalize_episode_diagnostics(
             confirmed_targets
             / target_count
         ),
+        "report_delivery_given_confirmation_rate_percent": float(
+            100.0
+            * delivered_targets
+            / confirmed_targets
+            if confirmed_targets > 0
+            else 0.0
+        ),
+        "distance_total_m": float(
+            diagnostics["distance_total_m"]
+        ),
+        "first_confirmation_observed": float(
+            first_confirmation_step is not None
+        ),
+        "all_targets_confirmed": float(
+            all_confirmation_step is not None
+        ),
+        "first_delivery_observed": float(
+            first_delivery_step is not None
+        ),
+        "target_confirmation_to_delivery_latency_count": int(
+            confirmation_delivery_count
+        ),
         "false_confirmations": int(
             diagnostics[
                 "false_confirmations"
@@ -3992,6 +4167,45 @@ def finalize_episode_diagnostics(
         ),
         "visualization_trace": trace,
     }
+
+    if confirmed_targets > 0:
+        metrics["energy_per_confirmed_target_j"] = float(
+            diagnostics["total_energy_j"]
+            / confirmed_targets
+        )
+    if delivered_targets > 0:
+        metrics["energy_per_delivered_target_j"] = float(
+            diagnostics["total_energy_j"]
+            / delivered_targets
+        )
+    if first_confirmation_step is not None:
+        metrics["time_to_first_confirm_s"] = float(
+            first_confirmation_step * dt_seconds
+        )
+    if all_confirmation_step is not None:
+        metrics["time_to_all_confirm_s"] = float(
+            all_confirmation_step * dt_seconds
+        )
+    if first_delivery_step is not None:
+        metrics["time_to_first_delivery_s"] = float(
+            first_delivery_step * dt_seconds
+        )
+    if confirmation_delivery_count > 0:
+        metrics[
+            "target_confirmation_to_delivery_latency_s"
+        ] = float(
+            diagnostics[
+                "confirmation_to_delivery_latency_sum_s"
+            ]
+            / confirmation_delivery_count
+        )
+        metrics[
+            "target_confirmation_to_delivery_latency_max_s"
+        ] = float(
+            diagnostics[
+                "confirmation_to_delivery_latency_max_s"
+            ]
+        )
 
     metrics.update(
         extract_network_kpis(
@@ -4702,6 +4916,12 @@ def summarize_evaluation_results(
         "delivered_targets",
         "target_search_rate_percent",
         "target_delivery_rate_percent",
+        "report_delivery_given_confirmation_rate_percent",
+        "distance_total_m",
+        "first_confirmation_observed",
+        "all_targets_confirmed",
+        "first_delivery_observed",
+        "target_confirmation_to_delivery_latency_count",
         "targets_ever_in_fov_count",
         "target_encounter_rate",
         "sensing_records",
@@ -4727,6 +4947,20 @@ def summarize_evaluation_results(
         "collision_step_count",
         "episode_end_step",
         "information_gain_bits",
+        "action_motion_mean_x",
+        "action_motion_mean_y",
+        "action_motion_mean_z",
+        "action_motion_std_x",
+        "action_motion_std_y",
+        "action_motion_std_z",
+        "action_motion_norm_mean",
+        "action_motion_saturation_rate",
+        "action_destination_silent_rate",
+        "action_destination_peer_rate",
+        "action_destination_gcs_rate",
+        "action_power_mean",
+        "action_power_std",
+        "action_tx_power_w_mean",
         "network_pdr_percent",
         "network_e2e_delay_ms",
         "network_throughput_kbps",
@@ -4765,6 +4999,33 @@ def summarize_evaluation_results(
                 )
             )
         )
+
+    conditional_keys = (
+        "energy_per_confirmed_target_j",
+        "energy_per_delivered_target_j",
+        "time_to_first_confirm_s",
+        "time_to_all_confirm_s",
+        "time_to_first_delivery_s",
+        "target_confirmation_to_delivery_latency_s",
+        "target_confirmation_to_delivery_latency_max_s",
+    )
+    for key in conditional_keys:
+        values = [
+            float(item[key])
+            for item in results
+            if key in item
+            and item[key] is not None
+            and np.isfinite(float(item[key]))
+        ]
+        if values:
+            summary[key] = float(
+                np.mean(
+                    np.asarray(
+                        values,
+                        dtype=np.float64,
+                    )
+                )
+            )
 
     return summary
 

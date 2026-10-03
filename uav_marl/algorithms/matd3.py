@@ -1486,7 +1486,7 @@ def evaluate_matd3(
 
         episode_return = 0.0
         diagnostics = (
-            new_episode_diagnostics()
+            new_episode_diagnostics(env=env)
         )
 
         while True:
