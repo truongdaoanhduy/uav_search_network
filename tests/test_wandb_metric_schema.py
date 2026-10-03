@@ -160,9 +160,10 @@ def test_workspace_formatter_uses_episode_axis_paper_style_and_kaggle_column():
     assert 'title_x="Episode"' in source
     assert "smoothing_show_original=True" in source
     assert "smoothing_factor=0.95" in source
-    assert '"config:kaggle"' in source
-    assert '"summary:global_step"' in source
-    assert '"config:kaggle_account"' not in source
+    assert '"summary:global_step"' not in source
+    assert '"config:kaggle_account"' in source
+    assert '"config:kaggle"' not in source
+    assert '"config:execution_platform"' not in source
     assert '"episode/return"' in source
     assert '"episode/coverage_percent"' in source
     assert "episode/coverage_percent_mean" not in source
