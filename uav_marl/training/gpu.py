@@ -4543,6 +4543,7 @@ def _init_gpu_wandb_run(
     run.summary[
         "episodes_completed"
     ] = 0
+    run.summary["kaggle"] = str(kaggle_account)
     run.summary["kaggle_account"] = str(kaggle_account)
     run.summary["execution_platform"] = str(execution_platform)
 
@@ -4552,6 +4553,7 @@ def _init_gpu_wandb_run(
                 algorithm
             ).lower(),
             "seed": int(seed),
+            "kaggle": str(kaggle_account),
             "kaggle_account": str(kaggle_account),
             "execution_platform": execution_platform,
             "experiment": CONFIG.get("_experiment_name"),

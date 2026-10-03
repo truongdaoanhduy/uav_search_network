@@ -59,6 +59,7 @@ def format_workspace(
             "run:displayName",
             "config:algorithm",
             "config:seed",
+            "config:kaggle",
             "config:kaggle_account",
             "config:execution_platform",
             "config:num_envs",
@@ -129,33 +130,61 @@ def format_workspace(
         ],
     )
 
-    diagnostics = ws.Section(
-        name="02 — Policy Diagnostics",
-        is_open=False,
+    safety_errors = ws.Section(
+        name="02 — Safety + Errors",
+        is_open=True,
         pinned=False,
         panels=[
-            _line(
-                "Boundary Clip Rate",
-                "episode/boundary_clip_rate",
-                "Rate",
-                y_range=(0, 1),
-            ),
-            _line(
-                "Peer Safety Block Rate",
-                "episode/peer_safety_block_rate",
-                "Rate",
-                y_range=(0, 1),
-            ),
-            _line(
-                "Information Gain",
-                "episode/information_gain_bits",
-                "Information gain (bits)",
-            ),
-            _line(
-                "Distance Flown",
-                "episode/distance_total_m",
-                "Distance (m)",
-            ),
+            _line("Blocked Motion Rate", "episode/blocked_motion_rate", "Rate", y_range=(0, 1)),
+            _line("Boundary Clip Rate", "episode/boundary_clip_rate", "Rate", y_range=(0, 1)),
+            _line("Peer Safety Block Rate", "episode/peer_safety_block_rate", "Rate", y_range=(0, 1)),
+            _line("Obstacle Block Rate", "episode/obstacle_block_rate", "Rate", y_range=(0, 1)),
+            _line("False Confirmations", "episode/false_confirmations", "Count"),
+            _line("Expired Reports", "episode/expired_reports", "Count"),
+            _line("Dropped Reports", "episode/dropped_reports", "Count"),
+        ],
+    )
+
+    energy = ws.Section(
+        name="03 — Energy",
+        is_open=True,
+        pinned=False,
+        panels=[
+            _line("Total Energy", "episode/total_energy_j", "Energy (J)"),
+            _line("Communication Energy", "episode/communication_energy_j", "Energy (J)"),
+            _line("Battery Remaining", "episode/battery_remaining_mean_percent", "Battery (%)", y_range=(0, 100)),
+            _line("Energy / Confirmed Target", "episode/energy_per_confirmed_target_j", "J / target"),
+            _line("Energy / Delivered Target", "episode/energy_per_delivered_target_j", "J / target"),
+        ],
+    )
+
+    network = ws.Section(
+        name="04 — Network",
+        is_open=True,
+        pinned=False,
+        panels=[
+            _line("PHY Success", "episode/network_phy_success_percent", "PHY success (%)", y_range=(0, 100)),
+            _line("Network Throughput", "episode/network_throughput_kbps", "Throughput (kbps)"),
+            _line("TX Payload Success Ratio", "episode/network_tx_payload_success_ratio", "Ratio", y_range=(0, 1)),
+            _line("TX Attempts", "episode/network_tx_attempts", "Attempts"),
+            _line("NLOS Attempt Rate", "episode/network_nlos_attempt_rate_percent", "NLOS (%)", y_range=(0, 100)),
+            _line("GCS In-range UAV Fraction", "episode/gcs_in_range_uav_fraction", "Fraction", y_range=(0, 1)),
+            _line("Report Delivery Latency", "episode/report_delivery_latency_s", "Latency (s)"),
+        ],
+    )
+
+    mission_timing = ws.Section(
+        name="05 — Episode + Mission Timing",
+        is_open=True,
+        pinned=False,
+        panels=[
+            _line("Episode Length", "episode/length", "Steps"),
+            _line("Episode End Step", "episode/end_step", "Step"),
+            _line("Distance Flown", "episode/distance_total_m", "Distance (m)"),
+            _line("Information Gain", "episode/information_gain_bits", "Information gain (bits)"),
+            _line("Time to First Confirm", "episode/time_to_first_confirm_s", "Time (s)"),
+            _line("Time to All Confirm", "episode/time_to_all_confirm_s", "Time (s)"),
+            _line("Time to First Delivery", "episode/time_to_first_delivery_s", "Time (s)"),
         ],
     )
 
@@ -167,6 +196,10 @@ def format_workspace(
             "01 — Paper Overview",
             "01 — Algorithm Comparison",
             "02 — Policy Diagnostics",
+            "02 — Safety + Errors",
+            "03 — Energy",
+            "04 — Network",
+            "05 — Episode + Mission Timing",
         }
     ]
     for section in remaining:
@@ -175,7 +208,10 @@ def format_workspace(
 
     workspace.sections = [
         comparison,
-        diagnostics,
+        safety_errors,
+        energy,
+        network,
+        mission_timing,
         *remaining,
     ]
     return workspace.save()
