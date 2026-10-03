@@ -171,3 +171,19 @@ def test_workspace_formatter_uses_episode_axis_paper_style_and_kaggle_column():
     assert "03 — Energy" in source
     assert "04 — Network" in source
     assert "05 — Episode + Mission Timing" in source
+
+
+def test_actual_runs_table_formatter_locks_training_columns():
+    source = (ROOT / "scripts" / "format_wandb_runs_table.py").read_text()
+    assert 'DEFAULT_WORKSPACE = "Truongdaoanhduy\'s workspace"' in source
+    assert '"config:kaggle_account.value"' in source
+    assert '"summary:episodes_completed"' in source
+    assert 'run_feed.lock_columns = True' in source
+    assert "Config('run_role') = 'training'" in source
+
+
+def test_wandb_run_roles_are_explicit():
+    gpu_source = (ROOT / "uav_marl" / "training" / "gpu.py").read_text()
+    cpu_source = (ROOT / "uav_marl" / "evaluation" / "postprocess.py").read_text()
+    assert '"run_role": "training"' in gpu_source
+    assert '"run_role": "cpu_evaluation"' in cpu_source

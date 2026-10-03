@@ -4551,6 +4551,7 @@ def _init_gpu_wandb_run(
                 algorithm
             ).lower(),
             "seed": int(seed),
+            "run_role": "training",
             "kaggle": str(kaggle_account),
             "execution_platform": execution_platform,
             "experiment": CONFIG.get("_experiment_name"),
