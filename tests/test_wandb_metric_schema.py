@@ -161,7 +161,8 @@ def test_workspace_formatter_uses_episode_axis_paper_style_and_kaggle_column():
     assert "smoothing_show_original=True" in source
     assert "smoothing_factor=0.95" in source
     assert '"config:kaggle"' in source
-    assert '"config:kaggle_account"' in source
+    assert '"summary:global_step"' in source
+    assert '"config:kaggle_account"' not in source
     assert '"episode/return"' in source
     assert '"episode/coverage_percent"' in source
     assert "episode/coverage_percent_mean" not in source
