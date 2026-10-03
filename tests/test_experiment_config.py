@@ -87,7 +87,8 @@ def test_legacy_bridge_maps_selected_profile():
     apply_to_legacy_config(legacy, cfg)
     assert legacy["seed"] == 44
     assert legacy["num_targets"] == 50
-    assert legacy["reward_blocked"] == 1.0
+    assert legacy["reward_blocked"] == 0.2
+    assert legacy["_reward_name"] == "paper_v2"
     assert legacy["matd3_actor_lr"] == pytest.approx(0.0001)
     assert legacy["training_num_envs"] == 2048
     assert legacy["full_gpu_max_gpus"] == 1

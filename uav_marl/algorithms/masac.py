@@ -2894,6 +2894,8 @@ def new_episode_diagnostics(env=None):
         ),
         "reward_components": {
             "information_gain": 0.0,
+            "coverage_shaping": 0.0,
+            "communication_progress": 0.0,
             "confirmation": 0.0,
             "delivery": 0.0,
             "false_confirmation": 0.0,
@@ -3750,6 +3752,10 @@ def finalize_episode_diagnostics(
             0.0,
         )
         + reward_components.get(
+            "coverage_shaping",
+            0.0,
+        )
+        + reward_components.get(
             "confirmation",
             0.0,
         )
@@ -3760,6 +3766,10 @@ def finalize_episode_diagnostics(
     )
     reward_communication = (
         reward_components.get(
+            "communication_progress",
+            0.0,
+        )
+        + reward_components.get(
             "delivery",
             0.0,
         )

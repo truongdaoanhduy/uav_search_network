@@ -4556,6 +4556,7 @@ def _init_gpu_wandb_run(
             "kaggle_account": str(kaggle_account),
             "execution_platform": execution_platform,
             "experiment": CONFIG.get("_experiment_name"),
+            "reward_profile": CONFIG.get("_reward_name"),
             "resolved_config_sha256": CONFIG.get(
                 "_resolved_config_sha256"
             ),
@@ -4599,7 +4600,7 @@ def _init_gpu_wandb_run(
             "num_obstacles": int(
                 CONFIG["num_obstacles"]
             ),
-            "metric_schema_version": "paper-kpi-v3",
+            "metric_schema_version": "paper-kpi-v4",
             "metric_groups": (
                 "train,episode,paper,evaluation,visualization"
             ),
@@ -6053,6 +6054,8 @@ def _train_full_gpu_ddp_worker(
         "reward_safety",
         "reward_energy",
         "reward_mission",
+        "reward_coverage_shaping",
+        "reward_communication_progress",
     )
     episode_components = {
         key: torch.zeros(

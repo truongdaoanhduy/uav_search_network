@@ -131,15 +131,18 @@ CONFIG = {
     "energy_speed_sq_coeff": 0.5,
     "energy_accel_sq_coeff": 2.0,
 
-    # Cooperative team reward.
-    # Potential-based belief-certainty shaping scale.
+    # Cooperative team reward (paper_v2).
+    # Potential-based shaping uses gamma*Phi(s') - Phi(s).
     "reward_info_gain": 10.0,
+    "reward_coverage_shaping": 5.0,
+    "reward_communication_progress_shaping": 5.0,
     "reward_shaping_gamma": 0.99,
-    "reward_confirmation": 20.0,
+    "reward_confirmation": 30.0,
     "reward_delivery": 50.0,
     "reward_false_confirmation": 5.0,
-    "reward_blocked": 1.0,
-    "reward_boundary": 0.05,
+    "reward_blocked": 0.2,
+    "reward_boundary": 0.1,
+    "reward_normalize_safety_by_uavs": True,
     "reward_expired_report": 10.0,
     "reward_dropped_report": 10.0,
     "reward_energy_per_kj": 0.01,

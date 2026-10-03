@@ -546,6 +546,27 @@ class FullGpuUAVBatchEnv:
             - entropy_map.mean(dim=(1, 2, 3))
         ).clamp(0.0, 1.0)
 
+    def _coverage_potential(self):
+        return self.coverage_seen.float().mean(-1)
+
+    def _communication_progress_potential(self):
+        report_size = float(CONFIG["report_bytes"])
+        report_progress = torch.where(
+            self.report_valid,
+            (
+                1.0
+                - self.report_remaining
+                / max(report_size, 1.0)
+            ).clamp(0.0, 1.0),
+            torch.zeros_like(self.report_remaining),
+        )
+        best_progress = report_progress.amax(dim=1)
+        best_progress = torch.maximum(
+            best_progress,
+            self.delivered.float(),
+        )
+        return best_progress.mean(-1)
+
     @staticmethod
     def _project_unit_ball(x):
         x = x.clamp(-1.0, 1.0)
@@ -2975,6 +2996,10 @@ class FullGpuUAVBatchEnv:
         if destination_idx.shape != (self.num_envs, self.num_uavs):
             raise ValueError("destination_idx has wrong shape")
 
+        old_coverage_potential = self._coverage_potential()
+        old_communication_progress = (
+            self._communication_progress_potential()
+        )
         self.step_count += 1
         expired = self._expire_reports()
         self._flush_pending()
@@ -3297,9 +3322,48 @@ class FullGpuUAVBatchEnv:
                 ),
             ),
         )
-        next_phi = torch.where(done, torch.zeros_like(new_potential), new_potential)
+        shaping_gamma = float(CONFIG["reward_shaping_gamma"])
+        next_phi = torch.where(
+            done,
+            torch.zeros_like(new_potential),
+            new_potential,
+        )
+        coverage_potential = self._coverage_potential()
+        communication_progress = (
+            self._communication_progress_potential()
+        )
+        next_coverage_potential = torch.where(
+            done,
+            torch.zeros_like(coverage_potential),
+            coverage_potential,
+        )
+        next_communication_progress = torch.where(
+            done,
+            torch.zeros_like(communication_progress),
+            communication_progress,
+        )
         shaping = float(CONFIG["reward_info_gain"]) * (
-            float(CONFIG["reward_shaping_gamma"]) * next_phi - old_potential
+            shaping_gamma * next_phi - old_potential
+        )
+        reward_coverage_shaping = float(
+            CONFIG.get(
+                "reward_coverage_shaping",
+                0.0,
+            )
+        ) * (
+            shaping_gamma
+            * next_coverage_potential
+            - old_coverage_potential
+        )
+        reward_communication_progress = float(
+            CONFIG.get(
+                "reward_communication_progress_shaping",
+                0.0,
+            )
+        ) * (
+            shaping_gamma
+            * next_communication_progress
+            - old_communication_progress
         )
         reward_information_gain = shaping
         reward_confirmation = (
@@ -3320,6 +3384,16 @@ class FullGpuUAVBatchEnv:
                 "false_confirmation"
             ].float()
         )
+        safety_denominator = (
+            float(max(1, self.num_uavs))
+            if bool(
+                CONFIG.get(
+                    "reward_normalize_safety_by_uavs",
+                    False,
+                )
+            )
+            else 1.0
+        )
         reward_blocked_motion = (
             -float(
                 CONFIG["reward_blocked"]
@@ -3327,6 +3401,7 @@ class FullGpuUAVBatchEnv:
             * motion[
                 "blocked"
             ].sum(-1).float()
+            / safety_denominator
         )
         reward_boundary = (
             -float(
@@ -3335,6 +3410,7 @@ class FullGpuUAVBatchEnv:
             * motion[
                 "boundary"
             ].sum(-1).float()
+            / safety_denominator
         )
         reward_expired_report = (
             -float(
@@ -3387,11 +3463,13 @@ class FullGpuUAVBatchEnv:
         )
         reward_search = (
             reward_information_gain
+            + reward_coverage_shaping
             + reward_confirmation
             + reward_false_confirmation
         )
         reward_communication = (
-            reward_delivery
+            reward_communication_progress
+            + reward_delivery
             + reward_expired_report
             + reward_dropped_report
         )
@@ -3405,6 +3483,8 @@ class FullGpuUAVBatchEnv:
         )
         reward = (
             reward_information_gain
+            + reward_coverage_shaping
+            + reward_communication_progress
             + reward_confirmation
             + reward_delivery
             + reward_false_confirmation
@@ -3553,6 +3633,12 @@ class FullGpuUAVBatchEnv:
             "reward_mission": reward_mission,
             "reward_information_gain": (
                 reward_information_gain
+            ),
+            "reward_coverage_shaping": (
+                reward_coverage_shaping
+            ),
+            "reward_communication_progress": (
+                reward_communication_progress
             ),
             "reward_confirmation": (
                 reward_confirmation

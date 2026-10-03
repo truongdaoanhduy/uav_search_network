@@ -297,6 +297,7 @@ class UAVSearchEnv(gym.Env):
         self.report_buffers = None
         self.pending_reports = None
         self.gcs_received_target_ids = None
+        self.coverage_seen = None
         self.network_backend = None
         self._episode_done = False
         self._pending_checkpoint_state = (
@@ -521,6 +522,48 @@ class UAVSearchEnv(gym.Env):
 
         return state
 
+    def _coverage_potential(self):
+        if self.coverage_seen is None:
+            return 0.0
+        coverage = np.asarray(
+            self.coverage_seen,
+            dtype=bool,
+        )
+        if coverage.size == 0:
+            return 0.0
+        return float(
+            np.count_nonzero(coverage)
+            / coverage.size
+        )
+
+    def _communication_progress_potential(self):
+        """Fractional GCS-delivery progress averaged across mission targets."""
+        progress = np.zeros(
+            self.num_targets,
+            dtype=np.float64,
+        )
+        for target_id in self.gcs_received_target_ids or ():
+            if 0 <= int(target_id) < self.num_targets:
+                progress[int(target_id)] = 1.0
+
+        buffers = list(self.report_buffers or [])
+        if self.pending_reports is not None:
+            buffers.append(self.pending_reports)
+        for buffer in buffers:
+            for report in buffer:
+                target_id = int(report.target_id)
+                if not 0 <= target_id < self.num_targets:
+                    continue
+                fraction = (
+                    float(report.delivered_bytes)
+                    / max(1.0, float(report.size_bytes))
+                )
+                progress[target_id] = max(
+                    progress[target_id],
+                    float(np.clip(fraction, 0.0, 1.0)),
+                )
+        return float(np.mean(progress)) if progress.size else 0.0
+
     def checkpoint_state(self):
         """Return exact simple-backend state in a torch-safe representation."""
         if self.uavs is None:
@@ -558,6 +601,7 @@ class UAVSearchEnv(gym.Env):
             "belief_potential": float(
                 self._belief_potential
             ),
+            "coverage_seen": self.coverage_seen,
             "rng_state_json": json.dumps(
                 self.rng.bit_generator.state
             ),
@@ -657,6 +701,23 @@ class UAVSearchEnv(gym.Env):
         )
         self._belief_potential = float(
             state["belief_potential"]
+        )
+        grid_n = int(
+            np.ceil(
+                float(CONFIG["map_size"])
+                / float(CONFIG["grid_cell_m"])
+            )
+        )
+        restored_coverage = state.get(
+            "coverage_seen"
+        )
+        self.coverage_seen = (
+            np.zeros((grid_n, grid_n), dtype=bool)
+            if restored_coverage is None
+            else np.asarray(
+                restored_coverage,
+                dtype=bool,
+            ).copy()
         )
         self.uavs = state["uavs"]
         self.targets = state["targets"]
@@ -829,6 +890,16 @@ class UAVSearchEnv(gym.Env):
         self.gcs_received_target_ids = (
             create_gcs_received_target_ids()
         )
+        grid_n = int(
+            np.ceil(
+                float(CONFIG["map_size"])
+                / float(CONFIG["grid_cell_m"])
+            )
+        )
+        self.coverage_seen = np.zeros(
+            (grid_n, grid_n),
+            dtype=bool,
+        )
 
         self.current_step = 0
         self.episode_seed = seed
@@ -904,6 +975,12 @@ class UAVSearchEnv(gym.Env):
 
         next_step = (
             self.current_step + 1
+        )
+        coverage_potential_before = (
+            self._coverage_potential()
+        )
+        communication_progress_before = (
+            self._communication_progress_potential()
         )
 
         expired_target_ids = set()
@@ -1041,6 +1118,11 @@ class UAVSearchEnv(gym.Env):
             sensing_record_count += len(
                 records
             )
+            for record in records:
+                self.coverage_seen[
+                    int(record["gy"]),
+                    int(record["gx"]),
+                ] = True
             information_gain_bits += (
                 sensing_information_gain_bits(
                     records
@@ -1426,29 +1508,78 @@ class UAVSearchEnv(gym.Env):
             )
         )
 
+        shaping_gamma = float(
+            CONFIG["reward_shaping_gamma"]
+        )
         shaping_next_potential = (
             0.0
             if episode_will_end
             else belief_potential_after
         )
+        coverage_potential_after = (
+            self._coverage_potential()
+        )
+        communication_progress_after = (
+            self._communication_progress_potential()
+        )
+        shaping_next_coverage = (
+            0.0
+            if episode_will_end
+            else coverage_potential_after
+        )
+        shaping_next_communication = (
+            0.0
+            if episode_will_end
+            else communication_progress_after
+        )
 
         information_shaping = float(
-            CONFIG[
-                "reward_info_gain"
-            ]
+            CONFIG["reward_info_gain"]
         ) * (
-            float(
-                CONFIG[
-                    "reward_shaping_gamma"
-                ]
-            )
+            shaping_gamma
             * shaping_next_potential
             - belief_potential_before
+        )
+        coverage_shaping = float(
+            CONFIG.get(
+                "reward_coverage_shaping",
+                0.0,
+            )
+        ) * (
+            shaping_gamma
+            * shaping_next_coverage
+            - coverage_potential_before
+        )
+        communication_progress_shaping = float(
+            CONFIG.get(
+                "reward_communication_progress_shaping",
+                0.0,
+            )
+        ) * (
+            shaping_gamma
+            * shaping_next_communication
+            - communication_progress_before
+        )
+        safety_denominator = (
+            float(max(1, self.num_uavs))
+            if bool(
+                CONFIG.get(
+                    "reward_normalize_safety_by_uavs",
+                    False,
+                )
+            )
+            else 1.0
         )
 
         reward_components = {
             "information_gain": (
                 information_shaping
+            ),
+            "coverage_shaping": (
+                coverage_shaping
+            ),
+            "communication_progress": (
+                communication_progress_shaping
             ),
             "confirmation": (
                 float(
@@ -1485,6 +1616,7 @@ class UAVSearchEnv(gym.Env):
                     ]
                 )
                 * blocked_count
+                / safety_denominator
             ),
             "boundary": (
                 -float(
@@ -1493,6 +1625,7 @@ class UAVSearchEnv(gym.Env):
                     ]
                 )
                 * boundary_count
+                / safety_denominator
             ),
             "expired_report": (
                 -float(

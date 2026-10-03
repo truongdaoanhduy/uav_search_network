@@ -1,6 +1,6 @@
 defaults:
   - task: uav_search
-  - reward: paper_v1
+  - reward: paper_v2
   - algorithm: masac
   - runtime: kaggle_2xt4
   - experiment: paper_50k

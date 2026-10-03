@@ -69,6 +69,8 @@ def _episode(value: float = 1.0):
         "reward_safety": -3.0,
         "reward_energy": -0.1,
         "reward_mission": -1.0,
+        "reward_coverage_shaping": 0.5,
+        "reward_communication_progress": 0.25,
     }
 
 

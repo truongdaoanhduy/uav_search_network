@@ -423,6 +423,9 @@ def apply_to_legacy_config(
         legacy_config["full_gpu_network_model"] = backend
 
     reward = _get(plain, "reward")
+    legacy_config["_reward_name"] = str(
+        reward.get("name", "unknown")
+    )
     for key, value in reward.items():
         if key == "name":
             continue
