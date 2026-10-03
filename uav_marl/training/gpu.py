@@ -4677,8 +4677,6 @@ class _MasacPolicyActionCudaGraph:
                 self.static_destination = destination.reshape(
                     batch_size, trainer.num_agents
                 )
-        if hasattr(self.graph, "instantiate"):
-            self.graph.instantiate()
         torch.cuda.set_rng_state(rng_state, self.device)
 
     def __call__(self, observations, masks):
