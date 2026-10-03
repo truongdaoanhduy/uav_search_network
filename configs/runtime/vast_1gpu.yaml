@@ -8,6 +8,7 @@ auto_multi_gpu: false
 max_gpus: 1
 multi_gpu_strategy: ddp
 compile_mode: null
+cuda_graph_policy_actions: false
 fused_adam: false
 offpolicy:
   auto_scale_gradient_steps: true

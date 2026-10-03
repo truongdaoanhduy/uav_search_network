@@ -58,8 +58,13 @@ def format_runs_table(display_name: str = DEFAULT_WORKSPACE):
     runset = spec.section.run_sets[0]
     run_feed = runset.run_feed
 
+    existing_columns = set(run_feed.column_order) | set(run_feed.column_visible) | set(run_feed.column_pinned)
     run_feed.column_order = list(DESIRED_COLUMNS)
-    run_feed.column_visible = {column: True for column in DESIRED_COLUMNS}
+    # W&B's frontend treats omitted visibility keys as auto-visible in some
+    # personal workspaces. Explicitly turn every old column off, then enable
+    # only the curated training columns.
+    run_feed.column_visible = {column: False for column in existing_columns}
+    run_feed.column_visible.update({column: True for column in DESIRED_COLUMNS})
     run_feed.column_pinned = {
         "run:displayName": True,
         "run:state": True,

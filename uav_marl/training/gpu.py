@@ -3744,7 +3744,6 @@ def train_full_gpu(
         train_freq=train_freq,
     )
 
-    obs, state, mask = env.reset()
     global_step = 0
     vector_step_count = 0
     last_train_transition = int(learning_starts)
@@ -4606,6 +4605,64 @@ def _init_gpu_wandb_run(
         allow_val_change=True,
     )
     return run
+
+
+# CUDA-graph acceleration for the fixed-shape MASAC policy-action hot path.
+class _MasacPolicyActionCudaGraph:
+    """Capture stochastic MASAC action sampling for one fixed env shard.
+
+    The graph owns static input/output storage. Actor parameters are not copied,
+    so optimizer updates remain visible to every replay at the same addresses.
+    CUDA RNG kernels are graph-safe; the pre-capture RNG state is restored so
+    graph construction does not perturb the seeded training trajectory.
+    """
+
+    def __init__(self, trainer, observations, masks):
+        if not observations.is_cuda or not masks.is_cuda:
+            raise ValueError("CUDA graph inputs must be CUDA tensors")
+        self.trainer = trainer
+        self.device = observations.device
+        self.static_observations = torch.empty_like(observations)
+        self.static_masks = torch.empty_like(masks)
+        self.static_observations.copy_(observations)
+        self.static_masks.copy_(masks)
+        rng_state = torch.cuda.get_rng_state(self.device)
+
+        warmup_stream = torch.cuda.Stream(device=self.device)
+        warmup_stream.wait_stream(torch.cuda.current_stream(self.device))
+        with torch.cuda.stream(warmup_stream), torch.no_grad():
+            for _ in range(3):
+                trainer._sample_joint_policy(
+                    self.static_observations,
+                    self.static_masks,
+                    deterministic=False,
+                )
+        torch.cuda.current_stream(self.device).wait_stream(warmup_stream)
+        torch.cuda.synchronize(self.device)
+
+        self.graph = torch.cuda.CUDAGraph()
+        with torch.no_grad():
+            with torch.cuda.graph(self.graph):
+                sampled = trainer._sample_joint_policy(
+                    self.static_observations,
+                    self.static_masks,
+                    deterministic=False,
+                )
+                self.static_continuous = sampled["continuous"]
+                self.static_destination = sampled["destination_indices"]
+        if hasattr(self.graph, "instantiate"):
+            self.graph.instantiate()
+        torch.cuda.set_rng_state(rng_state, self.device)
+
+    def __call__(self, observations, masks):
+        if observations.shape != self.static_observations.shape:
+            raise ValueError("CUDA graph observation shape changed")
+        if masks.shape != self.static_masks.shape:
+            raise ValueError("CUDA graph mask shape changed")
+        self.static_observations.copy_(observations)
+        self.static_masks.copy_(masks)
+        self.graph.replay()
+        return self.static_continuous, self.static_destination
 
 
 # --- frozen notebook cell 261 ---
@@ -5864,6 +5921,20 @@ def _train_full_gpu_ddp_worker(
         train_freq=train_freq,
     )
 
+    obs, state, mask = env.reset()
+    cuda_graph_policy = None
+    cuda_graph_enabled = bool(
+        CONFIG.get("training_cuda_graph_policy_actions", False)
+    )
+    if cuda_graph_enabled:
+        if algorithm != "masac":
+            raise ValueError(
+                "runtime.cuda_graph_policy_actions currently supports MASAC only"
+            )
+        cuda_graph_policy = _MasacPolicyActionCudaGraph(
+            trainer, obs, mask
+        )
+
     wandb_run = (
         _init_gpu_wandb_run(
             algorithm,
@@ -5910,6 +5981,7 @@ def _train_full_gpu_ddp_worker(
                 "configured_gradient_steps": int(configured_gradient_steps),
                 "effective_gradient_steps": int(gradient_steps),
                 "gradient_steps": int(gradient_steps),
+                "cuda_graph_policy_actions": bool(cuda_graph_enabled),
                 "global_batch_size": int(global_batch_size),
                 "replay_capacity": int(global_capacity),
                 "replay_samples_per_new_transition": (
@@ -6167,15 +6239,20 @@ def _train_full_gpu_ddp_worker(
             elif all_policy:
                 if algorithm == "masac":
                     with torch.no_grad():
-                        sampled = trainer._sample_joint_policy(
-                            obs,
-                            mask,
-                            deterministic=False,
-                        )
-                        continuous = sampled["continuous"]
-                        destination = sampled[
-                            "destination_indices"
-                        ]
+                        if cuda_graph_policy is not None:
+                            continuous, destination = cuda_graph_policy(
+                                obs, mask
+                            )
+                        else:
+                            sampled = trainer._sample_joint_policy(
+                                obs,
+                                mask,
+                                deterministic=False,
+                            )
+                            continuous = sampled["continuous"]
+                            destination = sampled[
+                                "destination_indices"
+                            ]
                 else:
                     continuous, destination = _matd3_actions(
                         trainer,
@@ -6190,15 +6267,20 @@ def _train_full_gpu_ddp_worker(
                 )
                 if algorithm == "masac":
                     with torch.no_grad():
-                        sampled = trainer._sample_joint_policy(
-                            obs,
-                            mask,
-                            deterministic=False,
-                        )
-                        policy_continuous = sampled["continuous"]
-                        policy_destination = sampled[
-                            "destination_indices"
-                        ]
+                        if cuda_graph_policy is not None:
+                            policy_continuous, policy_destination = (
+                                cuda_graph_policy(obs, mask)
+                            )
+                        else:
+                            sampled = trainer._sample_joint_policy(
+                                obs,
+                                mask,
+                                deterministic=False,
+                            )
+                            policy_continuous = sampled["continuous"]
+                            policy_destination = sampled[
+                                "destination_indices"
+                            ]
                 else:
                     policy_continuous, policy_destination = (
                         _matd3_actions(
@@ -8070,6 +8152,7 @@ def _train_full_gpu_ddp_worker(
                 "multi_gpu_strategy": (
                     "ddp" if world_size > 1 else "single_gpu_distributed"
                 ),
+                "cuda_graph_policy_actions": bool(cuda_graph_enabled),
                 "algorithm": algorithm,
                 "network_backend": network_backend,
                 "used_gpu_count": world_size,

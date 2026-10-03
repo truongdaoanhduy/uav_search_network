@@ -323,6 +323,7 @@ _RUNTIME_MAP = {
     "full_gpu_max_gpus": "runtime.max_gpus",
     "full_gpu_multi_gpu_strategy": "runtime.multi_gpu_strategy",
     "full_gpu_num_envs": "runtime.num_envs",
+    "training_cuda_graph_policy_actions": "runtime.cuda_graph_policy_actions",
     "training_auto_scale_gradient_steps": (
         "runtime.offpolicy.auto_scale_gradient_steps"
     ),

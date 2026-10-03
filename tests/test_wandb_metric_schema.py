@@ -187,3 +187,13 @@ def test_wandb_run_roles_are_explicit():
     cpu_source = (ROOT / "uav_marl" / "evaluation" / "postprocess.py").read_text()
     assert '"run_role": "training"' in gpu_source
     assert '"run_role": "cpu_evaluation"' in cpu_source
+
+
+def test_cuda_graph_policy_runtime_flag_is_wired():
+    config_source = (ROOT / "uav_marl" / "configuration.py").read_text()
+    gpu_source = (ROOT / "uav_marl" / "training" / "gpu.py").read_text()
+    assert '"training_cuda_graph_policy_actions": "runtime.cuda_graph_policy_actions"' in config_source
+    assert 'class _MasacPolicyActionCudaGraph' in gpu_source
+    assert 'torch.cuda.CUDAGraph()' in gpu_source
+    assert 'self.graph.replay()' in gpu_source
+    assert '"cuda_graph_policy_actions": bool(cuda_graph_enabled)' in gpu_source
