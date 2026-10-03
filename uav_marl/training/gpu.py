@@ -4542,6 +4542,7 @@ def _init_gpu_wandb_run(
     run.summary[
         "episodes_completed"
     ] = 0
+    run.summary["kaggle_account"] = str(kaggle_account)
     run.summary["execution_platform"] = str(execution_platform)
 
     run.config.update(
@@ -4552,6 +4553,7 @@ def _init_gpu_wandb_run(
             "seed": int(seed),
             "run_role": "training",
             "kaggle": str(kaggle_account),
+            "kaggle_account": str(kaggle_account),
             "execution_platform": execution_platform,
             "experiment": CONFIG.get("_experiment_name"),
             "resolved_config_sha256": CONFIG.get(

@@ -197,3 +197,11 @@ def test_cuda_graph_policy_runtime_flag_is_wired():
     assert 'torch.cuda.CUDAGraph()' in gpu_source
     assert 'self.graph.replay()' in gpu_source
     assert '"cuda_graph_policy_actions": bool(cuda_graph_enabled)' in gpu_source
+
+
+def test_wandb_training_and_cpu_runs_expose_kaggle_account():
+    gpu_source = (ROOT / "uav_marl" / "training" / "gpu.py").read_text()
+    cpu_source = (ROOT / "uav_marl" / "evaluation" / "postprocess.py").read_text()
+    assert '"kaggle_account": str(kaggle_account)' in gpu_source
+    assert 'run.summary["kaggle_account"] = str(kaggle_account)' in gpu_source
+    assert '"kaggle_account": resolve_kaggle_account()' in cpu_source

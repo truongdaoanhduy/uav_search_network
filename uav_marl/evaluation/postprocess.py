@@ -554,6 +554,7 @@ def postprocess_checkpoint_cpu(
                 "seed": seed,
                 "run_role": "cpu_evaluation",
                 "kaggle": resolve_kaggle_account(),
+                "kaggle_account": resolve_kaggle_account(),
                 "source_run_id": source_run_id,
                 "artifact_ref": artifact_ref,
                 "execution_device": "cpu",
