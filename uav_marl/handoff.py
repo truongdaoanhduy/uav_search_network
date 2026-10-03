@@ -299,6 +299,10 @@ def run_cpu_postprocess_from_handoff(
         "algorithm": str(payload["algorithm"]),
         "seed": int(payload["seed"]),
         "network_backend": str(payload["network_backend"]),
+        "training_network_backend": str(payload["network_backend"]),
+        "evaluation_network_backend": str(
+            result.get("evaluation_backend", "uavnetsim")
+        ),
         "experiment": str(payload["experiment"]),
         "source_provider": str(payload["source_provider"]),
         "source_git_commit": payload.get("source_git_commit"),

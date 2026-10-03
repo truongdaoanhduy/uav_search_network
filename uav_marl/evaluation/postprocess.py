@@ -559,7 +559,7 @@ def postprocess_checkpoint_cpu(
                 "network_backend_train": str(network_backend),
             },
             settings=wandb_module.Settings(
-                _disable_stats=True,
+                x_disable_stats=True,
             ),
         )
 
@@ -757,6 +757,7 @@ def postprocess_checkpoint_cpu(
 
         return {
             "device": "cpu",
+            "evaluation_backend": str(eval_backend),
             "checkpoint_path": str(checkpoint_path),
             "image_path": str(image_path),
             "video_path": None if video_path is None else str(video_path),

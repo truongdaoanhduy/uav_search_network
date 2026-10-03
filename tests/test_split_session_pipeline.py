@@ -265,3 +265,17 @@ def test_kaggle_cpu_wandb_requires_one_credential_dataset(tmp_path):
             cpu_log_wandb=True,
             cpu_dataset_sources=[],
         )
+
+
+def test_cpu_postprocess_uses_current_wandb_stats_setting():
+    source = (ROOT / "uav_marl" / "evaluation" / "postprocess.py").read_text()
+    assert "x_disable_stats=True" in source
+    assert "_disable_stats=True" not in source.replace("x_disable_stats=True", "")
+
+
+def test_cpu_completion_distinguishes_training_and_evaluation_backends():
+    source = (ROOT / "uav_marl" / "handoff.py").read_text()
+    assert '"training_network_backend"' in source
+    assert '"evaluation_network_backend"' in source
+    postprocess_source = (ROOT / "uav_marl" / "evaluation" / "postprocess.py").read_text()
+    assert '"evaluation_backend": str(eval_backend)' in postprocess_source
