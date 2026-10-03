@@ -4643,13 +4643,37 @@ class _MasacPolicyActionCudaGraph:
         self.graph = torch.cuda.CUDAGraph()
         with torch.no_grad():
             with torch.cuda.graph(self.graph):
-                sampled = trainer._sample_joint_policy(
-                    self.static_observations,
-                    self.static_masks,
-                    deterministic=False,
+                batch_size = self.static_observations.shape[0]
+                flat_observations = self.static_observations.reshape(
+                    batch_size * trainer.num_agents, trainer.observation_dim
                 )
-                self.static_continuous = sampled["continuous"]
-                self.static_destination = sampled["destination_indices"]
+                flat_masks = self.static_masks.reshape(
+                    batch_size * trainer.num_agents, trainer.discrete_dim
+                )
+                mean, log_std, logits = trainer.actor(flat_observations)
+                # Avoid torch.distributions.Normal construction inside capture:
+                # validation performs a host-visible check that is not graph-safe.
+                pre_tanh = mean + torch.exp(log_std) * torch.randn_like(mean)
+                motion_action, _ = radial_squash_motion_action(
+                    pre_tanh[..., :3]
+                )
+                power_action = torch.tanh(pre_tanh[..., 3:4])
+                continuous = torch.cat((motion_action, power_action), dim=-1)
+
+                masked_logits = masked_categorical_logits(logits, flat_masks)
+                uniform = torch.rand_like(masked_logits).clamp_(1e-6, 1.0 - 1e-6)
+                gumbel_noise = -torch.log(-torch.log(uniform))
+                destination = torch.argmax(
+                    (masked_logits + gumbel_noise)
+                    / float(CONFIG["masac_gumbel_temperature"]),
+                    dim=-1,
+                )
+                self.static_continuous = continuous.reshape(
+                    batch_size, trainer.num_agents, trainer.continuous_dim
+                )
+                self.static_destination = destination.reshape(
+                    batch_size, trainer.num_agents
+                )
         if hasattr(self.graph, "instantiate"):
             self.graph.instantiate()
         torch.cuda.set_rng_state(rng_state, self.device)
