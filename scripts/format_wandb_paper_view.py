@@ -46,6 +46,30 @@ def format_workspace(
         view_url
     )
 
+    current = workspace.runset_settings
+    workspace.runset_settings = ws.RunsetSettings(
+        query=current.query,
+        regex_query=current.regex_query,
+        filters=current.filters,
+        groupby=list(current.groupby),
+        order=list(current.order),
+        run_settings=dict(current.run_settings),
+        group_colors=dict(current.group_colors),
+        pinned_columns=[
+            "run:displayName",
+            "config:algorithm",
+            "config:seed",
+            "config:kaggle_account",
+            "config:execution_platform",
+            "config:num_envs",
+            "config:target_episodes",
+            "config:network_backend",
+            "summary:episodes_completed",
+        ],
+        baseline_run=current.baseline_run,
+        pinned_runs=list(current.pinned_runs),
+    )
+
     comparison = ws.Section(
         name="01 — Algorithm Comparison",
         is_open=True,
@@ -53,12 +77,12 @@ def format_workspace(
         panels=[
             _line(
                 "Total Reward (Episode Return)",
-                "episode/return_mean",
+                "episode/return",
                 "Episode return",
             ),
             _line(
                 "Mission Success Rate",
-                "episode/success_rate",
+                "episode/success",
                 "Success rate",
                 y_range=(0, 1),
             ),
@@ -76,7 +100,7 @@ def format_workspace(
             ),
             _line(
                 "Area Coverage",
-                "episode/coverage_percent_mean",
+                "episode/coverage_percent",
                 "Coverage (%)",
                 y_range=(0, 100),
             ),
@@ -93,7 +117,7 @@ def format_workspace(
             ),
             _line(
                 "Total Energy",
-                "episode/total_energy_j_mean",
+                "episode/total_energy_j",
                 "Energy (J)",
             ),
             _line(
@@ -105,6 +129,36 @@ def format_workspace(
         ],
     )
 
+    diagnostics = ws.Section(
+        name="02 — Policy Diagnostics",
+        is_open=False,
+        pinned=False,
+        panels=[
+            _line(
+                "Boundary Clip Rate",
+                "episode/boundary_clip_rate",
+                "Rate",
+                y_range=(0, 1),
+            ),
+            _line(
+                "Peer Safety Block Rate",
+                "episode/peer_safety_block_rate",
+                "Rate",
+                y_range=(0, 1),
+            ),
+            _line(
+                "Information Gain",
+                "episode/information_gain_bits",
+                "Information gain (bits)",
+            ),
+            _line(
+                "Distance Flown",
+                "episode/distance_total_m",
+                "Distance (m)",
+            ),
+        ],
+    )
+
     remaining = [
         section
         for section in workspace.sections
@@ -112,6 +166,7 @@ def format_workspace(
         not in {
             "01 — Paper Overview",
             "01 — Algorithm Comparison",
+            "02 — Policy Diagnostics",
         }
     ]
     for section in remaining:
@@ -120,6 +175,7 @@ def format_workspace(
 
     workspace.sections = [
         comparison,
+        diagnostics,
         *remaining,
     ]
     return workspace.save()

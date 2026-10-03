@@ -15,12 +15,12 @@ import wandb
 
 DEFAULT_METRICS = {
     "reward": (
-        "episode/return_mean",
+        "episode/return",
         "Reward Value",
         None,
     ),
     "coverage": (
-        "episode/coverage_percent_mean",
+        "episode/coverage_percent",
         "Coverage (%)",
         (0.0, 100.0),
     ),

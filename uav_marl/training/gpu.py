@@ -3474,6 +3474,51 @@ def evaluate_full_gpu_reference(
             )
 
 
+def resolve_vector_gradient_steps(
+    configured_gradient_steps,
+    *,
+    num_envs,
+    batch_size,
+    train_freq=1,
+):
+    """Scale off-policy updates for vector collection without pretending one seed is many.
+
+    Stable off-policy training needs optimizer work to scale with the amount of
+    data collected by vectorized environments. When auto scaling is enabled,
+    choose enough minibatch updates so the number of replay samples consumed
+    per optimizer burst is at least `training_min_replay_sample_ratio` times
+    the number of newly collected transitions. `-1` keeps exact one-gradient-
+    step-per-transition semantics.
+    """
+    configured = int(configured_gradient_steps)
+    num_envs = int(num_envs)
+    batch_size = int(batch_size)
+    train_freq = int(train_freq)
+    if configured == 0 or configured < -1:
+        raise ValueError("gradient_steps must be -1 or a positive integer")
+    if num_envs < 1 or batch_size < 1 or train_freq < 1:
+        raise ValueError("num_envs, batch_size and train_freq must be >= 1")
+    if configured == -1:
+        return -1
+    if not bool(CONFIG.get("training_auto_scale_gradient_steps", False)):
+        return configured
+
+    min_ratio = float(
+        CONFIG.get("training_min_replay_sample_ratio", 1.0)
+    )
+    if not math.isfinite(min_ratio) or min_ratio <= 0.0:
+        raise ValueError("training_min_replay_sample_ratio must be > 0")
+    collected_per_burst = num_envs * train_freq
+    auto_min = int(
+        math.ceil(
+            min_ratio
+            * collected_per_burst
+            / batch_size
+        )
+    )
+    return max(configured, max(1, auto_min))
+
+
 # --- frozen notebook cell 254 ---
 def train_full_gpu(
     repo: Path,
@@ -3684,7 +3729,7 @@ def train_full_gpu(
     train_freq = int(
         CONFIG.get(f"{algorithm}_train_freq", 1)
     )
-    gradient_steps = int(
+    configured_gradient_steps = int(
         CONFIG.get(
             f"{algorithm}_gradient_steps",
             CONFIG.get(f"{algorithm}_updates_per_step", 1),
@@ -3692,10 +3737,12 @@ def train_full_gpu(
     )
     if train_freq < 1:
         raise ValueError("train_freq must be >= 1")
-    if gradient_steps == 0 or gradient_steps < -1:
-        raise ValueError(
-            "gradient_steps must be -1 or a positive integer"
-        )
+    gradient_steps = resolve_vector_gradient_steps(
+        configured_gradient_steps,
+        num_envs=num_envs,
+        batch_size=batch_size,
+        train_freq=train_freq,
+    )
 
     obs, state, mask = env.reset()
     global_step = 0
@@ -4496,6 +4543,8 @@ def _init_gpu_wandb_run(
     run.summary[
         "episodes_completed"
     ] = 0
+    run.summary["kaggle_account"] = str(kaggle_account)
+    run.summary["execution_platform"] = str(execution_platform)
 
     run.config.update(
         {
@@ -4549,7 +4598,7 @@ def _init_gpu_wandb_run(
             "num_obstacles": int(
                 CONFIG["num_obstacles"]
             ),
-            "metric_schema_version": "paper-kpi-v2",
+            "metric_schema_version": "paper-kpi-v3",
             "metric_groups": (
                 "train,episode,paper,evaluation,visualization"
             ),
@@ -5037,128 +5086,145 @@ def _ddp_update_matd3(
 
 
 # --- frozen notebook cell 266 ---
+def _episode_metric_key(name, chunk_size):
+    """Use raw names for one episode; make bin averaging explicit otherwise."""
+    name = str(name)
+    return (
+        f"episode/{name}"
+        if int(chunk_size) == 1
+        else f"episode/{name}_bin_mean"
+    )
+
+
+def _finite_episode_values(chunk, key):
+    values = []
+    for item in chunk:
+        value = item.get(key)
+        if value is None:
+            continue
+        value = float(value)
+        if math.isfinite(value):
+            values.append(value)
+    return values
+
+
+def _add_episode_value(payload, chunk, output_name, source_key):
+    source_values = _finite_episode_values(chunk, source_key)
+    if not source_values:
+        return
+    key = _episode_metric_key(output_name, len(chunk))
+    if len(chunk) == 1:
+        payload[key] = float(source_values[0])
+    else:
+        payload[key] = float(np.mean(source_values))
+
+
 def add_episode_diagnostic_metrics(payload, chunk):
-    """Add paper-grade mission/safety/energy/network KPIs to an episode payload."""
+    """Add mission/safety/energy/network KPIs without seed-like mean/std names."""
     if not chunk:
         return payload
 
-    def values(key):
-        output = []
-        for item in chunk:
-            value = item.get(key)
-            if value is None:
-                continue
-            value = float(value)
-            if math.isfinite(value):
-                output.append(value)
-        return output
-
-    def add_mean(output_key, source_key):
-        source_values = values(source_key)
-        if source_values:
-            payload[output_key] = float(
-                np.mean(source_values)
-            )
-
-    direct_means = {
-        "episode/coverage_percent_mean": "coverage_percent",
-        "episode/target_encounter_rate_percent": "target_encounter_rate_percent",
-        "episode/information_gain_bits_mean": "information_gain_bits",
-        "episode/blocked_motion_rate": "blocked_motion_rate",
-        "episode/peer_safety_block_rate": "peer_safety_block_rate",
-        "episode/obstacle_block_rate": "obstacle_block_rate",
-        "episode/boundary_clip_rate": "boundary_clip_rate",
-        "episode/false_confirmations_mean": "false_confirmations",
-        "episode/reports_created_mean": "reports_created",
-        "episode/expired_reports_mean": "expired_reports",
-        "episode/dropped_reports_mean": "dropped_reports",
-        "episode/report_expiry_rate_percent": "report_expiry_rate_percent",
-        "episode/report_drop_rate_percent": "report_drop_rate_percent",
-        "episode/report_delivery_given_confirmation_rate_percent": (
+    direct = {
+        "coverage_percent": "coverage_percent",
+        "target_encounter_rate_percent": "target_encounter_rate_percent",
+        "information_gain_bits": "information_gain_bits",
+        "blocked_motion_rate": "blocked_motion_rate",
+        "peer_safety_block_rate": "peer_safety_block_rate",
+        "obstacle_block_rate": "obstacle_block_rate",
+        "boundary_clip_rate": "boundary_clip_rate",
+        "false_confirmations": "false_confirmations",
+        "reports_created": "reports_created",
+        "expired_reports": "expired_reports",
+        "dropped_reports": "dropped_reports",
+        "report_expiry_rate_percent": "report_expiry_rate_percent",
+        "report_drop_rate_percent": "report_drop_rate_percent",
+        "report_delivery_given_confirmation_rate_percent": (
             "report_delivery_given_confirmation_rate_percent"
         ),
-        "episode/communication_energy_j_mean": "communication_energy_j",
-        "episode/battery_remaining_mean_percent": "battery_remaining_mean_percent",
-        "episode/depleted_uav_count_mean": "depleted_uav_count",
-        "episode/distance_total_m_mean": "distance_total_m",
-        "episode/network_tx_attempts_mean": "network_tx_attempts",
-        "episode/network_phy_success_percent": "network_phy_success_percent",
-        "episode/network_tx_payload_success_ratio": (
-            "network_tx_payload_success_ratio"
-        ),
-        "episode/network_throughput_kbps": "network_throughput_kbps",
-        "episode/network_nlos_attempt_rate_percent": (
-            "network_nlos_attempt_rate_percent"
-        ),
-        "episode/gcs_in_range_uav_fraction": "gcs_in_range_uav_fraction",
-        "episode/report_delivery_latency_s_mean": (
-            "report_delivery_latency_s"
-        ),
-        "episode/report_delivery_latency_s_max_mean": (
-            "report_delivery_latency_max_s"
-        ),
-        "episode/report_delivery_latency_sample_count_mean": (
+        "communication_energy_j": "communication_energy_j",
+        # This metric is intentionally a mean across UAVs inside one episode,
+        # not a mean across seeds or episodes.
+        "battery_remaining_mean_percent": "battery_remaining_mean_percent",
+        "depleted_uav_count": "depleted_uav_count",
+        "distance_total_m": "distance_total_m",
+        "network_tx_attempts": "network_tx_attempts",
+        "network_phy_success_percent": "network_phy_success_percent",
+        "network_tx_payload_success_ratio": "network_tx_payload_success_ratio",
+        "network_throughput_kbps": "network_throughput_kbps",
+        "network_nlos_attempt_rate_percent": "network_nlos_attempt_rate_percent",
+        "gcs_in_range_uav_fraction": "gcs_in_range_uav_fraction",
+        "report_delivery_latency_s": "report_delivery_latency_s",
+        "report_delivery_latency_max_s": "report_delivery_latency_max_s",
+        "report_delivery_latency_sample_count": (
             "report_delivery_latency_sample_count"
         ),
-        "episode/energy_per_confirmed_target_j_mean": (
-            "energy_per_confirmed_target_j"
-        ),
-        "episode/energy_per_delivered_target_j_mean": (
-            "energy_per_delivered_target_j"
-        ),
-        "episode/time_to_first_confirm_s_mean": (
-            "time_to_first_confirm_s"
-        ),
-        "episode/time_to_all_confirm_s_mean": (
-            "time_to_all_confirm_s"
-        ),
-        "episode/time_to_first_delivery_s_mean": (
-            "time_to_first_delivery_s"
-        ),
+        "energy_per_confirmed_target_j": "energy_per_confirmed_target_j",
+        "energy_per_delivered_target_j": "energy_per_delivered_target_j",
+        "time_to_first_confirm_s": "time_to_first_confirm_s",
+        "time_to_all_confirm_s": "time_to_all_confirm_s",
+        "time_to_first_delivery_s": "time_to_first_delivery_s",
+        "first_confirmation_observed": "first_confirmation_observed",
+        "all_targets_confirmed": "all_targets_confirmed",
+        "first_delivery_observed": "first_delivery_observed",
     }
-    for output_key, source_key in direct_means.items():
-        add_mean(output_key, source_key)
+    for output_name, source_key in direct.items():
+        _add_episode_value(
+            payload,
+            chunk,
+            output_name,
+            source_key,
+        )
 
-    rate_sources = {
-        "episode/first_confirmation_observed_rate": (
-            "first_confirmation_observed"
-        ),
-        "episode/all_targets_confirmed_rate": (
-            "all_targets_confirmed"
-        ),
-        "episode/first_delivery_observed_rate": (
-            "first_delivery_observed"
-        ),
+    return payload
+
+
+def build_episode_curve_payload(
+    chunk,
+    episodes_completed,
+    episode_component_keys,
+):
+    """Build raw single-episode W&B metrics; bins are explicitly named if used."""
+    if not chunk:
+        raise ValueError("chunk must not be empty")
+
+    payload = {
+        "episodes_completed": int(episodes_completed),
     }
-    for output_key, source_key in rate_sources.items():
-        add_mean(output_key, source_key)
+    base = {
+        "return": "return",
+        "length": "length",
+        "end_step": "end_step",
+        "end_reason_code": "end_reason_code",
+        "end_by_success": "end_by_success",
+        "end_by_all_uavs_inactive": "end_by_all_uavs_inactive",
+        "end_by_horizon": "end_by_horizon",
+        "confirmed_targets": "confirmed_targets",
+        "delivered_targets": "delivered_targets",
+        "total_energy_j": "episode_energy_j",
+        "target_search_rate_percent": "target_search_rate_percent",
+        "target_delivery_rate_percent": "target_delivery_rate_percent",
+        "success": "success",
+    }
+    for output_name, source_key in base.items():
+        _add_episode_value(
+            payload,
+            chunk,
+            output_name,
+            source_key,
+        )
 
-    # Std bands for the main mission quantities are useful when a W&B bin
-    # contains multiple episodes. They remain 0 for a one-episode raw bin.
-    for source_key, output_key in (
-        (
-            "target_search_rate_percent",
-            "episode/target_search_rate_std",
-        ),
-        (
-            "target_delivery_rate_percent",
-            "episode/target_delivery_rate_std",
-        ),
-        (
-            "coverage_percent",
-            "episode/coverage_percent_std",
-        ),
-        (
-            "episode_energy_j",
-            "episode/total_energy_j_std",
-        ),
-    ):
-        source_values = values(source_key)
-        if source_values:
-            payload[output_key] = float(
-                np.std(source_values)
-            )
+    for component_key in episode_component_keys:
+        _add_episode_value(
+            payload,
+            chunk,
+            component_key,
+            component_key,
+        )
 
+    add_episode_diagnostic_metrics(
+        payload,
+        chunk,
+    )
     return payload
 
 
@@ -5205,17 +5271,8 @@ def build_paper_curve_payload(
             for item in chunk
         )
     }
-    return_values = np.asarray(
-        [item["return"] for item in chunk],
-        dtype=np.float64,
-    )
     payload = {
         "episodes_completed": int(episodes_completed),
-        "paper/window_size": int(len(chunk)),
-        # Keep the unsmoothed window statistic beside the display curve so the
-        # paper-style view stays auditable instead of replacing raw evidence.
-        "paper/return_window_mean": float(np.mean(return_values)),
-        "paper/return_window_std": float(np.std(return_values)),
     }
     for output_key, source_key in sources.items():
         source_values = [
@@ -5792,7 +5849,7 @@ def _train_full_gpu_ddp_worker(
     train_freq = int(
         CONFIG.get(f"{algorithm}_train_freq", 1)
     )
-    gradient_steps = int(
+    configured_gradient_steps = int(
         CONFIG.get(
             f"{algorithm}_gradient_steps",
             CONFIG.get(f"{algorithm}_updates_per_step", 1),
@@ -5800,10 +5857,12 @@ def _train_full_gpu_ddp_worker(
     )
     if train_freq < 1:
         raise ValueError("train_freq must be >= 1")
-    if gradient_steps == 0 or gradient_steps < -1:
-        raise ValueError(
-            "gradient_steps must be -1 or a positive integer"
-        )
+    gradient_steps = resolve_vector_gradient_steps(
+        configured_gradient_steps,
+        num_envs=num_envs,
+        batch_size=global_batch_size,
+        train_freq=train_freq,
+    )
 
     wandb_run = (
         _init_gpu_wandb_run(
@@ -5848,7 +5907,25 @@ def _train_full_gpu_ddp_worker(
                     )
                 ),
                 "train_freq": int(train_freq),
+                "configured_gradient_steps": int(configured_gradient_steps),
+                "effective_gradient_steps": int(gradient_steps),
                 "gradient_steps": int(gradient_steps),
+                "global_batch_size": int(global_batch_size),
+                "replay_capacity": int(global_capacity),
+                "replay_samples_per_new_transition": (
+                    float(global_batch_size)
+                    if int(gradient_steps) == -1
+                    else float(gradient_steps) * float(global_batch_size)
+                    / max(1.0, float(num_envs * train_freq))
+                ),
+                "optimizer_updates_per_1000_new_transitions": (
+                    1000.0
+                    if int(gradient_steps) == -1
+                    else 1000.0 * float(gradient_steps)
+                    / max(1.0, float(num_envs * train_freq))
+                ),
+                "replay_turnover_vector_steps": float(global_capacity)
+                / max(1.0, float(num_envs)),
             },
             allow_val_change=True,
         )
@@ -7044,191 +7121,10 @@ def _train_full_gpu_ddp_worker(
                         episodes_logged += len(
                             chunk
                         )
-                        returns = np.asarray(
-                            [
-                                item[
-                                    "return"
-                                ]
-                                for item in chunk
-                            ],
-                            dtype=np.float64,
-                        )
-                        payload = {
-                            "episodes_completed": int(
-                                episodes_logged
-                            ),
-                            "episode/return_mean": float(
-                                np.mean(
-                                    returns
-                                )
-                            ),
-                            "episode/return_std": float(
-                                np.std(
-                                    returns
-                                )
-                            ),
-                            "episode/return_min": float(
-                                np.min(
-                                    returns
-                                )
-                            ),
-                            "episode/return_max": float(
-                                np.max(
-                                    returns
-                                )
-                            ),
-                            "episode/length_mean": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "length"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/end_step": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "end_step"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/end_reason_code": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "end_reason_code"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/end_by_success_rate": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "end_by_success"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/end_by_all_uavs_inactive_rate": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "end_by_all_uavs_inactive"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/end_by_horizon_rate": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "end_by_horizon"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/confirmed_targets_mean": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "confirmed_targets"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/delivered_targets_mean": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "delivered_targets"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/total_energy_j_mean": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "episode_energy_j"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/target_search_rate_percent": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "target_search_rate_percent"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/target_delivery_rate_percent": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "target_delivery_rate_percent"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                            "episode/success_rate": float(
-                                np.mean(
-                                    [
-                                        item[
-                                            "success"
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            ),
-                        }
-                        for component_key in (
-                            episode_component_keys
-                        ):
-                            payload[
-                                f"episode/{component_key}_mean"
-                            ] = float(
-                                np.mean(
-                                    [
-                                        item[
-                                            component_key
-                                        ]
-                                        for item
-                                        in chunk
-                                    ]
-                                )
-                            )
-                        add_episode_diagnostic_metrics(
-                            payload,
+                        payload = build_episode_curve_payload(
                             chunk,
+                            episodes_logged,
+                            episode_component_keys,
                         )
                         print(
                             "WANDB_BRIDGE_JSON "
@@ -7248,28 +7144,38 @@ def _train_full_gpu_ddp_worker(
                                 "latest_episode_return"
                             ] = float(
                                 payload[
-                                    "episode/return_mean"
+                                    _episode_metric_key(
+                                        "return", len(chunk)
+                                    )
                                 ]
                             )
                             wandb_run.summary[
                                 "latest_episode_target_search_rate_percent"
                             ] = float(
                                 payload[
-                                    "episode/target_search_rate_percent"
+                                    _episode_metric_key(
+                                        "target_search_rate_percent",
+                                        len(chunk),
+                                    )
                                 ]
                             )
                             wandb_run.summary[
                                 "latest_episode_target_delivery_rate_percent"
                             ] = float(
                                 payload[
-                                    "episode/target_delivery_rate_percent"
+                                    _episode_metric_key(
+                                        "target_delivery_rate_percent",
+                                        len(chunk),
+                                    )
                                 ]
                             )
                             wandb_run.summary[
                                 "latest_episode_success_rate"
                             ] = float(
                                 payload[
-                                    "episode/success_rate"
+                                    _episode_metric_key(
+                                        "success", len(chunk)
+                                    )
                                 ]
                             )
                             wandb_run.summary[
@@ -7557,6 +7463,23 @@ def _train_full_gpu_ddp_worker(
                         "train/updates_per_second": (
                             update_count
                             / elapsed
+                        ),
+                        "train/optimizer_updates": int(update_count),
+                        "train/vector_steps": int(vector_step_count),
+                        "train/optimizer_updates_per_1000_transitions": (
+                            1000.0 * float(update_count)
+                            / max(
+                                1.0,
+                                float(global_step - learning_starts),
+                            )
+                        ),
+                        "train/replay_samples_per_new_transition_effective": (
+                            float(global_batch_size)
+                            * float(update_count)
+                            / max(
+                                1.0,
+                                float(global_step - learning_starts),
+                            )
                         ),
                         "train/reward_mean": (
                             reward_mean
@@ -8019,92 +7942,10 @@ def _train_full_gpu_ddp_worker(
             episodes_logged += len(
                 chunk
             )
-            returns = np.asarray(
-                [
-                    item["return"]
-                    for item in chunk
-                ],
-                dtype=np.float64,
-            )
-            payload = {
-                "episodes_completed": int(
-                    episodes_logged
-                ),
-                "episode/return_mean": float(
-                    np.mean(
-                        returns
-                    )
-                ),
-                "episode/return_std": float(
-                    np.std(
-                        returns
-                    )
-                ),
-                "episode/return_min": float(
-                    np.min(
-                        returns
-                    )
-                ),
-                "episode/return_max": float(
-                    np.max(
-                        returns
-                    )
-                ),
-                "episode/length_mean": float(
-                    np.mean(
-                        [
-                            item["length"]
-                            for item in chunk
-                        ]
-                    )
-                ),
-                "episode/target_search_rate_percent": float(
-                    np.mean(
-                        [
-                            item[
-                                "target_search_rate_percent"
-                            ]
-                            for item in chunk
-                        ]
-                    )
-                ),
-                "episode/target_delivery_rate_percent": float(
-                    np.mean(
-                        [
-                            item[
-                                "target_delivery_rate_percent"
-                            ]
-                            for item in chunk
-                        ]
-                    )
-                ),
-                "episode/success_rate": float(
-                    np.mean(
-                        [
-                            item["success"]
-                            for item in chunk
-                        ]
-                    )
-                ),
-            }
-            for component_key in (
-                episode_component_keys
-            ):
-                payload[
-                    f"episode/{component_key}_mean"
-                ] = float(
-                    np.mean(
-                        [
-                            item[
-                                component_key
-                            ]
-                            for item in chunk
-                        ]
-                    )
-                )
-            add_episode_diagnostic_metrics(
-                payload,
+            payload = build_episode_curve_payload(
                 chunk,
+                episodes_logged,
+                episode_component_keys,
             )
             if wandb_run is not None:
                 wandb_run.log(
@@ -8253,7 +8094,15 @@ def _train_full_gpu_ddp_worker(
                 "transitions": int(global_step),
                 "updates": int(update_count),
                 "train_freq": int(train_freq),
+                "configured_gradient_steps": int(configured_gradient_steps),
+                "effective_gradient_steps": int(gradient_steps),
                 "gradient_steps": int(gradient_steps),
+                "replay_samples_per_new_transition": (
+                    float(global_batch_size)
+                    if int(gradient_steps) == -1
+                    else float(gradient_steps) * float(global_batch_size)
+                    / max(1.0, float(num_envs * train_freq))
+                ),
                 "target_episodes": (
                     int(target_episodes)
                     if target_episodes
@@ -8869,7 +8718,7 @@ def train_full_gpu_sharded(
             "algorithm.train_freq and algorithm.gradient_steps instead"
         )
     train_freq = int(CONFIG.get(f"{algorithm}_train_freq", 1))
-    gradient_steps = int(
+    configured_gradient_steps = int(
         CONFIG.get(
             f"{algorithm}_gradient_steps",
             CONFIG.get(f"{algorithm}_updates_per_step", 1),
@@ -8877,10 +8726,12 @@ def train_full_gpu_sharded(
     )
     if train_freq < 1:
         raise ValueError("train_freq must be >= 1")
-    if gradient_steps == 0 or gradient_steps < -1:
-        raise ValueError(
-            "gradient_steps must be -1 or a positive integer"
-        )
+    gradient_steps = resolve_vector_gradient_steps(
+        configured_gradient_steps,
+        num_envs=num_envs,
+        batch_size=batch_size,
+        train_freq=train_freq,
+    )
 
     policy_generator = torch.Generator(device=primary)
     policy_generator.manual_seed(int(seed) + 77_777)

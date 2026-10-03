@@ -323,6 +323,12 @@ _RUNTIME_MAP = {
     "full_gpu_max_gpus": "runtime.max_gpus",
     "full_gpu_multi_gpu_strategy": "runtime.multi_gpu_strategy",
     "full_gpu_num_envs": "runtime.num_envs",
+    "training_auto_scale_gradient_steps": (
+        "runtime.offpolicy.auto_scale_gradient_steps"
+    ),
+    "training_min_replay_sample_ratio": (
+        "runtime.offpolicy.min_replay_sample_ratio"
+    ),
     "training_num_envs": "runtime.num_envs",
     "training_vector_context": "runtime.vector.context",
     "training_vector_shared_memory": "runtime.vector.shared_memory",

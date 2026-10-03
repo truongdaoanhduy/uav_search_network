@@ -8,6 +8,9 @@ max_gpus: 0
 multi_gpu_strategy: ddp
 compile_mode: null
 fused_adam: false
+offpolicy:
+  auto_scale_gradient_steps: true
+  min_replay_sample_ratio: 1.0
 vector:
   context: fork
   shared_memory: true

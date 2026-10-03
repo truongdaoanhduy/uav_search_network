@@ -221,6 +221,11 @@ CONFIG = {
     "full_gpu_max_gpus": 2,
     "full_gpu_multi_gpu_strategy": "ddp",
     "full_gpu_num_envs": 1024,
+    # For off-policy training with vectorized envs, ensure each optimizer burst
+    # samples at least this fraction of the newly collected transitions.
+    # 1.0 means total minibatch samples per burst >= new transitions.
+    "training_auto_scale_gradient_steps": True,
+    "training_min_replay_sample_ratio": 1.0,
     "full_gpu_benchmark_env_counts": (
         1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
     ),

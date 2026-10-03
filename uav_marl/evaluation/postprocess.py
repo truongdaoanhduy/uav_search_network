@@ -750,6 +750,10 @@ def postprocess_checkpoint_cpu(
                     format="mp4",
                 )
             wandb_run.log(payload)
+            wandb_run.summary["kaggle_account"] = resolve_kaggle_account()
+            wandb_run.summary["execution_platform"] = (
+                "kaggle" if running_on_kaggle() else "None"
+            )
             wandb_run.summary["cpu_postprocess/checkpoint_sha256"] = digest.hexdigest()
             wandb_run.summary["cpu_postprocess/huggingface_uploaded"] = bool(
                 hf_status.get("uploaded", False)
