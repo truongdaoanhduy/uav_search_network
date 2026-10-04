@@ -6,7 +6,7 @@ from uav_marl.training.gpu import CONFIG, train_full_gpu
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_train_full_gpu_cpu_initializes_environment_before_action_selection(monkeypatch):
+def test_train_full_gpu_cpu_initializes_environment_before_action_selection(monkeypatch, tmp_path):
     monkeypatch.setitem(CONFIG, "masac_learning_starts", 2000)
     monkeypatch.setitem(CONFIG, "masac_batch_size", 4)
     monkeypatch.setitem(CONFIG, "masac_replay_capacity", 64)
@@ -14,7 +14,7 @@ def test_train_full_gpu_cpu_initializes_environment_before_action_selection(monk
     monkeypatch.setitem(CONFIG, "training_checkpoint_interval_episodes", 1000)
 
     result = train_full_gpu(
-        repo=ROOT,
+        repo=tmp_path,
         algorithm="masac",
         num_envs=1,
         total_transitions=1,
