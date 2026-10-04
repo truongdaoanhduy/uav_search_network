@@ -195,3 +195,36 @@ def test_single_gpu_full_flow_rejects_unsupported_runtime_optimizer_switches():
     )
     with pytest.raises(ValueError, match="train_freq"):
         validate_config(cfg)
+
+
+def test_risk_aware_apf_config_is_minimal_and_maps_to_legacy_bridge():
+    cfg = compose_cfg("algorithm=masac")
+
+    assert cfg.task.scenario.map_size == 3000
+    assert cfg.task.scenario.num_targets == 50
+    assert cfg.task.scenario.num_obstacles == 30
+    assert cfg.task.scenario.max_steps == 1000
+    assert list(cfg.task.scenario.gcs_position) == [1500, 0, 0.0]
+
+    assert cfg.task.safety.peer_distance_m == pytest.approx(30.0)
+    assert cfg.task.safety.obstacle_clearance_m == pytest.approx(30.0)
+    assert cfg.task.spawn.launch_radius_m == pytest.approx(300.0)
+    assert cfg.task.spawn.launch_min_spacing_m == pytest.approx(60.0)
+
+    assert cfg.task.apf.enabled is True
+    assert cfg.task.apf.soft_gain == pytest.approx(1.5)
+    assert cfg.task.apf.lookahead_s == pytest.approx(3.0)
+    assert cfg.task.apf.braking_margin == pytest.approx(1.5)
+
+    assert "apf_peer_influence_m" not in cfg.task.scenario
+    assert "apf_obstacle_influence_m" not in cfg.task.scenario
+    assert "apf_emergency_gain" not in cfg.task.scenario
+
+    legacy = dict(BASE_CONFIG)
+    apply_to_legacy_config(legacy, cfg)
+    assert legacy["apf_enabled"] is True
+    assert legacy["apf_soft_gain"] == pytest.approx(1.5)
+    assert legacy["apf_lookahead_s"] == pytest.approx(3.0)
+    assert legacy["apf_braking_margin"] == pytest.approx(1.5)
+    assert legacy["safety_distance"] == pytest.approx(30.0)
+    assert legacy["launch_min_spacing_m"] == pytest.approx(60.0)

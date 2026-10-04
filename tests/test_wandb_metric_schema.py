@@ -40,6 +40,8 @@ def _episode(value: float = 1.0):
         "apf_intervention_rate": 0.2,
         "apf_peer_intervention_rate": 0.1,
         "apf_obstacle_intervention_rate": 0.15,
+        "apf_emergency_rate": 0.02,
+        "apf_correction_norm_mean_mps2": 0.3,
         "boundary_clip_rate": 0.05,
         "false_confirmations": 0.0,
         "reports_created": 2.0,
@@ -100,6 +102,8 @@ def test_single_episode_metrics_are_raw_not_fake_seed_statistics():
     assert payload["episode/apf_intervention_rate"] == 0.2
     assert payload["episode/apf_peer_intervention_rate"] == 0.1
     assert payload["episode/apf_obstacle_intervention_rate"] == 0.15
+    assert payload["episode/apf_emergency_rate"] == 0.02
+    assert payload["episode/apf_correction_norm_mean_mps2"] == 0.3
     assert "episode/return_mean" not in payload
     assert "episode/return_std" not in payload
     assert "episode/coverage_percent_mean" not in payload
@@ -190,6 +194,8 @@ def test_workspace_formatter_uses_episode_axis_paper_style_and_kaggle_column():
     assert "episode/apf_intervention_rate" in source
     assert "episode/apf_peer_intervention_rate" in source
     assert "episode/apf_obstacle_intervention_rate" in source
+    assert "episode/apf_emergency_rate" in source
+    assert "episode/apf_correction_norm_mean_mps2" in source
     assert "episode/blocked_motion_rate" not in source
 
 

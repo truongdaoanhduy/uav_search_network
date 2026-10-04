@@ -5225,6 +5225,8 @@ def add_episode_diagnostic_metrics(payload, chunk):
         "apf_intervention_rate": "apf_intervention_rate",
         "apf_peer_intervention_rate": "apf_peer_intervention_rate",
         "apf_obstacle_intervention_rate": "apf_obstacle_intervention_rate",
+        "apf_emergency_rate": "apf_emergency_rate",
+        "apf_correction_norm_mean_mps2": "apf_correction_norm_mean_mps2",
         "boundary_clip_rate": "boundary_clip_rate",
         "false_confirmations": "false_confirmations",
         "reports_created": "reports_created",
@@ -6090,6 +6092,8 @@ def _train_full_gpu_ddp_worker(
         "apf_active",
         "apf_peer_active",
         "apf_obstacle_active",
+        "apf_emergency",
+        "apf_correction_norm_sum",
         "boundary",
         "distance_m",
         "false_confirmations",
@@ -6931,6 +6935,18 @@ def _train_full_gpu_ddp_worker(
                                 "apf_obstacle_intervention_rate": (
                                     diag[
                                         "apf_obstacle_active"
+                                    ]
+                                    / possible_agent_steps
+                                ),
+                                "apf_emergency_rate": (
+                                    diag[
+                                        "apf_emergency"
+                                    ]
+                                    / possible_agent_steps
+                                ),
+                                "apf_correction_norm_mean_mps2": (
+                                    diag[
+                                        "apf_correction_norm_sum"
                                     ]
                                     / possible_agent_steps
                                 ),

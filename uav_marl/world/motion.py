@@ -6,6 +6,7 @@ Migrated from notebook cells 16..20.
 """
 
 from .generation import *  # noqa: F401,F403
+from .apf import apf_repulsion_numpy
 
 # --- frozen notebook cell 16 ---
 def segment_intersects_obstacle(
@@ -339,49 +340,62 @@ def apply_swarm_motion(
         obstacle_radius = np.zeros((0,), dtype=np.float64)
         obstacle_height = np.zeros((0,), dtype=np.float64)
 
+    projected_actions = project_motion_action_np(actions)
+    max_accel = float(CONFIG["max_accel"])
+    max_speed = float(CONFIG["max_speed"])
+    nominal_acceleration = projected_actions * max_accel
+    nominal_velocities = (
+        old_velocities + nominal_acceleration * dt
+    )
+    nominal_speed = np.linalg.norm(
+        nominal_velocities,
+        axis=-1,
+        keepdims=True,
+    )
+    nominal_velocities = nominal_velocities * np.minimum(
+        1.0,
+        max_speed / np.maximum(nominal_speed, 1e-12),
+    )
+
+    # Quantize APF inputs to float32 so the CPU reference uses the same
+    # safety-field state precision as the tensor/CUDA training environment.
+    # The physical CPU integrator remains float64.
     apf = apf_repulsion_numpy(
-        old_positions,
-        old_velocities,
+        old_positions.astype(np.float32),
+        old_velocities.astype(np.float32),
         active,
-        obstacle_xy,
-        obstacle_radius,
-        obstacle_height,
-        max_accel=float(CONFIG["max_accel"]),
+        obstacle_xy.astype(np.float32),
+        obstacle_radius.astype(np.float32),
+        obstacle_height.astype(np.float32),
+        nominal_velocities=nominal_velocities.astype(np.float32),
+        max_accel=max_accel,
         safety_distance=float(CONFIG["safety_distance"]),
         obstacle_clearance=float(
             CONFIG["obstacle_clearance_m"]
         ),
-        peer_influence=float(
-            CONFIG.get("apf_peer_influence_m", 200.0)
-        ),
-        obstacle_influence=float(
-            CONFIG.get("apf_obstacle_influence_m", 120.0)
-        ),
-        peer_gain=float(
-            CONFIG.get("apf_peer_gain", 1.5)
-        ),
-        obstacle_gain=float(
-            CONFIG.get("apf_obstacle_gain", 1.5)
-        ),
-        lookahead_s=float(
-            CONFIG.get("apf_lookahead_s", 3.0)
-        ),
-        emergency_gain=float(
-            CONFIG.get("apf_emergency_gain", 4.0)
-        ),
+        soft_gain=float(CONFIG.get("apf_soft_gain", 1.5)),
+        lookahead_s=float(CONFIG.get("apf_lookahead_s", 3.0)),
         braking_margin=float(
             CONFIG.get("apf_braking_margin", 1.5)
         ),
+        enabled=bool(CONFIG.get("apf_enabled", True)),
     )
 
-    projected_actions = project_motion_action_np(actions)
-    desired_acceleration = (
-        projected_actions * float(CONFIG["max_accel"])
-        + apf["acceleration_mps2"]
+    soft_desired_acceleration = (
+        nominal_acceleration
+        + apf["soft_acceleration_mps2"]
+    )
+    desired_acceleration = np.where(
+        apf["emergency"][:, None],
+        apf["emergency_acceleration_mps2"],
+        soft_desired_acceleration,
     )
     combined_actions = project_motion_action_np(
-        desired_acceleration
-        / max(float(CONFIG["max_accel"]), 1e-12)
+        desired_acceleration / max(max_accel, 1e-12)
+    )
+    applied_acceleration = combined_actions * max_accel
+    apf_correction_acceleration = (
+        applied_acceleration - nominal_acceleration
     )
 
     candidate_positions = []
@@ -467,8 +481,20 @@ def apply_swarm_motion(
             apf["obstacle_active"],
             dtype=bool,
         ),
+        "apf_emergency": np.asarray(
+            apf["emergency"],
+            dtype=bool,
+        ),
+        "apf_peer_emergency": np.asarray(
+            apf["peer_emergency"],
+            dtype=bool,
+        ),
+        "apf_obstacle_emergency": np.asarray(
+            apf["obstacle_emergency"],
+            dtype=bool,
+        ),
         "apf_acceleration_mps2": np.asarray(
-            apf["acceleration_mps2"],
+            apf_correction_acceleration,
             dtype=np.float64,
         ),
         "apf_peer_acceleration_mps2": np.asarray(
@@ -477,6 +503,14 @@ def apply_swarm_motion(
         ),
         "apf_obstacle_acceleration_mps2": np.asarray(
             apf["obstacle_acceleration_mps2"],
+            dtype=np.float64,
+        ),
+        "apf_min_peer_clearance_m": np.asarray(
+            apf["min_peer_clearance_m"],
+            dtype=np.float64,
+        ),
+        "apf_min_obstacle_clearance_m": np.asarray(
+            apf["min_obstacle_clearance_m"],
             dtype=np.float64,
         ),
         "boundary_clipped": boundary_clipped,

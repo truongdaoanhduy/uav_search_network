@@ -135,6 +135,8 @@ def format_workspace(
             _line("APF Intervention Rate", "episode/apf_intervention_rate", "Rate", y_range=(0, 1)),
             _line("APF Peer Intervention Rate", "episode/apf_peer_intervention_rate", "Rate", y_range=(0, 1)),
             _line("APF Obstacle Intervention Rate", "episode/apf_obstacle_intervention_rate", "Rate", y_range=(0, 1)),
+            _line("APF Emergency Rate", "episode/apf_emergency_rate", "Rate", y_range=(0, 1)),
+            _line("APF Correction Magnitude", "episode/apf_correction_norm_mean_mps2", "Acceleration (m/s²)"),
             _line("Boundary Clip Rate", "episode/boundary_clip_rate", "Rate", y_range=(0, 1)),
             _line("False Confirmations", "episode/false_confirmations", "Count"),
             _line("Expired Reports", "episode/expired_reports", "Count"),

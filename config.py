@@ -4,7 +4,7 @@
 CONFIG = {
     "seed": 44,
 
-    "map_size": 5000,
+    "map_size": 3000,
     "num_uavs": 6,
     "num_targets": 50,
     "num_obstacles": 30,
@@ -17,9 +17,9 @@ CONFIG = {
     "dt": 1,
     "max_steps": 1000,
 
-    "gcs_position": [2500, 0, 0.0],
-    "gcs_exclusion_radius_m": 200,
-    "target_exclusion_radius_m": 400,
+    "gcs_position": [1500, 0, 0.0],
+    "gcs_exclusion_radius_m": 150,
+    "target_exclusion_radius_m": 250,
 
     "battery_j": 277200,
 
@@ -36,16 +36,13 @@ CONFIG = {
 
     "safety_distance": 30,
     "obstacle_clearance_m": 30.0,
-    # Predictive bounded Artificial Potential Field (APF) safety layer.
-    # Influence values are margins outside the peer/obstacle safety envelope.
-    "apf_peer_influence_m": 200.0,
-    "apf_obstacle_influence_m": 120.0,
-    "apf_peer_gain": 1.5,
-    "apf_obstacle_gain": 1.5,
+    # Risk-aware APF safety layer. Influence distances are derived each step
+    # from relative closing speed and braking capability.
+    "apf_enabled": True,
+    "apf_soft_gain": 1.5,
     "apf_lookahead_s": 3.0,
-    "apf_emergency_gain": 4.0,
     "apf_braking_margin": 1.5,
-    "launch_min_spacing_m": 45.0,
+    "launch_min_spacing_m": 60.0,
 
     "report_bytes": 1_000_000,
     "buffer_bytes": 3_000_000,
@@ -57,13 +54,13 @@ CONFIG = {
 
     "launch_radius_m": 300,
 
-    "obstacle_radius_min_m": 80.0,
-    "obstacle_radius_max_m": 220.0,
+    "obstacle_radius_min_m": 50.0,
+    "obstacle_radius_max_m": 130.0,
     "obstacle_height_min_m": 30.0,
     "obstacle_height_max_m": 120.0,
 
-    "peer_contact_range_m": 1000,
-    "gcs_contact_range_m": 1000,
+    "peer_contact_range_m": 500,
+    "gcs_contact_range_m": 500,
 
     "tx_power_min_w": 0.1,
     "tx_power_max_w": 0.4,

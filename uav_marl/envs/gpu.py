@@ -6,10 +6,8 @@ Migrated from notebook cells 221..225.
 """
 
 from ..algorithms.matd3 import *  # noqa: F401,F403
-from ..common import (
-    apf_repulsion_torch,
-    contact_graph_reachability_fraction_torch,
-)
+from ..common import contact_graph_reachability_fraction_torch
+from ..world.apf import apf_repulsion_torch
 
 # --- frozen notebook cell 221 ---
 class FullGpuUAVBatchEnv:
@@ -675,10 +673,27 @@ class FullGpuUAVBatchEnv:
 
 
     def _motion(self, motion):
-        """Apply MARL acceleration plus APF repulsion without hard blocking."""
+        """Apply nominal MARL acceleration through the risk-aware APF shield."""
         old_pos = self.positions
         old_vel = self.velocities
         projected = self._project_unit_ball(motion)
+
+        nominal_accel = projected * self.max_accel
+        nominal_velocity = old_vel + nominal_accel * self.dt
+        nominal_speed = torch.linalg.vector_norm(
+            nominal_velocity,
+            dim=-1,
+            keepdim=True,
+        )
+        nominal_velocity = nominal_velocity * torch.minimum(
+            torch.ones_like(nominal_speed),
+            torch.as_tensor(
+                self.max_speed,
+                dtype=nominal_velocity.dtype,
+                device=self.device,
+            )
+            / nominal_speed.clamp_min(1e-8),
+        )
 
         apf = apf_repulsion_torch(
             old_pos,
@@ -687,66 +702,39 @@ class FullGpuUAVBatchEnv:
             self.obstacle_xy,
             self.obstacle_radius,
             self.obstacle_height,
+            nominal_velocities=nominal_velocity,
             max_accel=self.max_accel,
-            safety_distance=float(
-                CONFIG["safety_distance"]
-            ),
+            safety_distance=float(CONFIG["safety_distance"]),
             obstacle_clearance=float(
                 CONFIG["obstacle_clearance_m"]
             ),
-            peer_influence=float(
-                CONFIG.get(
-                    "apf_peer_influence_m",
-                    200.0,
-                )
-            ),
-            obstacle_influence=float(
-                CONFIG.get(
-                    "apf_obstacle_influence_m",
-                    120.0,
-                )
-            ),
-            peer_gain=float(
-                CONFIG.get(
-                    "apf_peer_gain",
-                    1.5,
-                )
-            ),
-            obstacle_gain=float(
-                CONFIG.get(
-                    "apf_obstacle_gain",
-                    1.5,
-                )
+            soft_gain=float(
+                CONFIG.get("apf_soft_gain", 1.5)
             ),
             lookahead_s=float(
-                CONFIG.get(
-                    "apf_lookahead_s",
-                    3.0,
-                )
-            ),
-            emergency_gain=float(
-                CONFIG.get(
-                    "apf_emergency_gain",
-                    4.0,
-                )
+                CONFIG.get("apf_lookahead_s", 3.0)
             ),
             braking_margin=float(
-                CONFIG.get(
-                    "apf_braking_margin",
-                    1.5,
-                )
+                CONFIG.get("apf_braking_margin", 1.5)
             ),
+            enabled=bool(CONFIG.get("apf_enabled", True)),
         )
 
-        desired_accel = (
-            projected * self.max_accel
-            + apf["acceleration_mps2"]
+        soft_desired_accel = (
+            nominal_accel
+            + apf["soft_acceleration_mps2"]
+        )
+        desired_accel = torch.where(
+            apf["emergency"].unsqueeze(-1),
+            apf["emergency_acceleration_mps2"],
+            soft_desired_accel,
         )
         applied_motion = self._project_unit_ball(
             desired_accel
             / max(self.max_accel, 1e-12)
         )
         accel = applied_motion * self.max_accel
+        apf_correction_accel = accel - nominal_accel
 
         candidate_velocity = old_vel + accel * self.dt
         speed = torch.linalg.vector_norm(
@@ -815,14 +803,25 @@ class FullGpuUAVBatchEnv:
             "apf_obstacle_active": (
                 apf["obstacle_active"]
             ),
+            "apf_emergency": apf["emergency"],
+            "apf_peer_emergency": apf["peer_emergency"],
+            "apf_obstacle_emergency": (
+                apf["obstacle_emergency"]
+            ),
             "apf_acceleration_mps2": (
-                apf["acceleration_mps2"]
+                apf_correction_accel
             ),
             "apf_peer_acceleration_mps2": (
                 apf["peer_acceleration_mps2"]
             ),
             "apf_obstacle_acceleration_mps2": (
                 apf["obstacle_acceleration_mps2"]
+            ),
+            "apf_min_peer_clearance_m": (
+                apf["min_peer_clearance_m"]
+            ),
+            "apf_min_obstacle_clearance_m": (
+                apf["min_obstacle_clearance_m"]
             ),
             "boundary": hclip | zclip,
             "horizontal_boundary": hclip,
@@ -3325,7 +3324,7 @@ class FullGpuUAVBatchEnv:
                 CONFIG["reward_blocked"]
             )
             * motion[
-                "apf_active"
+                "blocked"
             ].sum(-1).float()
             / safety_denominator
         )
@@ -3461,6 +3460,15 @@ class FullGpuUAVBatchEnv:
             "apf_obstacle_active": motion[
                 "apf_obstacle_active"
             ].sum(-1),
+            "apf_emergency": motion[
+                "apf_emergency"
+            ].sum(-1),
+            "apf_correction_norm_sum": (
+                torch.linalg.vector_norm(
+                    motion["apf_acceleration_mps2"],
+                    dim=-1,
+                ).sum(-1)
+            ),
             "boundary": motion["boundary"].sum(-1),
             "distance_m": torch.linalg.vector_norm(
                 self.positions - positions_before_motion,
