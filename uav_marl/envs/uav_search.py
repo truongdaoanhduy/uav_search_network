@@ -6,6 +6,7 @@ Migrated from notebook cells 139..163.
 """
 
 from ..world.observations import *  # noqa: F401,F403
+from ..common import contact_graph_reachability_fraction_numpy
 
 # --- frozen notebook cell 139 ---
 class UAVSearchEnv(gym.Env):
@@ -1090,6 +1091,7 @@ class UAVSearchEnv(gym.Env):
         )
 
         sensing_record_count = 0
+        coverage_new_unique_cells = 0
         positive_observation_count = 0
         target_positive_observation_count = 0
         targets_in_fov_ids = set()
@@ -1119,10 +1121,12 @@ class UAVSearchEnv(gym.Env):
                 records
             )
             for record in records:
-                self.coverage_seen[
-                    int(record["gy"]),
-                    int(record["gx"]),
-                ] = True
+                gy = int(record["gy"])
+                gx = int(record["gx"])
+                coverage_new_unique_cells += int(
+                    not self.coverage_seen[gy, gx]
+                )
+                self.coverage_seen[gy, gx] = True
             information_gain_bits += (
                 sensing_information_gain_bits(
                     records
@@ -1723,6 +1727,25 @@ class UAVSearchEnv(gym.Env):
             in self.agent_ids
         }
 
+        gcs_contact_graph_reachability_fraction = (
+            contact_graph_reachability_fraction_numpy(
+                np.stack(
+                    [
+                        np.asarray(uav.position, dtype=np.float64)
+                        for uav in self.uavs
+                    ],
+                    axis=0,
+                ),
+                np.asarray(
+                    [bool(uav.active) for uav in self.uavs],
+                    dtype=bool,
+                ),
+                np.asarray(CONFIG["gcs_position"], dtype=np.float64),
+                peer_range_m=float(CONFIG["peer_contact_range_m"]),
+                gcs_range_m=float(CONFIG["gcs_contact_range_m"]),
+            )
+        )
+
         info = {
             "step": self.current_step,
             "backend": str(
@@ -1750,6 +1773,15 @@ class UAVSearchEnv(gym.Env):
             ),
             "sensing_record_count": (
                 sensing_record_count
+            ),
+            "coverage_sensed_cell_events": int(
+                sensing_record_count
+            ),
+            "coverage_new_unique_cells": int(
+                coverage_new_unique_cells
+            ),
+            "gcs_contact_graph_reachability_fraction": float(
+                gcs_contact_graph_reachability_fraction
             ),
             "positive_observation_count": int(
                 positive_observation_count

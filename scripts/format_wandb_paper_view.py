@@ -39,6 +39,27 @@ def _line(
     )
 
 
+def _train_line(
+    title,
+    metric,
+    ylabel,
+    *,
+    y_range=(None, None),
+):
+    return wr.LinePlot(
+        title=title,
+        x=wr.Metric("train/vector_steps"),
+        y=[wr.Metric(metric)],
+        title_x="Vector step",
+        title_y=ylabel,
+        range_y=y_range,
+        smoothing_type="exponential",
+        smoothing_factor=0.95,
+        smoothing_show_original=True,
+        legend_position="south",
+    )
+
+
 def format_workspace(
     view_url=DEFAULT_VIEW,
 ):
@@ -69,8 +90,8 @@ def format_workspace(
         pinned_runs=list(current.pinned_runs),
     )
 
-    comparison = ws.Section(
-        name="01 — Algorithm Comparison",
+    mission_learning = ws.Section(
+        name="01 — Mission / Learning",
         is_open=True,
         pinned=True,
         panels=[
@@ -103,33 +124,11 @@ def format_workspace(
                 "Coverage (%)",
                 y_range=(0, 100),
             ),
-            _line(
-                "Report Delivery Efficiency",
-                "episode/report_delivery_given_confirmation_rate_percent",
-                "Delivered / confirmed (%)",
-                y_range=(0, 100),
-            ),
-            _line(
-                "Episode End Step",
-                "episode/end_step",
-                "Step",
-            ),
-            _line(
-                "Total Energy",
-                "episode/total_energy_j",
-                "Energy (J)",
-            ),
-            _line(
-                "Blocked Motion Rate",
-                "episode/blocked_motion_rate",
-                "Rate",
-                y_range=(0, 1),
-            ),
         ],
     )
 
     safety_errors = ws.Section(
-        name="02 — Safety + Errors",
+        name="03 — Safety + Errors",
         is_open=True,
         pinned=False,
         panels=[
@@ -144,7 +143,7 @@ def format_workspace(
     )
 
     energy = ws.Section(
-        name="03 — Energy",
+        name="04 — Energy",
         is_open=True,
         pinned=False,
         panels=[
@@ -157,7 +156,7 @@ def format_workspace(
     )
 
     network = ws.Section(
-        name="04 — Network",
+        name="05 — Communication / Network",
         is_open=True,
         pinned=False,
         panels=[
@@ -167,12 +166,13 @@ def format_workspace(
             _line("TX Attempts", "episode/network_tx_attempts", "Attempts"),
             _line("NLOS Attempt Rate", "episode/network_nlos_attempt_rate_percent", "NLOS (%)", y_range=(0, 100)),
             _line("GCS In-range UAV Fraction", "episode/gcs_in_range_uav_fraction", "Fraction", y_range=(0, 1)),
+            _line("GCS Contact-Graph Reachability", "episode/gcs_contact_graph_reachability_percent", "Reachable UAVs (%)", y_range=(0, 100)),
             _line("Report Delivery Latency", "episode/report_delivery_latency_s", "Latency (s)"),
         ],
     )
 
-    mission_timing = ws.Section(
-        name="05 — Episode + Mission Timing",
+    mission_efficiency = ws.Section(
+        name="02 — Mission Efficiency",
         is_open=True,
         pinned=False,
         panels=[
@@ -180,9 +180,28 @@ def format_workspace(
             _line("Episode End Step", "episode/end_step", "Step"),
             _line("Distance Flown", "episode/distance_total_m", "Distance (m)"),
             _line("Information Gain", "episode/information_gain_bits", "Information gain (bits)"),
+            _line("Target Encounter Rate", "episode/target_encounter_rate_percent", "Encounter rate (%)", y_range=(0, 100)),
+            _line("Report Delivery Efficiency", "episode/report_delivery_given_confirmation_rate_percent", "Delivered / confirmed (%)", y_range=(0, 100)),
+            _line("Coverage Redundancy", "episode/coverage_redundancy_percent", "Redundant sensing (%)", y_range=(0, 100)),
             _line("Time to First Confirm", "episode/time_to_first_confirm_s", "Time (s)"),
             _line("Time to All Confirm", "episode/time_to_all_confirm_s", "Time (s)"),
             _line("Time to First Delivery", "episode/time_to_first_delivery_s", "Time (s)"),
+        ],
+    )
+
+    training_diagnostics = ws.Section(
+        name="06 — Training Diagnostics",
+        is_open=False,
+        pinned=False,
+        panels=[
+            _train_line("Actor Loss", "train/actor_loss", "Loss"),
+            _train_line("Critic Loss", "train/critic_loss", "Loss"),
+            _train_line("Continuous Entropy", "train/continuous_entropy", "Entropy"),
+            _train_line("Discrete Entropy", "train/discrete_entropy", "Entropy"),
+            _train_line("Target Q Mean", "train/target_q_mean", "Q value"),
+            _train_line("Optimizer Updates / 1000 Transitions", "train/optimizer_updates_per_1000_transitions", "Updates"),
+            _train_line("Replay Samples / New Transition", "train/replay_samples_per_new_transition_effective", "Ratio"),
+            _train_line("Transitions / Second", "train/transitions_per_second", "Transitions/s"),
         ],
     )
 
@@ -193,11 +212,17 @@ def format_workspace(
         not in {
             "01 — Paper Overview",
             "01 — Algorithm Comparison",
+            "01 — Mission / Learning",
             "02 — Policy Diagnostics",
             "02 — Safety + Errors",
+            "02 — Mission Efficiency",
             "03 — Energy",
+            "03 — Safety + Errors",
             "04 — Network",
+            "04 — Energy",
             "05 — Episode + Mission Timing",
+            "05 — Communication / Network",
+            "06 — Training Diagnostics",
         }
     ]
     for section in remaining:
@@ -205,11 +230,12 @@ def format_workspace(
         section.pinned = False
 
     workspace.sections = [
-        comparison,
+        mission_learning,
+        mission_efficiency,
         safety_errors,
         energy,
         network,
-        mission_timing,
+        training_diagnostics,
         *remaining,
     ]
     return workspace.save()

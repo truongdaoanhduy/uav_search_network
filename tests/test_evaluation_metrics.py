@@ -12,7 +12,16 @@ from uav_marl.algorithms.masac import (
 )
 
 
-def _fake_info(*, step: int, newly_confirmed=(), newly_delivered=(), total_j=0.0):
+def _fake_info(
+    *,
+    step: int,
+    newly_confirmed=(),
+    newly_delivered=(),
+    total_j=0.0,
+    coverage_sensed_cell_events=0,
+    coverage_new_unique_cells=0,
+    gcs_contact_graph_reachability_fraction=0.0,
+):
     zeros = np.zeros(2, dtype=bool)
     return {
         "step": step,
@@ -41,6 +50,11 @@ def _fake_info(*, step: int, newly_confirmed=(), newly_delivered=(), total_j=0.0
         },
         "communication_edges": [],
         "network_metrics": {},
+        "coverage_sensed_cell_events": int(coverage_sensed_cell_events),
+        "coverage_new_unique_cells": int(coverage_new_unique_cells),
+        "gcs_contact_graph_reachability_fraction": float(
+            gcs_contact_graph_reachability_fraction
+        ),
     }
 
 
@@ -112,6 +126,53 @@ def test_cpu_evaluation_tracks_mission_latency_distance_and_efficiency():
     assert metrics["report_delivery_given_confirmation_rate_percent"] == 100.0
     assert metrics["energy_per_confirmed_target_j"] == 100.0
     assert metrics["energy_per_delivered_target_j"] == 100.0
+
+
+def test_cpu_evaluation_tracks_coverage_redundancy_and_multihop_reachability():
+    env = _fake_env()
+    diagnostics = new_episode_diagnostics(env=env)
+
+    update_episode_diagnostics(
+        diagnostics,
+        _fake_info(
+            step=1,
+            coverage_sensed_cell_events=10,
+            coverage_new_unique_cells=6,
+            gcs_contact_graph_reachability_fraction=0.5,
+        ),
+        env=env,
+    )
+    update_episode_diagnostics(
+        diagnostics,
+        _fake_info(
+            step=2,
+            coverage_sensed_cell_events=5,
+            coverage_new_unique_cells=2,
+            gcs_contact_graph_reachability_fraction=1.0,
+        ),
+        env=env,
+    )
+    update_episode_diagnostics(
+        diagnostics,
+        _fake_info(
+            step=3,
+            coverage_sensed_cell_events=0,
+            coverage_new_unique_cells=0,
+            gcs_contact_graph_reachability_fraction=0.5,
+        ),
+        env=env,
+    )
+
+    metrics = finalize_episode_diagnostics(
+        diagnostics,
+        env,
+        episode_return=0.0,
+        episode_length=3,
+        success=False,
+    )
+
+    assert np.isclose(metrics["coverage_redundancy_percent"], 100.0 * (1.0 - 8.0 / 15.0))
+    assert np.isclose(metrics["gcs_contact_graph_reachability_percent"], 100.0 * (2.0 / 3.0))
 
 
 def test_conditional_time_metrics_ignore_unobserved_episodes_but_keep_observed_rate():

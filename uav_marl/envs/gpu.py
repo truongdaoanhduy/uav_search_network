@@ -6,6 +6,7 @@ Migrated from notebook cells 221..225.
 """
 
 from ..algorithms.matd3 import *  # noqa: F401,F403
+from ..common import contact_graph_reachability_fraction_torch
 
 # --- frozen notebook cell 221 ---
 class FullGpuUAVBatchEnv:
@@ -990,6 +991,8 @@ class FullGpuUAVBatchEnv:
 
         flat_idx = gy_c * self.grid_n + gx_c
         sentinel_index = self.grid_n * self.grid_n
+        coverage_count_before = self.coverage_seen.sum(-1)
+        coverage_sensed_cell_events = visible.sum(dim=(1, 2))
         coverage_padded = torch.cat(
             (
                 self.coverage_seen,
@@ -1023,6 +1026,10 @@ class FullGpuUAVBatchEnv:
                 :,
                 :sentinel_index,
             ]
+        )
+        coverage_new_unique_cells = (
+            self.coverage_seen.sum(-1)
+            - coverage_count_before
         )
 
         belief_flat = self.belief.view(E, U, -1)
@@ -1203,6 +1210,8 @@ class FullGpuUAVBatchEnv:
             "false_confirmation": false_confirmation,
             "reports_created": create_mask.sum(dim=(1, 2)),
             "dropped": dropped.sum(dim=(1, 2)),
+            "coverage_sensed_cell_events": coverage_sensed_cell_events,
+            "coverage_new_unique_cells": coverage_new_unique_cells,
         }
 
 
@@ -3589,6 +3598,21 @@ class FullGpuUAVBatchEnv:
                 .sum(-1)
                 / self.active.float().sum(-1).clamp_min(1.0)
             ),
+            "gcs_contact_graph_reachability_fraction": (
+                contact_graph_reachability_fraction_torch(
+                    self.positions,
+                    self.active,
+                    self.gcs,
+                    peer_range_m=float(CONFIG["peer_contact_range_m"]),
+                    gcs_range_m=float(CONFIG["gcs_contact_range_m"]),
+                )
+            ),
+            "coverage_sensed_cell_events": sensing[
+                "coverage_sensed_cell_events"
+            ].float(),
+            "coverage_new_unique_cells": sensing[
+                "coverage_new_unique_cells"
+            ].float(),
             "information_gain_bits": (
                 (
                     (

@@ -30,6 +30,8 @@ def _episode(value: float = 1.0):
         "target_delivery_rate_percent": 2.0 * value,
         "success": 0.0,
         "coverage_percent": 20.0 * value,
+        "coverage_redundancy_percent": 40.0,
+        "gcs_contact_graph_reachability_percent": 75.0,
         "target_encounter_rate_percent": 10.0,
         "information_gain_bits": 30.0,
         "blocked_motion_rate": 0.2,
@@ -90,6 +92,8 @@ def test_single_episode_metrics_are_raw_not_fake_seed_statistics():
     assert payload["episode/coverage_percent"] == 20.0
     assert payload["episode/success"] == 0.0
     assert payload["episode/total_energy_j"] == 5000.0
+    assert payload["episode/coverage_redundancy_percent"] == 40.0
+    assert payload["episode/gcs_contact_graph_reachability_percent"] == 75.0
     assert "episode/return_mean" not in payload
     assert "episode/return_std" not in payload
     assert "episode/coverage_percent_mean" not in payload
@@ -169,10 +173,14 @@ def test_workspace_formatter_uses_episode_axis_paper_style_and_kaggle_column():
     assert '"episode/return"' in source
     assert '"episode/coverage_percent"' in source
     assert "episode/coverage_percent_mean" not in source
-    assert "02 — Safety + Errors" in source
-    assert "03 — Energy" in source
-    assert "04 — Network" in source
-    assert "05 — Episode + Mission Timing" in source
+    assert "01 — Mission / Learning" in source
+    assert "02 — Mission Efficiency" in source
+    assert "03 — Safety + Errors" in source
+    assert "04 — Energy" in source
+    assert "05 — Communication / Network" in source
+    assert "06 — Training Diagnostics" in source
+    assert "episode/coverage_redundancy_percent" in source
+    assert "episode/gcs_contact_graph_reachability_percent" in source
 
 
 def test_actual_runs_table_formatter_locks_training_columns():

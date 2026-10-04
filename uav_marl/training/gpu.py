@@ -5211,6 +5211,10 @@ def add_episode_diagnostic_metrics(payload, chunk):
 
     direct = {
         "coverage_percent": "coverage_percent",
+        "coverage_redundancy_percent": "coverage_redundancy_percent",
+        "gcs_contact_graph_reachability_percent": (
+            "gcs_contact_graph_reachability_percent"
+        ),
         "target_encounter_rate_percent": "target_encounter_rate_percent",
         "information_gain_bits": "information_gain_bits",
         "blocked_motion_rate": "blocked_motion_rate",
@@ -5333,6 +5337,10 @@ def build_paper_curve_payload(
         "paper/delivery_rate_percent": "target_delivery_rate_percent",
         "paper/success_rate": "success",
         "paper/coverage_percent": "coverage_percent",
+        "paper/coverage_redundancy_percent": "coverage_redundancy_percent",
+        "paper/gcs_contact_graph_reachability_percent": (
+            "gcs_contact_graph_reachability_percent"
+        ),
         "paper/target_encounter_rate_percent": (
             "target_encounter_rate_percent"
         ),
@@ -6089,6 +6097,9 @@ def _train_full_gpu_ddp_worker(
         "delivery_latency_sum_s",
         "delivery_latency_count",
         "gcs_in_range_uav_fraction",
+        "gcs_contact_graph_reachability_fraction",
+        "coverage_sensed_cell_events",
+        "coverage_new_unique_cells",
     )
     episode_diagnostics = {
         key: torch.zeros(
@@ -6980,6 +6991,29 @@ def _train_full_gpu_ddp_worker(
                                         "gcs_in_range_uav_fraction"
                                     ]
                                     / length_steps
+                                ),
+                                "gcs_contact_graph_reachability_percent": (
+                                    100.0
+                                    * diag[
+                                        "gcs_contact_graph_reachability_fraction"
+                                    ]
+                                    / length_steps
+                                ),
+                                "coverage_redundancy_percent": (
+                                    100.0
+                                    * (
+                                        1.0
+                                        - diag[
+                                            "coverage_new_unique_cells"
+                                        ]
+                                        / diag[
+                                            "coverage_sensed_cell_events"
+                                        ]
+                                    )
+                                    if diag[
+                                        "coverage_sensed_cell_events"
+                                    ] > 0.0
+                                    else 0.0
                                 ),
                                 "report_delivery_latency_sample_count": (
                                     diag[

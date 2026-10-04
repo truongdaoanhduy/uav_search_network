@@ -2848,6 +2848,9 @@ def new_episode_diagnostics(env=None):
     return {
         "information_gain_bits": 0.0,
         "sensing_records": 0,
+        "coverage_sensed_cell_events": 0,
+        "coverage_new_unique_cells": 0,
+        "gcs_contact_graph_reachability_fraction_sum": 0.0,
         "positive_observations": 0,
         "target_positive_observations": 0,
         "targets_ever_in_fov_ids": set(),
@@ -3000,6 +3003,30 @@ def update_episode_diagnostics(
         info.get(
             "sensing_record_count",
             0,
+        )
+    )
+    diagnostics[
+        "coverage_sensed_cell_events"
+    ] += int(
+        info.get(
+            "coverage_sensed_cell_events",
+            info.get("sensing_record_count", 0),
+        )
+    )
+    diagnostics[
+        "coverage_new_unique_cells"
+    ] += int(
+        info.get(
+            "coverage_new_unique_cells",
+            0,
+        )
+    )
+    diagnostics[
+        "gcs_contact_graph_reachability_fraction_sum"
+    ] += float(
+        info.get(
+            "gcs_contact_graph_reachability_fraction",
+            0.0,
         )
     )
     diagnostics[
@@ -3933,6 +3960,23 @@ def finalize_episode_diagnostics(
         ),
     )
 
+    sensed_cell_events = int(
+        diagnostics["coverage_sensed_cell_events"]
+    )
+    new_unique_cells = int(
+        diagnostics["coverage_new_unique_cells"]
+    )
+    coverage_redundancy_percent = float(
+        100.0 * (1.0 - new_unique_cells / sensed_cell_events)
+        if sensed_cell_events > 0
+        else 0.0
+    )
+    gcs_contact_graph_reachability_percent = float(
+        100.0
+        * diagnostics["gcs_contact_graph_reachability_fraction_sum"]
+        / max(1, int(episode_length))
+    )
+
     metrics = {
         "return": float(
             episode_return
@@ -3965,6 +4009,12 @@ def finalize_episode_diagnostics(
         },
         "coverage_percent": (
             coverage_percent
+        ),
+        "coverage_redundancy_percent": (
+            coverage_redundancy_percent
+        ),
+        "gcs_contact_graph_reachability_percent": (
+            gcs_contact_graph_reachability_percent
         ),
         "length": int(
             episode_length
@@ -4920,6 +4970,8 @@ def summarize_evaluation_results(
         "reward_component_step",
         "reward_component_success_bonus",
         "coverage_percent",
+        "coverage_redundancy_percent",
+        "gcs_contact_graph_reachability_percent",
         "targets_spawned",
         "obstacles_spawned",
         "confirmed_targets",
