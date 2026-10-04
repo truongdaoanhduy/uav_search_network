@@ -3744,6 +3744,8 @@ def train_full_gpu(
         train_freq=train_freq,
     )
 
+    obs, state, mask = env.reset()
+
     global_step = 0
     vector_step_count = 0
     last_train_transition = int(learning_starts)
