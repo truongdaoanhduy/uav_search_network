@@ -36,6 +36,15 @@ CONFIG = {
 
     "safety_distance": 30,
     "obstacle_clearance_m": 30.0,
+    # Predictive bounded Artificial Potential Field (APF) safety layer.
+    # Influence values are margins outside the peer/obstacle safety envelope.
+    "apf_peer_influence_m": 200.0,
+    "apf_obstacle_influence_m": 120.0,
+    "apf_peer_gain": 1.5,
+    "apf_obstacle_gain": 1.5,
+    "apf_lookahead_s": 3.0,
+    "apf_emergency_gain": 4.0,
+    "apf_braking_margin": 1.5,
     "launch_min_spacing_m": 45.0,
 
     "report_bytes": 1_000_000,

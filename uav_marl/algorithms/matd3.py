@@ -3236,6 +3236,18 @@ def _finalize_vector_episode_tracker(
             diagnostics["peer_safety_blocks"]
             / possible_agent_steps
         ),
+        "apf_intervention_rate": float(
+            diagnostics["apf_interventions"]
+            / possible_agent_steps
+        ),
+        "apf_peer_intervention_rate": float(
+            diagnostics["apf_peer_interventions"]
+            / possible_agent_steps
+        ),
+        "apf_obstacle_intervention_rate": float(
+            diagnostics["apf_obstacle_interventions"]
+            / possible_agent_steps
+        ),
         "boundary_clip_rate": float(
             diagnostics["boundary_clips"]
             / possible_agent_steps
@@ -5385,8 +5397,9 @@ DEFAULT_WANDB_COMPARISON_METRICS = (
     "evaluation/false_confirmations",
     "evaluation/expired_reports",
     "evaluation/dropped_reports",
-    "evaluation/obstacle_block_rate",
-    "evaluation/peer_safety_block_rate",
+    "evaluation/apf_intervention_rate",
+    "evaluation/apf_peer_intervention_rate",
+    "evaluation/apf_obstacle_intervention_rate",
     "evaluation/boundary_clip_rate",
     "evaluation/total_energy_j",
     "evaluation/communication_energy_j",

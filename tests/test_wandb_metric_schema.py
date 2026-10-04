@@ -34,9 +34,12 @@ def _episode(value: float = 1.0):
         "gcs_contact_graph_reachability_percent": 75.0,
         "target_encounter_rate_percent": 10.0,
         "information_gain_bits": 30.0,
-        "blocked_motion_rate": 0.2,
-        "peer_safety_block_rate": 0.1,
+        "blocked_motion_rate": 0.0,
+        "peer_safety_block_rate": 0.0,
         "obstacle_block_rate": 0.0,
+        "apf_intervention_rate": 0.2,
+        "apf_peer_intervention_rate": 0.1,
+        "apf_obstacle_intervention_rate": 0.15,
         "boundary_clip_rate": 0.05,
         "false_confirmations": 0.0,
         "reports_created": 2.0,
@@ -94,6 +97,9 @@ def test_single_episode_metrics_are_raw_not_fake_seed_statistics():
     assert payload["episode/total_energy_j"] == 5000.0
     assert payload["episode/coverage_redundancy_percent"] == 40.0
     assert payload["episode/gcs_contact_graph_reachability_percent"] == 75.0
+    assert payload["episode/apf_intervention_rate"] == 0.2
+    assert payload["episode/apf_peer_intervention_rate"] == 0.1
+    assert payload["episode/apf_obstacle_intervention_rate"] == 0.15
     assert "episode/return_mean" not in payload
     assert "episode/return_std" not in payload
     assert "episode/coverage_percent_mean" not in payload
@@ -181,6 +187,10 @@ def test_workspace_formatter_uses_episode_axis_paper_style_and_kaggle_column():
     assert "06 — Training Diagnostics" in source
     assert "episode/coverage_redundancy_percent" in source
     assert "episode/gcs_contact_graph_reachability_percent" in source
+    assert "episode/apf_intervention_rate" in source
+    assert "episode/apf_peer_intervention_rate" in source
+    assert "episode/apf_obstacle_intervention_rate" in source
+    assert "episode/blocked_motion_rate" not in source
 
 
 def test_actual_runs_table_formatter_locks_training_columns():

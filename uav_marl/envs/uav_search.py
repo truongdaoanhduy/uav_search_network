@@ -1474,11 +1474,15 @@ class UAVSearchEnv(gym.Env):
             for event in event_log
         )
 
-        blocked_count = int(
+        apf_intervention_count = int(
             np.count_nonzero(
-                motion_result[
-                    "blocked"
-                ]
+                motion_result.get(
+                    "apf_active",
+                    np.zeros(
+                        self.num_uavs,
+                        dtype=bool,
+                    ),
+                )
             )
         )
         boundary_count = int(
@@ -1619,7 +1623,7 @@ class UAVSearchEnv(gym.Env):
                         "reward_blocked"
                     ]
                 )
-                * blocked_count
+                * apf_intervention_count
                 / safety_denominator
             ),
             "boundary": (

@@ -2860,6 +2860,9 @@ def new_episode_diagnostics(env=None):
         "blocked_motion": 0,
         "obstacle_blocks": 0,
         "peer_safety_blocks": 0,
+        "apf_interventions": 0,
+        "apf_peer_interventions": 0,
+        "apf_obstacle_interventions": 0,
         "boundary_clips": 0,
         "horizontal_boundary_clips": 0,
         "altitude_clips": 0,
@@ -3192,6 +3195,45 @@ def update_episode_diagnostics(
             motion[
                 "blocked_by_peer"
             ]
+        )
+    )
+    diagnostics[
+        "apf_interventions"
+    ] += int(
+        np.count_nonzero(
+            motion.get(
+                "apf_active",
+                np.zeros_like(
+                    motion["blocked"],
+                    dtype=bool,
+                ),
+            )
+        )
+    )
+    diagnostics[
+        "apf_peer_interventions"
+    ] += int(
+        np.count_nonzero(
+            motion.get(
+                "apf_peer_active",
+                np.zeros_like(
+                    motion["blocked"],
+                    dtype=bool,
+                ),
+            )
+        )
+    )
+    diagnostics[
+        "apf_obstacle_interventions"
+    ] += int(
+        np.count_nonzero(
+            motion.get(
+                "apf_obstacle_active",
+                np.zeros_like(
+                    motion["blocked"],
+                    dtype=bool,
+                ),
+            )
         )
     )
     diagnostics[
@@ -4132,6 +4174,24 @@ def finalize_episode_diagnostics(
             ]
             / possible_agent_steps
         ),
+        "apf_intervention_rate": float(
+            diagnostics[
+                "apf_interventions"
+            ]
+            / possible_agent_steps
+        ),
+        "apf_peer_intervention_rate": float(
+            diagnostics[
+                "apf_peer_interventions"
+            ]
+            / possible_agent_steps
+        ),
+        "apf_obstacle_intervention_rate": float(
+            diagnostics[
+                "apf_obstacle_interventions"
+            ]
+            / possible_agent_steps
+        ),
         "boundary_clip_rate": float(
             diagnostics[
                 "boundary_clips"
@@ -4997,6 +5057,9 @@ def summarize_evaluation_results(
         "blocked_motion_rate",
         "obstacle_block_rate",
         "peer_safety_block_rate",
+        "apf_intervention_rate",
+        "apf_peer_intervention_rate",
+        "apf_obstacle_intervention_rate",
         "boundary_clip_rate",
         "horizontal_boundary_clip_rate",
         "altitude_clip_rate",

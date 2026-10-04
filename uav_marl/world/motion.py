@@ -264,60 +264,6 @@ def compute_motion_candidate(
     )
 
 
-# --- frozen notebook cell 19 ---
-def minimum_distance_during_motion(
-    start_a,
-    end_a,
-    start_b,
-    end_b,
-):
-    start_a = np.asarray(start_a,dtype=np.float64,)
-    end_a = np.asarray(end_a,dtype=np.float64,)
-    start_b = np.asarray(start_b,dtype=np.float64,)
-    end_b = np.asarray(end_b,dtype=np.float64,)
-    for point in (
-        start_a,
-        end_a,
-        start_b,
-        end_b,
-    ):
-        if point.shape != (3,):
-            raise ValueError(
-                "all positions must have shape (3,)"
-            )
-
-        if not np.all(np.isfinite(point)):
-            raise ValueError(
-                "all positions must contain only finite values"
-            )
-    relative_start = start_a - start_b
-    displacement_a = end_a - start_a
-    displacement_b = end_b - start_b
-
-    relative_motion = displacement_a - displacement_b
-
-    denominator = relative_motion@relative_motion
-    if denominator <= 1e-12:
-        return np.linalg.norm(
-                relative_start
-            )
-
-
-    t_closest = -(relative_start@relative_motion)/ denominator
-    t_closest = np.clip(t_closest,0.0,1.0,)
-
-    relative_at_closest = (
-        relative_start
-        + t_closest * relative_motion
-    )
-
-    return float(
-        np.linalg.norm(
-            relative_at_closest
-        )
-    )
-
-
 # --- frozen notebook cell 20 ---
 def apply_swarm_motion(
     uavs,
@@ -325,65 +271,118 @@ def apply_swarm_motion(
     obstacles=None,
     dt=None,
 ):
+    """Advance the swarm with an APF safety layer instead of hard blocking.
+
+    The MARL action remains the task-directed acceleration command. A bounded,
+    predictive Artificial Potential Field adds repulsive acceleration for
+    nearby peers and finite-cylinder obstacles, after which the combined
+    acceleration is projected back to the physical max-acceleration ball.
+
+    Legacy blocked outputs are retained as all-false compatibility fields;
+    no motion is cancelled by the collision-avoidance layer anymore.
+    """
     if obstacles is None:
         obstacles = []
 
     if dt is None:
         dt = CONFIG["dt"]
     dt = float(dt)
-
-
     if not np.isfinite(dt) or dt <= 0.0:
-        raise ValueError(
-            "dt must be finite and > 0"
-        )
+        raise ValueError("dt must be finite and > 0")
 
     num_uavs = len(uavs)
-
     if num_uavs == 0:
-        raise ValueError(
-            "uavs must not be empty"
-        )
+        raise ValueError("uavs must not be empty")
 
-    actions = np.asarray(actions,dtype=np.float64)
-
+    actions = np.asarray(actions, dtype=np.float64)
     if actions.shape != (num_uavs, 3):
         raise ValueError(
-            f"actions must have shape "
-            f"({num_uavs}, 3)"
+            f"actions must have shape ({num_uavs}, 3)"
         )
-
     if not np.all(np.isfinite(actions)):
         raise ValueError(
             "actions must contain only finite values"
         )
 
-    old_positions = np.stack([
-        uav.position.copy()
-        for uav in uavs
-    ])
-    old_velocities = np.stack([
-        uav.velocity.copy()
-        for uav in uavs
-    ])
+    old_positions = np.stack(
+        [uav.position.copy() for uav in uavs]
+    )
+    old_velocities = np.stack(
+        [uav.velocity.copy() for uav in uavs]
+    )
+    active = np.asarray(
+        [bool(uav.active) for uav in uavs],
+        dtype=bool,
+    )
 
-    safety_distance = float(CONFIG["safety_distance"])
-
-    for i in range(num_uavs):
-        if not uavs[i].active:
-            continue
-
-        for j in range(i + 1,num_uavs):
-            if not uavs[j].active:
-                continue
-
-            distance = np.linalg.norm(old_positions[i]- old_positions[j])
-
-            if distance < safety_distance:
-                raise ValueError(
-                    "initial active UAV positions "
-                    "violate safety_distance"
+    if obstacles:
+        obstacle_xy = np.stack(
+            [
+                np.asarray(
+                    obstacle.position,
+                    dtype=np.float64,
                 )
+                for obstacle in obstacles
+            ],
+            axis=0,
+        )
+        obstacle_radius = np.asarray(
+            [float(obstacle.radius) for obstacle in obstacles],
+            dtype=np.float64,
+        )
+        obstacle_height = np.asarray(
+            [float(obstacle.height) for obstacle in obstacles],
+            dtype=np.float64,
+        )
+    else:
+        obstacle_xy = np.zeros((0, 2), dtype=np.float64)
+        obstacle_radius = np.zeros((0,), dtype=np.float64)
+        obstacle_height = np.zeros((0,), dtype=np.float64)
+
+    apf = apf_repulsion_numpy(
+        old_positions,
+        old_velocities,
+        active,
+        obstacle_xy,
+        obstacle_radius,
+        obstacle_height,
+        max_accel=float(CONFIG["max_accel"]),
+        safety_distance=float(CONFIG["safety_distance"]),
+        obstacle_clearance=float(
+            CONFIG["obstacle_clearance_m"]
+        ),
+        peer_influence=float(
+            CONFIG.get("apf_peer_influence_m", 200.0)
+        ),
+        obstacle_influence=float(
+            CONFIG.get("apf_obstacle_influence_m", 120.0)
+        ),
+        peer_gain=float(
+            CONFIG.get("apf_peer_gain", 1.5)
+        ),
+        obstacle_gain=float(
+            CONFIG.get("apf_obstacle_gain", 1.5)
+        ),
+        lookahead_s=float(
+            CONFIG.get("apf_lookahead_s", 3.0)
+        ),
+        emergency_gain=float(
+            CONFIG.get("apf_emergency_gain", 4.0)
+        ),
+        braking_margin=float(
+            CONFIG.get("apf_braking_margin", 1.5)
+        ),
+    )
+
+    projected_actions = project_motion_action_np(actions)
+    desired_acceleration = (
+        projected_actions * float(CONFIG["max_accel"])
+        + apf["acceleration_mps2"]
+    )
+    combined_actions = project_motion_action_np(
+        desired_acceleration
+        / max(float(CONFIG["max_accel"]), 1e-12)
+    )
 
     candidate_positions = []
     candidate_velocities = []
@@ -400,8 +399,9 @@ def apply_swarm_motion(
         dtype=bool,
     )
 
-    for i, (uav, action) in enumerate(zip(uavs, actions)):
-
+    for i, (uav, action) in enumerate(
+        zip(uavs, combined_actions)
+    ):
         (
             position,
             velocity,
@@ -413,105 +413,73 @@ def apply_swarm_motion(
             action,
             dt=dt,
         )
-
         candidate_positions.append(position)
         candidate_velocities.append(velocity)
-
         boundary_clipped[i] = clipped
         horizontal_boundary_clipped[i] = (
             horizontal_clipped
         )
-        altitude_clipped[i] = (
-            vertical_clipped
-        )
+        altitude_clipped[i] = vertical_clipped
 
     candidate_positions = np.stack(candidate_positions)
     candidate_velocities = np.stack(candidate_velocities)
 
+    for i, uav in enumerate(uavs):
+        if not uav.active:
+            uav.velocity = np.zeros(
+                3,
+                dtype=np.float64,
+            )
+            continue
+        uav.position = candidate_positions[i].copy()
+        uav.velocity = candidate_velocities[i].copy()
+
+    realized_acceleration_mps2 = (
+        np.stack(
+            [uav.velocity.copy() for uav in uavs]
+        )
+        - old_velocities
+    ) / dt
+
+    blocked = np.zeros(num_uavs, dtype=bool)
     blocked_by_obstacle = np.zeros(
         num_uavs,
         dtype=bool,
     )
-
-    for i, uav in enumerate(uavs):
-        if not uav.active:
-            continue
-
-        if segment_intersects_obstacle(
-            old_positions[i],
-            candidate_positions[i],
-            obstacles,
-            margin=float(
-                CONFIG[
-                    "obstacle_clearance_m"
-                ]
-            ),
-        ):
-            blocked_by_obstacle[i] = True
-
-    blocked_by_peer = np.zeros(num_uavs,dtype=bool)
-    blocked = blocked_by_obstacle.copy()
-
-
-    while True:
-        effective_positions = candidate_positions.copy()
-        effective_positions[blocked] = old_positions[blocked]
-
-        next_blocked = blocked.copy()
-
-        for i in range(num_uavs):
-            if not uavs[i].active:
-                continue
-
-            for j in range(i + 1,num_uavs):
-                if not uavs[j].active:
-                    continue
-
-                distance = minimum_distance_during_motion(
-                        old_positions[i],
-                        effective_positions[i],
-                        old_positions[j],
-                        effective_positions[j],
-                    )
-
-                if distance < safety_distance:
-                    next_blocked[i] = True
-                    next_blocked[j] = True
-
-                    blocked_by_peer[i] = True
-                    blocked_by_peer[j] = True
-
-        if np.array_equal(next_blocked,blocked):
-            break
-
-        blocked = next_blocked
-
-    for i, uav in enumerate(uavs):
-        if not uav.active:
-            uav.velocity = np.zeros(3, dtype=np.float64)
-            continue
-
-        if blocked[i]:
-            uav.position = old_positions[i].copy()
-            uav.velocity = np.zeros(3,dtype=np.float64)
-
-        else:
-            uav.position = candidate_positions[i].copy()
-            uav.velocity = candidate_velocities[i].copy()
-
-    realized_acceleration_mps2 = (
-        np.stack([
-            uav.velocity.copy()
-            for uav in uavs
-        ])
-        - old_velocities
-    ) / dt
+    blocked_by_peer = np.zeros(
+        num_uavs,
+        dtype=bool,
+    )
 
     return {
         "blocked": blocked,
-        "blocked_by_obstacle":blocked_by_obstacle,
-        "blocked_by_peer":blocked_by_peer,
-        "boundary_clipped":boundary_clipped,
+        "blocked_by_obstacle": blocked_by_obstacle,
+        "blocked_by_peer": blocked_by_peer,
+        "apf_active": np.asarray(
+            apf["active"],
+            dtype=bool,
+        ),
+        "apf_peer_active": np.asarray(
+            apf["peer_active"],
+            dtype=bool,
+        ),
+        "apf_obstacle_active": np.asarray(
+            apf["obstacle_active"],
+            dtype=bool,
+        ),
+        "apf_acceleration_mps2": np.asarray(
+            apf["acceleration_mps2"],
+            dtype=np.float64,
+        ),
+        "apf_peer_acceleration_mps2": np.asarray(
+            apf["peer_acceleration_mps2"],
+            dtype=np.float64,
+        ),
+        "apf_obstacle_acceleration_mps2": np.asarray(
+            apf["obstacle_acceleration_mps2"],
+            dtype=np.float64,
+        ),
+        "boundary_clipped": boundary_clipped,
         "horizontal_boundary_clipped": (
             horizontal_boundary_clipped
         ),

@@ -132,10 +132,10 @@ def format_workspace(
         is_open=True,
         pinned=False,
         panels=[
-            _line("Blocked Motion Rate", "episode/blocked_motion_rate", "Rate", y_range=(0, 1)),
+            _line("APF Intervention Rate", "episode/apf_intervention_rate", "Rate", y_range=(0, 1)),
+            _line("APF Peer Intervention Rate", "episode/apf_peer_intervention_rate", "Rate", y_range=(0, 1)),
+            _line("APF Obstacle Intervention Rate", "episode/apf_obstacle_intervention_rate", "Rate", y_range=(0, 1)),
             _line("Boundary Clip Rate", "episode/boundary_clip_rate", "Rate", y_range=(0, 1)),
-            _line("Peer Safety Block Rate", "episode/peer_safety_block_rate", "Rate", y_range=(0, 1)),
-            _line("Obstacle Block Rate", "episode/obstacle_block_rate", "Rate", y_range=(0, 1)),
             _line("False Confirmations", "episode/false_confirmations", "Count"),
             _line("Expired Reports", "episode/expired_reports", "Count"),
             _line("Dropped Reports", "episode/dropped_reports", "Count"),

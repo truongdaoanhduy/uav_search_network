@@ -530,78 +530,23 @@ def apply_battery_limited_motion(
                 * fraction
             )
 
-    # Scaling one path can create a peer conflict that did not exist for the
-    # original full-length simultaneous segments. Re-run the same monotone
-    # safety rule on the realized scaled segments before committing them.
+    # APF is the only collision-avoidance mechanism. Battery limiting may
+    # shorten the realized segment, but it must not reintroduce the old
+    # hard-stop peer collision resolver.
     blocked = np.asarray(
-        motion_result["blocked"],
+        motion_result.get(
+            "blocked",
+            np.zeros(count, dtype=bool),
+        ),
         dtype=bool,
     ).copy()
     blocked_by_peer = np.asarray(
-        motion_result["blocked_by_peer"],
+        motion_result.get(
+            "blocked_by_peer",
+            np.zeros(count, dtype=bool),
+        ),
         dtype=bool,
     ).copy()
-    safety_distance = float(
-        CONFIG["safety_distance"]
-    )
-
-    while True:
-        effective_positions = np.stack(
-            [
-                (
-                    positions_before[index]
-                    if blocked[index]
-                    else uavs[index].position
-                )
-                for index in range(count)
-            ],
-            axis=0,
-        )
-        next_blocked = blocked.copy()
-
-        for left in range(count):
-            if not active_before[left]:
-                continue
-            for right in range(
-                left + 1,
-                count,
-            ):
-                if not active_before[right]:
-                    continue
-                distance = minimum_distance_during_motion(
-                    positions_before[left],
-                    effective_positions[left],
-                    positions_before[right],
-                    effective_positions[right],
-                )
-                if distance < safety_distance:
-                    next_blocked[left] = True
-                    next_blocked[right] = True
-                    blocked_by_peer[left] = True
-                    blocked_by_peer[right] = True
-
-        if np.array_equal(
-            next_blocked,
-            blocked,
-        ):
-            break
-        blocked = next_blocked
-
-    for index, uav in enumerate(uavs):
-        if not active_before[index]:
-            uav.velocity = np.zeros(
-                3,
-                dtype=np.float64,
-            )
-            continue
-        if blocked[index]:
-            uav.position = (
-                positions_before[index].copy()
-            )
-            uav.velocity = np.zeros(
-                3,
-                dtype=np.float64,
-            )
 
     final_velocities = np.stack(
         [

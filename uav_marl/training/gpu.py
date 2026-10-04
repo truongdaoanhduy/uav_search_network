@@ -5220,6 +5220,9 @@ def add_episode_diagnostic_metrics(payload, chunk):
         "blocked_motion_rate": "blocked_motion_rate",
         "peer_safety_block_rate": "peer_safety_block_rate",
         "obstacle_block_rate": "obstacle_block_rate",
+        "apf_intervention_rate": "apf_intervention_rate",
+        "apf_peer_intervention_rate": "apf_peer_intervention_rate",
+        "apf_obstacle_intervention_rate": "apf_obstacle_intervention_rate",
         "boundary_clip_rate": "boundary_clip_rate",
         "false_confirmations": "false_confirmations",
         "reports_created": "reports_created",
@@ -5347,7 +5350,7 @@ def build_paper_curve_payload(
         "paper/end_step": "end_step",
         "paper/horizon_rate": "end_by_horizon",
         "paper/total_energy_j": "episode_energy_j",
-        "paper/blocked_motion_rate": "blocked_motion_rate",
+        "paper/apf_intervention_rate": "apf_intervention_rate",
         "paper/communication_energy_j": "communication_energy_j",
         "paper/network_phy_success_percent": (
             "network_phy_success_percent"
@@ -6082,6 +6085,9 @@ def _train_full_gpu_ddp_worker(
         "blocked",
         "blocked_by_peer",
         "blocked_by_obstacle",
+        "apf_active",
+        "apf_peer_active",
+        "apf_obstacle_active",
         "boundary",
         "distance_m",
         "false_confirmations",
@@ -6905,6 +6911,24 @@ def _train_full_gpu_ddp_worker(
                                 "obstacle_block_rate": (
                                     diag[
                                         "blocked_by_obstacle"
+                                    ]
+                                    / possible_agent_steps
+                                ),
+                                "apf_intervention_rate": (
+                                    diag[
+                                        "apf_active"
+                                    ]
+                                    / possible_agent_steps
+                                ),
+                                "apf_peer_intervention_rate": (
+                                    diag[
+                                        "apf_peer_active"
+                                    ]
+                                    / possible_agent_steps
+                                ),
+                                "apf_obstacle_intervention_rate": (
+                                    diag[
+                                        "apf_obstacle_active"
                                     ]
                                     / possible_agent_steps
                                 ),

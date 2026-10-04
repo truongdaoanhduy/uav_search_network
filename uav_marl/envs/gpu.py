@@ -6,7 +6,10 @@ Migrated from notebook cells 221..225.
 """
 
 from ..algorithms.matd3 import *  # noqa: F401,F403
-from ..common import contact_graph_reachability_fraction_torch
+from ..common import (
+    apf_repulsion_torch,
+    contact_graph_reachability_fraction_torch,
+)
 
 # --- frozen notebook cell 221 ---
 class FullGpuUAVBatchEnv:
@@ -672,11 +675,79 @@ class FullGpuUAVBatchEnv:
 
 
     def _motion(self, motion):
-        E, U, T = self.num_envs, self.num_uavs, self.num_targets
+        """Apply MARL acceleration plus APF repulsion without hard blocking."""
         old_pos = self.positions
         old_vel = self.velocities
         projected = self._project_unit_ball(motion)
-        accel = projected * self.max_accel
+
+        apf = apf_repulsion_torch(
+            old_pos,
+            old_vel,
+            self.active,
+            self.obstacle_xy,
+            self.obstacle_radius,
+            self.obstacle_height,
+            max_accel=self.max_accel,
+            safety_distance=float(
+                CONFIG["safety_distance"]
+            ),
+            obstacle_clearance=float(
+                CONFIG["obstacle_clearance_m"]
+            ),
+            peer_influence=float(
+                CONFIG.get(
+                    "apf_peer_influence_m",
+                    200.0,
+                )
+            ),
+            obstacle_influence=float(
+                CONFIG.get(
+                    "apf_obstacle_influence_m",
+                    120.0,
+                )
+            ),
+            peer_gain=float(
+                CONFIG.get(
+                    "apf_peer_gain",
+                    1.5,
+                )
+            ),
+            obstacle_gain=float(
+                CONFIG.get(
+                    "apf_obstacle_gain",
+                    1.5,
+                )
+            ),
+            lookahead_s=float(
+                CONFIG.get(
+                    "apf_lookahead_s",
+                    3.0,
+                )
+            ),
+            emergency_gain=float(
+                CONFIG.get(
+                    "apf_emergency_gain",
+                    4.0,
+                )
+            ),
+            braking_margin=float(
+                CONFIG.get(
+                    "apf_braking_margin",
+                    1.5,
+                )
+            ),
+        )
+
+        desired_accel = (
+            projected * self.max_accel
+            + apf["acceleration_mps2"]
+        )
+        applied_motion = self._project_unit_ball(
+            desired_accel
+            / max(self.max_accel, 1e-12)
+        )
+        accel = applied_motion * self.max_accel
+
         candidate_velocity = old_vel + accel * self.dt
         speed = torch.linalg.vector_norm(
             candidate_velocity,
@@ -685,7 +756,10 @@ class FullGpuUAVBatchEnv:
         )
         candidate_velocity = candidate_velocity * torch.minimum(
             torch.ones_like(speed),
-            torch.tensor(self.max_speed, device=self.device)
+            torch.tensor(
+                self.max_speed,
+                device=self.device,
+            )
             / speed.clamp_min(1e-8),
         )
         raw_pos = old_pos + candidate_velocity * self.dt
@@ -708,103 +782,27 @@ class FullGpuUAVBatchEnv:
         )
         hclip &= self.active
         zclip &= self.active
-        # CPU reference uses the realized velocity after boundary clipping.
+
         candidate_velocity = (
             candidate_pos - old_pos
         ) / self.dt
-
-        # Exact CPU-equivalent segment/finite-cylinder collision, including
-        # horizontal and vertical clearance.
-        clearance = float(CONFIG["obstacle_clearance_m"])
-        blocked_by_obstacle = self._segment_cylinder_blocked(
-            old_pos,
-            candidate_pos,
-            obstacle_radius=self.obstacle_radius + clearance,
-            obstacle_height=self.obstacle_height + clearance,
-        ) & self.active
-
-        # Match apply_swarm_motion(): collision is checked over the entire
-        # simultaneous segment, not only at the candidate endpoints. Blocking
-        # is monotone, so U fixed iterations are sufficient for convergence
-        # without a CPU-side convergence check.
-        blocked = blocked_by_obstacle.clone()
-        blocked_by_peer = torch.zeros_like(blocked)
-        eye = torch.eye(
-            U,
-            device=self.device,
-            dtype=torch.bool,
-        ).unsqueeze(0)
-        active_pair = (
-            self.active.unsqueeze(2)
-            & self.active.unsqueeze(1)
-            & ~eye
-        )
-        safety = float(CONFIG["safety_distance"])
-
-        for _ in range(U):
-            effective = torch.where(
-                blocked.unsqueeze(-1),
-                old_pos,
-                candidate_pos,
-            )
-            relative_start = (
-                old_pos.unsqueeze(2) - old_pos.unsqueeze(1)
-            )
-            displacement = effective - old_pos
-            relative_motion = (
-                displacement.unsqueeze(2)
-                - displacement.unsqueeze(1)
-            )
-            denominator = (
-                relative_motion * relative_motion
-            ).sum(-1)
-            t_closest = torch.where(
-                denominator > 1e-12,
-                -(
-                    relative_start * relative_motion
-                ).sum(-1)
-                / denominator.clamp_min(1e-12),
-                torch.zeros_like(denominator),
-            ).clamp(0.0, 1.0)
-            relative_at_closest = (
-                relative_start
-                + t_closest.unsqueeze(-1) * relative_motion
-            )
-            min_distance = torch.linalg.vector_norm(
-                relative_at_closest,
-                dim=-1,
-            )
-            pair_bad = (
-                (min_distance < safety)
-                & active_pair
-            )
-            peer_now = pair_bad.any(-1)
-            blocked_by_peer |= peer_now
-            blocked |= peer_now
-
         new_pos = torch.where(
-            blocked.unsqueeze(-1),
-            old_pos,
+            self.active.unsqueeze(-1),
             candidate_pos,
+            old_pos,
         )
         new_vel = torch.where(
-            blocked.unsqueeze(-1),
-            torch.zeros_like(candidate_velocity),
+            self.active.unsqueeze(-1),
             candidate_velocity,
-        )
-        new_vel = torch.where(
-            self.active.unsqueeze(-1),
-            new_vel,
-            torch.zeros_like(new_vel),
-        )
-        new_pos = torch.where(
-            self.active.unsqueeze(-1),
-            new_pos,
-            old_pos,
+            torch.zeros_like(candidate_velocity),
         )
         realized_accel = (
             new_vel - old_vel
         ) / self.dt
+
+        blocked = torch.zeros_like(self.active)
+        blocked_by_obstacle = torch.zeros_like(self.active)
+        blocked_by_peer = torch.zeros_like(self.active)
 
         self.positions = new_pos
         self.velocities = new_vel
@@ -812,11 +810,26 @@ class FullGpuUAVBatchEnv:
             "blocked": blocked,
             "blocked_by_obstacle": blocked_by_obstacle,
             "blocked_by_peer": blocked_by_peer,
+            "apf_active": apf["active"],
+            "apf_peer_active": apf["peer_active"],
+            "apf_obstacle_active": (
+                apf["obstacle_active"]
+            ),
+            "apf_acceleration_mps2": (
+                apf["acceleration_mps2"]
+            ),
+            "apf_peer_acceleration_mps2": (
+                apf["peer_acceleration_mps2"]
+            ),
+            "apf_obstacle_acceleration_mps2": (
+                apf["obstacle_acceleration_mps2"]
+            ),
             "boundary": hclip | zclip,
             "horizontal_boundary": hclip,
             "altitude_boundary": zclip,
             "realized_accel": realized_accel,
-            "commanded_motion": projected,
+            "commanded_motion": applied_motion,
+            "policy_motion": projected,
         }
 
     def _sensing_profile(self):
@@ -3071,105 +3084,9 @@ class FullGpuUAVBatchEnv:
             self.velocities,
         )
 
-        # Re-run monotone continuous-time peer safety on the scaled segments.
-        blocked = motion[
-            "blocked"
-        ].clone()
-        blocked_by_peer = motion[
-            "blocked_by_peer"
-        ].clone()
-        eye = torch.eye(
-            self.num_uavs,
-            device=self.device,
-            dtype=torch.bool,
-        ).unsqueeze(0)
-        active_pair = (
-            active_before_step.unsqueeze(2)
-            & active_before_step.unsqueeze(1)
-            & ~eye
-        )
-        safety = float(
-            CONFIG["safety_distance"]
-        )
-
-        for _ in range(
-            self.num_uavs
-        ):
-            effective = torch.where(
-                blocked.unsqueeze(-1),
-                positions_before_motion,
-                self.positions,
-            )
-            relative_start = (
-                positions_before_motion.unsqueeze(2)
-                - positions_before_motion.unsqueeze(1)
-            )
-            displacement = (
-                effective
-                - positions_before_motion
-            )
-            relative_motion = (
-                displacement.unsqueeze(2)
-                - displacement.unsqueeze(1)
-            )
-            denominator = (
-                relative_motion
-                * relative_motion
-            ).sum(-1)
-            t_closest = torch.where(
-                denominator > 1e-12,
-                -(
-                    relative_start
-                    * relative_motion
-                ).sum(-1)
-                / denominator.clamp_min(
-                    1e-12
-                ),
-                torch.zeros_like(
-                    denominator
-                ),
-            ).clamp(
-                0.0,
-                1.0,
-            )
-            relative_at_closest = (
-                relative_start
-                + t_closest.unsqueeze(-1)
-                * relative_motion
-            )
-            min_distance = (
-                torch.linalg.vector_norm(
-                    relative_at_closest,
-                    dim=-1,
-                )
-            )
-            pair_bad = (
-                (min_distance < safety)
-                & active_pair
-            )
-            peer_now = pair_bad.any(-1)
-            blocked_by_peer |= peer_now
-            blocked |= peer_now
-
-        self.positions = torch.where(
-            blocked.unsqueeze(-1),
-            positions_before_motion,
-            self.positions,
-        )
-        self.velocities = torch.where(
-            blocked.unsqueeze(-1),
-            torch.zeros_like(
-                self.velocities
-            ),
-            self.velocities,
-        )
-        motion["blocked"] = blocked
-        motion[
-            "blocked_by_peer"
-        ] = blocked_by_peer
-        motion[
-            "realized_accel"
-        ] = (
+        # APF remains the only collision-avoidance mechanism after battery
+        # scaling. Do not reintroduce the old hard-stop peer resolver.
+        motion["realized_accel"] = (
             self.velocities
             - velocities_before_motion
         ) / self.dt
@@ -3408,7 +3325,7 @@ class FullGpuUAVBatchEnv:
                 CONFIG["reward_blocked"]
             )
             * motion[
-                "blocked"
+                "apf_active"
             ].sum(-1).float()
             / safety_denominator
         )
@@ -3534,6 +3451,15 @@ class FullGpuUAVBatchEnv:
             ].sum(-1),
             "blocked_by_obstacle": motion[
                 "blocked_by_obstacle"
+            ].sum(-1),
+            "apf_active": motion[
+                "apf_active"
+            ].sum(-1),
+            "apf_peer_active": motion[
+                "apf_peer_active"
+            ].sum(-1),
+            "apf_obstacle_active": motion[
+                "apf_obstacle_active"
             ].sum(-1),
             "boundary": motion["boundary"].sum(-1),
             "distance_m": torch.linalg.vector_norm(
