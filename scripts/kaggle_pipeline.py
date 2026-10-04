@@ -599,14 +599,28 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    data = load_config(args.key_file)
-    account, account_meta = pick_account(
-        data,
-        purpose="train",
-        required_gpu_hours=float(args.required_gpu_hours),
-        requested_name=args.account,
-    )
-    env = child_env(data, str(account["token"]))
+    cloud_token = os.environ.get("KAGGLE_API_TOKEN", "").strip()
+    if cloud_token:
+        # Cloud-controller mode (for example GitHub Actions). The Kaggle token
+        # comes from the runner secret store, so no local key.txt is needed.
+        env = os.environ.copy()
+        env["KAGGLE_API_TOKEN"] = cloud_token
+        account_meta = {
+            "name": os.environ.get(
+                "KAGGLE_ACCOUNT_NAME",
+                "cloud_controller",
+            ),
+        }
+    else:
+        data = load_config(args.key_file)
+        account, account_meta = pick_account(
+            data,
+            purpose="train",
+            required_gpu_hours=float(args.required_gpu_hours),
+            requested_name=args.account,
+        )
+        env = child_env(data, str(account["token"]))
+
     username = resolve_kaggle_username(
         env=env,
         explicit=args.username,

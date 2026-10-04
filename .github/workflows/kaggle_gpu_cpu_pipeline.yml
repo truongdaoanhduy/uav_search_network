@@ -1,0 +1,105 @@
+name: Kaggle UAV GPU -> CPU Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      episodes:
+        description: Total training episodes
+        required: true
+        default: "4096"
+      envs:
+        description: Parallel GPU environments
+        required: true
+        default: "4096"
+      max_steps:
+        description: Maximum steps per episode
+        required: true
+        default: "1000"
+      cuda_graph:
+        description: Enable CUDA Graph policy-action path
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: kaggle-uav-gpu-cpu-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  gpu_train_then_cpu_visualize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_USERNAME: haibro1234
+      KAGGLE_ACCOUNT_NAME: account_02
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install cloud controller dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "kaggle>=1.7,<2"
+
+      - name: Validate Kaggle cloud credential
+        shell: bash
+        run: |
+          test -n "${KAGGLE_API_TOKEN}"
+          kaggle kernels list --mine --page-size 1 >/dev/null
+
+      - name: Run GPU -> CPU pipeline
+        shell: bash
+        run: |
+          GPU_SLUG="uav-masac-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"
+          CPU_SLUG="uav-masac-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"
+          CUDA_GRAPH="${{ inputs.cuda_graph }}"
+
+          python scripts/kaggle_pipeline.py \
+            --username "${KAGGLE_USERNAME}" \
+            --algorithm masac \
+            --runtime kaggle_2xt4 \
+            --experiment smoke \
+            --seed 44 \
+            --required-gpu-hours 0 \
+            --machine-shape NvidiaTeslaT4 \
+            --gpu-kernel-slug "${GPU_SLUG}" \
+            --cpu-kernel-slug "${CPU_SLUG}" \
+            --gpu-credential-dataset haibro1234/uav-wandb-credential-masac50k-d59860c \
+            --cpu-log-wandb \
+            --cpu-credential-dataset haibro1234/uav-wandb-credential-masac50k-d59860c \
+            --poll-seconds 20 \
+            --gpu-timeout-seconds 14400 \
+            --cpu-timeout-seconds 10800 \
+            --output-dir pipeline_outputs \
+            runtime.num_envs=${{ inputs.envs }} \
+            runtime.cuda_graph_policy_actions=${CUDA_GRAPH} \
+            runtime.max_gpus=2 \
+            runtime.auto_multi_gpu=true \
+            task.scenario.max_steps=${{ inputs.max_steps }} \
+            experiment.total_episodes=${{ inputs.episodes }} \
+            experiment.name=rewardv2_cloud_pipeline \
+            experiment.checkpoint.interval_episodes=${{ inputs.episodes }} \
+            experiment.checkpoint.interval_steps=100000000 \
+            experiment.evaluation.interval_episodes=${{ inputs.episodes }} \
+            experiment.evaluation.interval_steps=100000000 \
+            experiment.visualization.interval_episodes=${{ inputs.episodes }}
+
+      - name: Upload verified CPU visualization outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaggle-uav-pipeline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pipeline_outputs/
+          if-no-files-found: warn
+          retention-days: 14

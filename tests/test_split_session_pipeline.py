@@ -305,3 +305,10 @@ def test_kaggle_gpu_kernel_can_read_private_wandb_credential_dataset(tmp_path):
     assert "wandb_api_key.txt" in gpu_script
     assert 'os.environ["WANDB_API_KEY"] = api_key' in gpu_script
     compile(gpu_script, "<gpu-wandb-dataset>", "exec")
+
+
+def test_pipeline_supports_cloud_kaggle_token_without_local_key_file():
+    source = (ROOT / "scripts" / "kaggle_pipeline.py").read_text()
+    assert 'os.environ.get("KAGGLE_API_TOKEN", "").strip()' in source
+    assert '"cloud_controller"' in source
+    assert 'env["KAGGLE_API_TOKEN"] = cloud_token' in source
