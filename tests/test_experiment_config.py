@@ -205,6 +205,7 @@ def test_risk_aware_apf_config_is_minimal_and_maps_to_legacy_bridge():
     assert cfg.task.scenario.num_targets == 50
     assert cfg.task.scenario.num_obstacles == 30
     assert cfg.task.scenario.max_steps == 3000
+    assert BASE_CONFIG["max_steps"] == cfg.task.scenario.max_steps
     assert list(cfg.task.scenario.gcs_position) == [1500, 0, 0.0]
 
     assert cfg.task.safety.peer_distance_m == pytest.approx(30.0)

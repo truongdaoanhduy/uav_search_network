@@ -15,7 +15,7 @@ CONFIG = {
     "max_accel": 2.0,
 
     "dt": 1,
-    "max_steps": 1000,
+    "max_steps": 3000,
 
     "gcs_position": [1500, 0, 0.0],
     "gcs_exclusion_radius_m": 150,
