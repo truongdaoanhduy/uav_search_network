@@ -252,9 +252,11 @@ def _gpu_script(
     experiment: str,
     seed: int,
     overrides: list[str],
+    cpu_ref: str,
     wandb_credential_dataset: str | None = None,
 ) -> str:
     override_literals = json.dumps(list(overrides))
+    cpu_url = f"https://www.kaggle.com/code/{cpu_ref}"
     return textwrap.dedent(
         f"""
         import json
@@ -267,6 +269,8 @@ def _gpu_script(
         os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
         COMMIT = {commit!r}
+        CPU_KERNEL_REF = {cpu_ref!r}
+        CPU_KERNEL_URL = {cpu_url!r}
         WANDB_CREDENTIAL_DATASET = {wandb_credential_dataset!r}
         REPO_URL = "https://github.com/truongdaoanhduy/uav_search_network.git"
         REPO = Path("/tmp/uav_search_network")
@@ -312,7 +316,19 @@ def _gpu_script(
         handoffs = sorted(Path("/kaggle/working/uav_training_handoff").rglob("uav_training_handoff.json"))
         if len(handoffs) != 1:
             raise RuntimeError(f"expected exactly one GPU handoff, found {{handoffs}}")
+        next_stage = {{
+            "stage": "cpu_visualization",
+            "cpu_kernel_ref": CPU_KERNEL_REF,
+            "cpu_kernel_url": CPU_KERNEL_URL,
+            "note": (
+                "CPU visualization runs in a separate Kaggle CPU kernel. "
+                "PNG/MP4 will appear in that kernel's Output tab, not in this GPU Output tab."
+            ),
+        }}
+        next_stage_path = Path("/kaggle/working/CPU_VISUALIZATION_NEXT_STAGE.json")
+        next_stage_path.write_text(json.dumps(next_stage, indent=2))
         print("GPU_TRAINING_HANDOFF_READY", handoffs[0], flush=True)
+        print("CPU_VISUALIZATION_NEXT_STAGE", CPU_KERNEL_URL, flush=True)
         """
     ).strip() + "\n"
 
@@ -437,6 +453,7 @@ def build_kernels(
             experiment=experiment,
             seed=seed,
             overrides=overrides,
+            cpu_ref=cpu_ref,
             wandb_credential_dataset=(
                 gpu_dataset_sources[0] if gpu_dataset_sources else None
             ),

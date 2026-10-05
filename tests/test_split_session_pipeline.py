@@ -119,6 +119,8 @@ def test_kaggle_pipeline_builds_gpu_then_cpu_kernel(tmp_path):
     compile(cpu_script, "<cpu-kernel>", "exec")
 
     assert "GPU_TRAINING_HANDOFF_READY" in gpu_script
+    assert "CPU_VISUALIZATION_NEXT_STAGE.json" in gpu_script
+    assert "https://www.kaggle.com/code/demo-user/uav-marl-cpu-visualize" in gpu_script
     assert "torch.cuda.is_available()" in cpu_script
     assert "--handoff" in cpu_script
     assert "/kaggle/input" in cpu_script
@@ -312,3 +314,12 @@ def test_pipeline_supports_cloud_kaggle_token_without_local_key_file():
     assert 'os.environ.get("KAGGLE_API_TOKEN", "").strip()' in source
     assert '"cloud_controller"' in source
     assert 'env["KAGGLE_API_TOKEN"] = cloud_token' in source
+
+
+def test_github_workflow_summary_links_gpu_and_cpu_kernels():
+    source = (ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_pipeline.yml").read_text()
+    assert "GITHUB_STEP_SUMMARY" in source
+    assert "GPU Kaggle kernel" in source
+    assert "CPU visualization kernel" in source
+    assert "https://www.kaggle.com/code/${KAGGLE_USERNAME}/${GPU_SLUG}" in source
+    assert "https://www.kaggle.com/code/${KAGGLE_USERNAME}/${CPU_SLUG}" in source
