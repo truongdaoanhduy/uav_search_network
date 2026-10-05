@@ -85,7 +85,8 @@ def _get(cfg: Mapping[str, Any], path: str) -> Any:
 
 def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
     plain = to_plain_dict(cfg)
-    get_algorithm(_get(plain, "algorithm.name"))
+    algorithm = str(_get(plain, "algorithm.name")).strip().lower()
+    get_algorithm(algorithm)
 
     seed = int(_get(plain, "seed"))
     if seed < 0:
@@ -160,6 +161,15 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError(
             "GPU episode-budget full-flow currently requires "
             "runtime.fused_adam=false"
+        )
+    if (
+        execution_mode == "gpu"
+        and bool(_get(plain, "runtime.cuda_graph_policy_actions"))
+        and algorithm != "masac"
+    ):
+        raise ValueError(
+            "runtime.cuda_graph_policy_actions currently supports MASAC only; "
+            "set it to false for MATD3"
         )
     train_freq = int(_get(plain, "algorithm.train_freq"))
     gradient_steps = int(_get(plain, "algorithm.gradient_steps"))

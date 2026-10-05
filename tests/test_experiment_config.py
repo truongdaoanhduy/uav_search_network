@@ -168,6 +168,16 @@ def test_multi_gpu_rejects_unsupported_training_options():
         validate_config(cfg)
 
 
+
+def test_matd3_rejects_masac_only_cuda_graph_policy_path_early():
+    cfg = compose_cfg(
+        "algorithm=matd3",
+        "runtime=kaggle_2xt4",
+        "runtime.cuda_graph_policy_actions=true",
+    )
+    with pytest.raises(ValueError, match="CUDA Graph|cuda_graph_policy_actions|MASAC"):
+        validate_config(cfg)
+
 def test_single_gpu_full_flow_rejects_unsupported_runtime_optimizer_switches():
     cfg = compose_cfg(
         "runtime=vast_1gpu",
