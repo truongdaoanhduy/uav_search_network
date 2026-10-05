@@ -771,9 +771,13 @@ class FullGpuUAVBatchEnv:
         hclip &= self.active
         zclip &= self.active
 
-        candidate_velocity = (
-            candidate_pos - old_pos
-        ) / self.dt
+        clipped_axes = (raw_pos - candidate_pos).abs() > 1e-6
+        boundary_velocity = (candidate_pos - old_pos) / self.dt
+        candidate_velocity = torch.where(
+            clipped_axes,
+            boundary_velocity,
+            candidate_velocity,
+        )
         new_pos = torch.where(
             self.active.unsqueeze(-1),
             candidate_pos,

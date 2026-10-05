@@ -91,3 +91,34 @@ def test_gpu_motion_uses_same_risk_aware_apf_safety_layer(monkeypatch):
     assert bool(result["apf_emergency"][0, 1])
     assert float(env.positions[0, 0, 0]) <= 100.0
     assert float(env.positions[0, 1, 0]) >= 135.0
+
+
+def test_gpu_motion_preserves_speed_cap_after_position_round_trip(monkeypatch):
+    _set_apf_config(monkeypatch)
+    monkeypatch.setitem(CONFIG, "apf_enabled", False)
+    env = FullGpuUAVBatchEnv(
+        num_envs=1,
+        device="cpu",
+        seed=44,
+        strict_cuda=False,
+    )
+    env.active[:] = False
+    env.active[0, 0] = True
+    env.positions[0, 0] = torch.tensor(
+        [2745.913818359375, 2325.429931640625, 101.22919464111328],
+        dtype=torch.float32,
+    )
+    env.velocities.zero_()
+    env.velocities[0, 0] = torch.tensor(
+        [-11.362462043762207, 14.687152862548828, -7.428459644317627],
+        dtype=torch.float32,
+    )
+    env.obstacle_xy[:] = torch.tensor([100.0, 100.0])
+    env.obstacle_radius[:] = 50.0
+    env.obstacle_height[:] = 30.0
+
+    motion = torch.zeros((1, env.num_uavs, 3), dtype=torch.float32)
+    env._motion(motion)
+
+    speed = torch.linalg.vector_norm(env.velocities[0, 0])
+    assert float(speed) <= float(CONFIG["max_speed"]) + 1e-5
