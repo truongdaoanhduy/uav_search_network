@@ -6,7 +6,7 @@ on:
       episodes:
         description: Total training episodes
         required: true
-        default: "4096"
+        default: "20000"
       envs:
         description: Parallel GPU environments
         required: true
@@ -14,7 +14,7 @@ on:
       max_steps:
         description: Maximum steps per episode
         required: true
-        default: "1000"
+        default: "3000"
       cuda_graph:
         description: Enable CUDA Graph policy-action path
         required: true
@@ -69,7 +69,7 @@ jobs:
             --username "${KAGGLE_USERNAME}" \
             --algorithm masac \
             --runtime kaggle_2xt4 \
-            --experiment smoke \
+            --experiment paper_20k \
             --seed 44 \
             --required-gpu-hours 0 \
             --machine-shape NvidiaTeslaT4 \

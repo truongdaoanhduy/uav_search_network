@@ -31,13 +31,14 @@ def test_kaggle_budget_is_derived_from_episodes():
         "runtime=kaggle_2xt4",
         "algorithm=masac",
     )
-    assert cfg.experiment.total_episodes == 50_000
+    assert cfg.experiment.name == "paper_20k"
+    assert cfg.experiment.total_episodes == 20_000
     assert cfg.runtime.num_envs == 4096
     assert derive_transition_budget(
         total_episodes=cfg.experiment.total_episodes,
         num_envs=cfg.runtime.num_envs,
         max_steps=cfg.task.scenario.max_steps,
-    ) == 53_248_000
+    ) == 61_440_000
 
 
 def test_vast_profile_changes_runtime_not_task_or_algorithm():
@@ -131,8 +132,8 @@ def test_runner_hides_transition_ceiling_from_user_api(monkeypatch, tmp_path):
     assert captured["num_envs"] == 2048
     assert captured["max_gpus"] == 1
     assert captured["device"] == "cuda:0"
-    assert captured["total_transitions"] == 2_048_000
-    assert result["derived_transition_ceiling"] == 2_048_000
+    assert captured["total_transitions"] == 6_144_000
+    assert result["derived_transition_ceiling"] == 6_144_000
 
 
 def test_multi_gpu_rejects_nonzero_preferred_device():
@@ -203,7 +204,7 @@ def test_risk_aware_apf_config_is_minimal_and_maps_to_legacy_bridge():
     assert cfg.task.scenario.map_size == 3000
     assert cfg.task.scenario.num_targets == 50
     assert cfg.task.scenario.num_obstacles == 30
-    assert cfg.task.scenario.max_steps == 1000
+    assert cfg.task.scenario.max_steps == 3000
     assert list(cfg.task.scenario.gcs_position) == [1500, 0, 0.0]
 
     assert cfg.task.safety.peer_distance_m == pytest.approx(30.0)

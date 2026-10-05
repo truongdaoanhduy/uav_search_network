@@ -3,7 +3,7 @@ defaults:
   - reward: paper_v2
   - algorithm: masac
   - runtime: kaggle_2xt4
-  - experiment: paper_50k
+  - experiment: paper_20k
   - override hydra/job_logging: disabled
   - _self_
 

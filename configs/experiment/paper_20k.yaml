@@ -1,0 +1,60 @@
+name: paper_20k
+total_episodes: 20000
+logging:
+  log_interval_steps: 100
+  reward_curve_bin_episodes: 1
+  paper_curve_bin_episodes: 256
+  paper_curve_ema_beta: 0.85
+evaluation:
+  interval_steps: 5000
+  interval_episodes: 5000
+  episodes: 1
+  seed_offset: 10000
+  inline: false
+visualization:
+  inline: false
+  enabled: true
+  session: separate_cpu
+  render_2d: true
+  interval_episodes: 10000
+  required: true
+  render_video: true
+  upload_media_to_wandb: false
+  output_dir: post_train_visualization
+  trajectory_stride: 10
+  max_link_edges: 64
+checkpoint:
+  interval_steps: 50000
+  interval_episodes: 5000
+  include_replay: false
+  upload_periodic_to_wandb: false
+  publish_final_wandb_artifact: true
+  final_artifact_alias: final
+wandb:
+  enabled: true
+  entity: uav_search_paper
+  project: uav_search_target
+  mode: online
+  required: true
+  require_online_gpu: true
+  disable_system_stats: true
+  require_kaggle_account_name: true
+  name_format: "{algorithm}-seed{seed}-{id}"
+postprocess:
+  eval_episodes: 1
+  video_fps: 8
+  upload_huggingface: false
+  hf_private_repo: true
+paper_plot:
+  ema_beta: 0.95
+  raw_alpha: 0.12
+  raw_linewidth: 0.9
+  main_linewidth: 2.6
+  band_alpha: 0.16
+secrets:
+  kaggle_wandb_names: [WANDB_API_KEY, wandb_key, WANDB_KEY]
+  kaggle_hf_token_names: [HF_TOKEN, HUGGINGFACE_TOKEN, HUGGING_FACE_HUB_TOKEN]
+  kaggle_hf_repo_names: [HF_REPO_ID, HUGGINGFACE_REPO_ID]
+outputs:
+  csv: true
+  tensorboard: true
