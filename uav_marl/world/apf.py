@@ -16,6 +16,7 @@ def _validate_parameters(
     soft_gain,
     lookahead_s,
     braking_margin,
+    control_dt=1.0,
     enabled=True,
 ):
     values = {
@@ -25,6 +26,7 @@ def _validate_parameters(
         "soft_gain": float(soft_gain),
         "lookahead_s": float(lookahead_s),
         "braking_margin": float(braking_margin),
+        "control_dt": float(control_dt),
         "enabled": bool(enabled),
     }
     for name in (
@@ -34,6 +36,7 @@ def _validate_parameters(
         "soft_gain",
         "lookahead_s",
         "braking_margin",
+        "control_dt",
     ):
         if not math.isfinite(values[name]):
             raise ValueError(f"{name} must be finite")
@@ -47,6 +50,8 @@ def _validate_parameters(
         raise ValueError("soft_gain must be >= 0")
     if values["lookahead_s"] < 0.0:
         raise ValueError("lookahead_s must be >= 0")
+    if values["control_dt"] <= 0.0:
+        raise ValueError("control_dt must be > 0")
     if values["braking_margin"] < 1.0:
         raise ValueError("braking_margin must be >= 1")
     return values
@@ -253,6 +258,141 @@ def _cylinder_clearance_torch(
     return clearance, direction
 
 
+def _segment_cylinder_intersects_numpy(
+    start,
+    end,
+    obstacle_xy,
+    radius,
+    height,
+):
+    """Return pairwise segment/finite-cylinder intersections [U, O]."""
+    s = np.asarray(start, dtype=np.float64)[:, None, :]
+    e = np.asarray(end, dtype=np.float64)[:, None, :]
+    obs_xy = np.asarray(obstacle_xy, dtype=np.float64)[None, :, :]
+    obs_r = np.asarray(radius, dtype=np.float64)[None, :]
+    obs_h = np.asarray(height, dtype=np.float64)[None, :]
+    d = e - s
+    dxy = d[..., :2]
+    dz = d[..., 2]
+    rel_xy = s[..., :2] - obs_xy
+    eps = np.finfo(np.float64).eps
+
+    dz_small = np.abs(dz) <= eps
+    horizontal_z_ok = (s[..., 2] >= 0.0) & (s[..., 2] <= obs_h)
+    safe_dz = np.where(dz_small, 1.0, dz)
+    t_ground = (0.0 - s[..., 2]) / safe_dz
+    t_top = (obs_h - s[..., 2]) / safe_dz
+    z_enter = np.maximum(0.0, np.minimum(t_ground, t_top))
+    z_exit = np.minimum(1.0, np.maximum(t_ground, t_top))
+    z_enter = np.where(dz_small, 0.0, z_enter)
+    z_exit = np.where(dz_small, 1.0, z_exit)
+    z_valid = np.where(dz_small, horizontal_z_ok, z_enter <= z_exit)
+
+    a = np.sum(dxy * dxy, axis=-1)
+    b = 2.0 * np.sum(rel_xy * dxy, axis=-1)
+    c = np.sum(rel_xy * rel_xy, axis=-1) - obs_r * obs_r
+    a_small = a <= eps
+    discriminant = b * b - 4.0 * a * c
+    root = np.sqrt(np.maximum(discriminant, 0.0))
+    safe_two_a = np.where(a_small, 1.0, 2.0 * a)
+    t1 = (-b - root) / safe_two_a
+    t2 = (-b + root) / safe_two_a
+    xy_enter = np.maximum(0.0, np.minimum(t1, t2))
+    xy_exit = np.minimum(1.0, np.maximum(t1, t2))
+    xy_enter = np.where(a_small, 0.0, xy_enter)
+    xy_exit = np.where(a_small, 1.0, xy_exit)
+    xy_valid = np.where(
+        a_small,
+        c <= 0.0,
+        (discriminant >= 0.0) & (xy_enter <= xy_exit),
+    )
+
+    return z_valid & xy_valid & (np.maximum(z_enter, xy_enter) <= np.minimum(z_exit, xy_exit))
+
+
+def _segment_cylinder_intersects_torch(
+    start,
+    end,
+    obstacle_xy,
+    radius,
+    height,
+):
+    """Return pairwise segment/finite-cylinder intersections [E, U, O]."""
+    s = start.unsqueeze(2)
+    e = end.unsqueeze(2)
+    obs_xy = obstacle_xy.unsqueeze(1)
+    obs_r = radius.unsqueeze(1)
+    obs_h = height.unsqueeze(1)
+    d = e - s
+    dxy = d[..., :2]
+    dz = d[..., 2]
+    rel_xy = s[..., :2] - obs_xy
+    eps = torch.finfo(start.dtype).eps
+
+    dz_small = dz.abs() <= eps
+    horizontal_z_ok = (s[..., 2] >= 0.0) & (s[..., 2] <= obs_h)
+    safe_dz = torch.where(dz_small, torch.ones_like(dz), dz)
+    t_ground = (0.0 - s[..., 2]) / safe_dz
+    t_top = (obs_h - s[..., 2]) / safe_dz
+    z_enter = torch.maximum(torch.zeros_like(t_ground), torch.minimum(t_ground, t_top))
+    z_exit = torch.minimum(torch.ones_like(t_ground), torch.maximum(t_ground, t_top))
+    z_enter = torch.where(dz_small, torch.zeros_like(z_enter), z_enter)
+    z_exit = torch.where(dz_small, torch.ones_like(z_exit), z_exit)
+    z_valid = torch.where(dz_small, horizontal_z_ok, z_enter <= z_exit)
+
+    a = (dxy * dxy).sum(-1)
+    b = 2.0 * (rel_xy * dxy).sum(-1)
+    c = (rel_xy * rel_xy).sum(-1) - obs_r * obs_r
+    a_small = a <= eps
+    discriminant = b * b - 4.0 * a * c
+    root = discriminant.clamp_min(0.0).sqrt()
+    safe_two_a = torch.where(a_small, torch.ones_like(a), 2.0 * a)
+    t1 = (-b - root) / safe_two_a
+    t2 = (-b + root) / safe_two_a
+    xy_enter = torch.maximum(torch.zeros_like(t1), torch.minimum(t1, t2))
+    xy_exit = torch.minimum(torch.ones_like(t1), torch.maximum(t1, t2))
+    xy_enter = torch.where(a_small, torch.zeros_like(xy_enter), xy_enter)
+    xy_exit = torch.where(a_small, torch.ones_like(xy_exit), xy_exit)
+    xy_valid = torch.where(
+        a_small,
+        c <= 0.0,
+        (discriminant >= 0.0) & (xy_enter <= xy_exit),
+    )
+
+    return z_valid & xy_valid & (
+        torch.maximum(z_enter, xy_enter) <= torch.minimum(z_exit, xy_exit)
+    )
+
+
+def _peer_path_conflicts_numpy(start, end, active, safety_distance):
+    """Pairwise conflicts along simultaneous linear paths over one step."""
+    relative = start[:, None, :] - start[None, :, :]
+    movement = end - start
+    delta = movement[:, None, :] - movement[None, :, :]
+    denom = np.sum(delta * delta, axis=-1)
+    fraction = np.clip(
+        -np.sum(relative * delta, axis=-1) / np.maximum(denom, 1e-12),
+        0.0, 1.0,
+    )
+    closest = np.linalg.norm(relative + fraction[..., None] * delta, axis=-1)
+    pairs = active[:, None] & active[None, :] & ~np.eye(len(start), dtype=bool)
+    return pairs & (closest < safety_distance)
+
+
+def _peer_path_conflicts_torch(start, end, active, safety_distance):
+    """Batched equivalent of _peer_path_conflicts_numpy."""
+    relative = start.unsqueeze(2) - start.unsqueeze(1)
+    movement = end - start
+    delta = movement.unsqueeze(2) - movement.unsqueeze(1)
+    fraction = (
+        -(relative * delta).sum(-1) / delta.square().sum(-1).clamp_min(1e-12)
+    ).clamp(0.0, 1.0)
+    closest = torch.linalg.vector_norm(relative + fraction.unsqueeze(-1) * delta, dim=-1)
+    eye = torch.eye(start.shape[1], device=start.device, dtype=torch.bool).unsqueeze(0)
+    pairs = active.unsqueeze(2) & active.unsqueeze(1) & ~eye
+    return pairs & (closest < safety_distance)
+
+
 def _obstacle_soft_direction_numpy(
     outward_direction,
     nominal_velocities,
@@ -346,6 +486,7 @@ def apf_repulsion_numpy(
     soft_gain,
     lookahead_s,
     braking_margin,
+    control_dt=1.0,
     enabled=True,
 ):
     """Risk-aware predictive APF using the nominal MARL motion."""
@@ -356,6 +497,7 @@ def apf_repulsion_numpy(
         soft_gain=soft_gain,
         lookahead_s=lookahead_s,
         braking_margin=braking_margin,
+        control_dt=control_dt,
         enabled=enabled,
     )
 
@@ -470,8 +612,12 @@ def apf_repulsion_numpy(
                     params["braking_margin"] * stopping_distance
                 )
 
+                reaction_distance = (
+                    stopping_distance
+                    + closing_speed * params["control_dt"]
+                )
                 emergency = (
-                    current_clearance <= stopping_distance
+                    current_clearance < reaction_distance
                     or predicted_clearance <= 0.0
                 )
                 caution = (
@@ -538,6 +684,18 @@ def apf_repulsion_numpy(
             expanded_radius,
             expanded_height,
         )
+        path_intersects = _segment_cylinder_intersects_numpy(
+            positions,
+            predicted_positions,
+            obstacle_xy,
+            expanded_radius,
+            expanded_height,
+        )
+        predicted_clearance = np.where(
+            path_intersects,
+            np.minimum(predicted_clearance, 0.0),
+            predicted_clearance,
+        )
 
         use_predicted = predicted_clearance < current_clearance
         risk_clearance = np.minimum(
@@ -571,8 +729,12 @@ def apf_repulsion_numpy(
             params["braking_margin"] * stopping_distance
         )
 
+        reaction_distance = (
+            stopping_distance
+            + closing_speed * params["control_dt"]
+        )
         emergency_pair = (
-            (current_clearance <= stopping_distance)
+            (current_clearance < reaction_distance)
             | (predicted_clearance <= 0.0)
         ) & active[:, None]
         caution_pair = (
@@ -655,6 +817,7 @@ def apf_repulsion_torch(
     soft_gain,
     lookahead_s,
     braking_margin,
+    control_dt=1.0,
     enabled=True,
 ):
     """Batched torch equivalent of apf_repulsion_numpy."""
@@ -665,6 +828,7 @@ def apf_repulsion_torch(
         soft_gain=soft_gain,
         lookahead_s=lookahead_s,
         braking_margin=braking_margin,
+        control_dt=control_dt,
         enabled=enabled,
     )
 
@@ -794,8 +958,12 @@ def apf_repulsion_torch(
             params["braking_margin"] * stopping_distance
         )
 
+        reaction_distance = (
+            stopping_distance
+            + closing_speed * params["control_dt"]
+        )
         emergency_pair = (
-            (current_clearance <= stopping_distance)
+            (current_clearance < reaction_distance)
             | (predicted_clearance <= 0.0)
         ) & pair_mask
         caution_pair = (
@@ -874,6 +1042,18 @@ def apf_repulsion_torch(
             expanded_radius,
             expanded_height,
         )
+        path_intersects = _segment_cylinder_intersects_torch(
+            positions,
+            predicted_positions,
+            obstacle_xy,
+            expanded_radius,
+            expanded_height,
+        )
+        predicted_clearance = torch.where(
+            path_intersects,
+            torch.minimum(predicted_clearance, torch.zeros_like(predicted_clearance)),
+            predicted_clearance,
+        )
 
         use_predicted = predicted_clearance < current_clearance
         risk_clearance = torch.minimum(
@@ -911,8 +1091,12 @@ def apf_repulsion_torch(
             params["braking_margin"] * stopping_distance
         )
 
+        reaction_distance = (
+            stopping_distance
+            + closing_speed * params["control_dt"]
+        )
         emergency_pair = (
-            (current_clearance <= stopping_distance)
+            (current_clearance < reaction_distance)
             | (predicted_clearance <= 0.0)
         ) & active.unsqueeze(-1)
         caution_pair = (

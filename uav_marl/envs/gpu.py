@@ -7,7 +7,7 @@ Migrated from notebook cells 221..225.
 
 from ..algorithms.matd3 import *  # noqa: F401,F403
 from ..common import contact_graph_reachability_fraction_torch
-from ..world.apf import apf_repulsion_torch
+from ..world.apf import apf_repulsion_torch, _peer_path_conflicts_torch
 
 # --- frozen notebook cell 221 ---
 class FullGpuUAVBatchEnv:
@@ -263,13 +263,19 @@ class FullGpuUAVBatchEnv:
         obstacle_xy = torch.zeros(E, O, 2, device=self.device)
         gcs_exclusion = float(CONFIG["gcs_exclusion_radius_m"])
         launch_margin = float(CONFIG["safety_distance"])
+        obstacle_clearance = float(CONFIG["obstacle_clearance_m"])
+        if 2.0 * (rmax + obstacle_clearance) > self.map_size:
+            raise ValueError(
+                "obstacle radius plus clearance must fit inside the map"
+            )
 
         for obstacle_index in range(O):
             radius = obstacle_radius[:, obstacle_index]
+            extent = radius + obstacle_clearance
             candidates = (
-                radius[:, None, None]
+                extent[:, None, None]
                 + self._rand(E, pool, 2)
-                * (self.map_size - 2.0 * radius).clamp_min(1.0)[:, None, None]
+                * (self.map_size - 2.0 * extent)[:, None, None]
             )
             gcs_distance = torch.linalg.vector_norm(
                 candidates - self.gcs[:2].view(1, 1, 2),
@@ -304,6 +310,8 @@ class FullGpuUAVBatchEnv:
                     previous_distance
                     - radius[:, None, None]
                     - obstacle_radius[:, None, :obstacle_index]
+                    - 2.0 * obstacle_clearance
+                    - launch_margin
                 )
                 valid &= (previous_margin > 0.0).all(-1)
                 margin_score = torch.minimum(
@@ -332,16 +340,22 @@ class FullGpuUAVBatchEnv:
                 candidates[:, :, None, :] - obstacle_xy[:, None, :, :],
                 dim=-1,
             )
+            obstacle_clearance = float(CONFIG["obstacle_clearance_m"])
             valid = (
                 (gcs_distance > target_exclusion)
                 & (
                     obstacle_distance
-                    > obstacle_radius[:, None, :]
+                    > (
+                        obstacle_radius[:, None, :]
+                        + obstacle_clearance
+                    )
                 ).all(-1)
             )
             obstacle_margin = (
                 (
-                    obstacle_distance - obstacle_radius[:, None, :]
+                    obstacle_distance
+                    - obstacle_radius[:, None, :]
+                    - obstacle_clearance
                 ).amin(-1)
                 if O > 0
                 else torch.full_like(gcs_distance, float("inf"))
@@ -695,6 +709,16 @@ class FullGpuUAVBatchEnv:
             / nominal_speed.clamp_min(1e-8),
         )
 
+        # Match the boundary-limited path before APF predicts peer conflicts.
+        nominal_pos = old_pos + nominal_velocity * self.dt
+        bounded_nominal_pos = nominal_pos.clone()
+        bounded_nominal_pos[..., :2].clamp_(0.0, self.map_size)
+        bounded_nominal_pos[..., 2].clamp_(self.altitude_min, self.altitude_max)
+        nominal_velocity = torch.where(
+            nominal_pos != bounded_nominal_pos,
+            (bounded_nominal_pos - old_pos) / self.dt,
+            nominal_velocity,
+        )
         apf = apf_repulsion_torch(
             old_pos,
             old_vel,
@@ -717,6 +741,7 @@ class FullGpuUAVBatchEnv:
             braking_margin=float(
                 CONFIG.get("apf_braking_margin", 1.5)
             ),
+            control_dt=self.dt,
             enabled=bool(CONFIG.get("apf_enabled", True)),
         )
 
@@ -778,6 +803,169 @@ class FullGpuUAVBatchEnv:
             boundary_velocity,
             candidate_velocity,
         )
+
+        if bool(CONFIG.get("apf_enabled", True)):
+            clearance = float(CONFIG["obstacle_clearance_m"])
+            needs_refinement = self._segment_cylinder_blocked(
+                old_pos,
+                candidate_pos,
+                obstacle_radius=self.obstacle_radius + clearance,
+                obstacle_height=self.obstacle_height + clearance,
+            ) & self.active
+            if bool(needs_refinement.any()):
+                refined_apf = apf_repulsion_torch(
+                    old_pos,
+                    old_vel,
+                    self.active,
+                    self.obstacle_xy,
+                    self.obstacle_radius,
+                    self.obstacle_height,
+                    nominal_velocities=candidate_velocity,
+                    max_accel=self.max_accel,
+                    safety_distance=float(CONFIG["safety_distance"]),
+                    obstacle_clearance=clearance,
+                    soft_gain=float(CONFIG.get("apf_soft_gain", 1.5)),
+                    lookahead_s=float(CONFIG.get("apf_lookahead_s", 3.0)),
+                    braking_margin=float(CONFIG.get("apf_braking_margin", 1.5)),
+                    control_dt=self.dt,
+                    enabled=True,
+                )
+                refined_desired = torch.where(
+                    refined_apf["emergency"].unsqueeze(-1),
+                    refined_apf["emergency_acceleration_mps2"],
+                    nominal_accel + refined_apf["soft_acceleration_mps2"],
+                )
+                refined_motion = self._project_unit_ball(
+                    refined_desired / max(self.max_accel, 1e-12)
+                )
+                refined_accel = refined_motion * self.max_accel
+                refined_velocity = old_vel + refined_accel * self.dt
+                refined_speed = torch.linalg.vector_norm(
+                    refined_velocity,
+                    dim=-1,
+                    keepdim=True,
+                )
+                refined_velocity = refined_velocity * torch.minimum(
+                    torch.ones_like(refined_speed),
+                    torch.as_tensor(
+                        self.max_speed,
+                        dtype=refined_velocity.dtype,
+                        device=self.device,
+                    ) / refined_speed.clamp_min(1e-8),
+                )
+                refined_raw_pos = old_pos + refined_velocity * self.dt
+                refined_pos = refined_raw_pos.clone()
+                refined_pos[..., :2].clamp_(0.0, self.map_size)
+                refined_pos[..., 2].clamp_(self.altitude_min, self.altitude_max)
+                refined_hclip = (
+                    (refined_raw_pos[..., :2] - refined_pos[..., :2])
+                    .abs()
+                    .amax(-1)
+                    > 1e-6
+                ) & self.active
+                refined_zclip = (
+                    (refined_raw_pos[..., 2] - refined_pos[..., 2]).abs()
+                    > 1e-6
+                ) & self.active
+                refined_axes = (refined_raw_pos - refined_pos).abs() > 1e-6
+                refined_boundary_velocity = (refined_pos - old_pos) / self.dt
+                refined_velocity = torch.where(
+                    refined_axes,
+                    refined_boundary_velocity,
+                    refined_velocity,
+                )
+                select = needs_refinement.unsqueeze(-1)
+                candidate_pos = torch.where(select, refined_pos, candidate_pos)
+                candidate_velocity = torch.where(
+                    select,
+                    refined_velocity,
+                    candidate_velocity,
+                )
+                hclip = torch.where(needs_refinement, refined_hclip, hclip)
+                zclip = torch.where(needs_refinement, refined_zclip, zclip)
+                applied_motion = torch.where(select, refined_motion, applied_motion)
+                accel = applied_motion * self.max_accel
+                apf_correction_accel = accel - nominal_accel
+                for key, refined_value in refined_apf.items():
+                    current_value = apf.get(key)
+                    if (
+                        torch.is_tensor(current_value)
+                        and current_value.shape[:2] == needs_refinement.shape
+                    ):
+                        selector = needs_refinement.reshape(
+                            *needs_refinement.shape,
+                            *([1] * (current_value.ndim - 2)),
+                        )
+                        apf[key] = torch.where(
+                            selector,
+                            refined_value,
+                            current_value,
+                        )
+
+            safety_distance = float(CONFIG["safety_distance"])
+            obstacle_unsafe = self._segment_cylinder_blocked(
+                old_pos, candidate_pos,
+                obstacle_radius=self.obstacle_radius + clearance,
+                obstacle_height=self.obstacle_height + clearance,
+            ) & self.active
+            peer_unsafe = _peer_path_conflicts_torch(
+                old_pos, candidate_pos, self.active, safety_distance,
+            ).any(-1)
+            if bool((obstacle_unsafe | peer_unsafe).any()):
+                # Commit one UAV at a time; each trial sees the paths already
+                # accepted for its peers, including earlier fallback choices.
+                for i in range(self.num_uavs):
+                    needs_fallback = self.active[:, i] & (
+                        obstacle_unsafe[:, i]
+                        | _peer_path_conflicts_torch(
+                            old_pos, candidate_pos, self.active, safety_distance,
+                        )[:, i].any(-1)
+                    )
+                    if not bool(needs_fallback.any()):
+                        continue
+                    brake_motion = self._project_unit_ball(
+                        -old_vel[:, i] / max(self.max_accel * self.dt, 1e-12)
+                    )
+                    for fallback_motion in (torch.zeros_like(brake_motion), brake_motion):
+                        fallback_velocity = old_vel[:, i] + fallback_motion * self.max_accel * self.dt
+                        speed = torch.linalg.vector_norm(fallback_velocity, dim=-1, keepdim=True)
+                        fallback_velocity = fallback_velocity * (
+                            self.max_speed / speed.clamp_min(1e-8)
+                        ).clamp_max(1.0)
+                        raw_pos = old_pos[:, i] + fallback_velocity * self.dt
+                        fallback_pos = raw_pos.clone()
+                        fallback_pos[..., :2].clamp_(0.0, self.map_size)
+                        fallback_pos[..., 2].clamp_(self.altitude_min, self.altitude_max)
+                        clipped_axes = (raw_pos - fallback_pos).abs() > 1e-6
+                        fallback_velocity = torch.where(
+                            clipped_axes, (fallback_pos - old_pos[:, i]) / self.dt,
+                            fallback_velocity,
+                        )
+                        trial_pos = candidate_pos.clone()
+                        trial_pos[:, i] = fallback_pos
+                        unsafe_obstacle = self._segment_cylinder_blocked(
+                            old_pos[:, i], fallback_pos,
+                            obstacle_radius=self.obstacle_radius + clearance,
+                            obstacle_height=self.obstacle_height + clearance,
+                        )
+                        unsafe_peer = _peer_path_conflicts_torch(
+                            old_pos, trial_pos, self.active, safety_distance,
+                        )[:, i].any(-1)
+                        accept = needs_fallback & ~unsafe_obstacle & ~unsafe_peer
+                        select = accept.unsqueeze(-1)
+                        candidate_pos[:, i] = torch.where(select, fallback_pos, candidate_pos[:, i])
+                        candidate_velocity[:, i] = torch.where(
+                            select, fallback_velocity, candidate_velocity[:, i],
+                        )
+                        hclip[:, i] = torch.where(accept, clipped_axes[..., :2].any(-1), hclip[:, i])
+                        zclip[:, i] = torch.where(accept, clipped_axes[..., 2], zclip[:, i])
+                        applied_motion[:, i] = torch.where(select, fallback_motion, applied_motion[:, i])
+                        needs_fallback = needs_fallback & ~accept
+                        if not bool(needs_fallback.any()):
+                            break
+                accel = applied_motion * self.max_accel
+                apf_correction_accel = accel - nominal_accel
+
         new_pos = torch.where(
             self.active.unsqueeze(-1),
             candidate_pos,

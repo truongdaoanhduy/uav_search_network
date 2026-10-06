@@ -161,14 +161,15 @@ def create_obstacle(rng, uavs):
     h_max = float(CONFIG["obstacle_height_max_m"])
 
     safety_margin = float(CONFIG["safety_distance"])
+    obstacle_clearance = float(CONFIG["obstacle_clearance_m"])
     gcs_xy = np.asarray(CONFIG["gcs_position"][:2], dtype=np.float64)
     gcs_exclusion = float(CONFIG["gcs_exclusion_radius_m"])
 
     if r_min <= 0.0 or r_max < r_min:
         raise ValueError("obstacle radius range is invalid")
-    if 2.0 * r_max > map_size:
+    if 2.0 * (r_max + obstacle_clearance) > map_size:
         raise ValueError(
-            "obstacle_radius_max_m must be <= map_size / 2"
+            "obstacle radius plus clearance must fit inside the map"
         )
 
     max_attempts = 100000
@@ -185,8 +186,9 @@ def create_obstacle(rng, uavs):
         radius = float(rng.uniform(r_min, r_max))
         height = float(rng.uniform(h_min, h_max))
 
-        x = float(rng.uniform(radius, map_size - radius))
-        y = float(rng.uniform(radius, map_size - radius))
+        extent = radius + obstacle_clearance
+        x = float(rng.uniform(extent, map_size - extent))
+        y = float(rng.uniform(extent, map_size - extent))
         center = np.array([x, y], dtype=np.float64)
 
         distance_to_gcs = np.linalg.norm(center - gcs_xy)
@@ -203,7 +205,12 @@ def create_obstacle(rng, uavs):
 
         overlaps_obstacle = any(
             np.linalg.norm(center - other.position)
-            <= radius + other.radius
+            <= (
+                radius
+                + other.radius
+                + 2.0 * obstacle_clearance
+                + safety_margin
+            )
             for other in obstacles
         )
         if overlaps_obstacle:
@@ -243,7 +250,11 @@ def create_target(rng, obstacles):
 
         position = rng.uniform(0.0,map_size,size=2,).astype(np.float64)
 
-        if point_inside_obstacle(position, obstacles):
+        if point_inside_obstacle(
+            position,
+            obstacles,
+            margin=float(CONFIG["obstacle_clearance_m"]),
+        ):
             continue
 
         if np.linalg.norm(position - gcs_xy) <= target_exclusion:

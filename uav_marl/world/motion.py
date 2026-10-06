@@ -6,7 +6,7 @@ Migrated from notebook cells 16..20.
 """
 
 from .generation import *  # noqa: F401,F403
-from .apf import apf_repulsion_numpy
+from .apf import apf_repulsion_numpy, _peer_path_conflicts_numpy
 
 # --- frozen notebook cell 16 ---
 def segment_intersects_obstacle(
@@ -360,6 +360,19 @@ def apply_swarm_motion(
     # Quantize APF inputs to float32 so the CPU reference uses the same
     # safety-field state precision as the tensor/CUDA training environment.
     # The physical CPU integrator remains float64.
+    # Predict the path the boundary-limited motion can actually execute.
+    # An outward velocity at the ceiling/map edge must not hide a peer conflict.
+    nominal_positions = old_positions + nominal_velocities * dt
+    bounded_positions = np.clip(
+        nominal_positions,
+        [0.0, 0.0, float(CONFIG["altitude_min"])],
+        [float(CONFIG["map_size"]), float(CONFIG["map_size"]), float(CONFIG["altitude_max"])],
+    )
+    nominal_velocities = np.where(
+        nominal_positions != bounded_positions,
+        (bounded_positions - old_positions) / dt,
+        nominal_velocities,
+    )
     apf = apf_repulsion_numpy(
         old_positions.astype(np.float32),
         old_velocities.astype(np.float32),
@@ -378,6 +391,7 @@ def apply_swarm_motion(
         braking_margin=float(
             CONFIG.get("apf_braking_margin", 1.5)
         ),
+        control_dt=dt,
         enabled=bool(CONFIG.get("apf_enabled", True)),
     )
 
@@ -437,6 +451,108 @@ def apply_swarm_motion(
 
     candidate_positions = np.stack(candidate_positions)
     candidate_velocities = np.stack(candidate_velocities)
+
+    if obstacles and bool(CONFIG.get("apf_enabled", True)):
+        clearance = float(CONFIG["obstacle_clearance_m"])
+        needs_refinement = np.asarray(
+            [
+                active[i]
+                and segment_intersects_obstacle(
+                    old_positions[i],
+                    candidate_positions[i],
+                    obstacles,
+                    margin=clearance,
+                )
+                for i in range(num_uavs)
+            ],
+            dtype=bool,
+        )
+        if np.any(needs_refinement):
+            refined_apf = apf_repulsion_numpy(
+                old_positions.astype(np.float32),
+                old_velocities.astype(np.float32),
+                active,
+                obstacle_xy.astype(np.float32),
+                obstacle_radius.astype(np.float32),
+                obstacle_height.astype(np.float32),
+                nominal_velocities=candidate_velocities.astype(np.float32),
+                max_accel=max_accel,
+                safety_distance=float(CONFIG["safety_distance"]),
+                obstacle_clearance=clearance,
+                soft_gain=float(CONFIG.get("apf_soft_gain", 1.5)),
+                lookahead_s=float(CONFIG.get("apf_lookahead_s", 3.0)),
+                braking_margin=float(CONFIG.get("apf_braking_margin", 1.5)),
+                control_dt=dt,
+                enabled=True,
+            )
+            refined_desired = np.where(
+                refined_apf["emergency"][:, None],
+                refined_apf["emergency_acceleration_mps2"],
+                nominal_acceleration + refined_apf["soft_acceleration_mps2"],
+            )
+            refined_actions = project_motion_action_np(
+                refined_desired / max(max_accel, 1e-12)
+            )
+            for i in np.flatnonzero(needs_refinement):
+                (
+                    candidate_positions[i],
+                    candidate_velocities[i],
+                    boundary_clipped[i],
+                    horizontal_boundary_clipped[i],
+                    altitude_clipped[i],
+                ) = compute_motion_candidate(
+                    uavs[i],
+                    refined_actions[i],
+                    dt=dt,
+                )
+                combined_actions[i] = refined_actions[i]
+            for key, refined_value in refined_apf.items():
+                current_value = apf.get(key)
+                if isinstance(current_value, np.ndarray) and current_value.shape[:1] == (num_uavs,):
+                    selector = needs_refinement.reshape(
+                        (num_uavs,) + (1,) * (current_value.ndim - 1)
+                    )
+                    apf[key] = np.where(selector, refined_value, current_value)
+
+    if bool(CONFIG.get("apf_enabled", True)):
+        clearance = float(CONFIG["obstacle_clearance_m"])
+        safety_distance = float(CONFIG["safety_distance"])
+        # A replacement must be safe against both cylinders and the other
+        # executed paths. Accept sequentially so later replacements also see
+        # every path already accepted earlier in this step.
+        for i in range(num_uavs):
+            if not active[i]:
+                continue
+            peer_unsafe = _peer_path_conflicts_numpy(
+                old_positions, candidate_positions, active, safety_distance,
+            )[i].any()
+            obstacle_unsafe = segment_intersects_obstacle(
+                old_positions[i], candidate_positions[i], obstacles, margin=clearance,
+            )
+            if not (peer_unsafe or obstacle_unsafe):
+                continue
+            brake_action = project_motion_action_np(
+                -old_velocities[i] / max(max_accel * dt, 1e-12)
+            )
+            for fallback_action in (np.zeros(3, dtype=np.float64), brake_action):
+                fallback = compute_motion_candidate(uavs[i], fallback_action, dt=dt)
+                trial_positions = candidate_positions.copy()
+                trial_positions[i] = fallback[0]
+                if segment_intersects_obstacle(
+                    old_positions[i], fallback[0], obstacles, margin=clearance,
+                ) or _peer_path_conflicts_numpy(
+                    old_positions, trial_positions, active, safety_distance,
+                )[i].any():
+                    continue
+                (
+                    candidate_positions[i], candidate_velocities[i],
+                    boundary_clipped[i], horizontal_boundary_clipped[i], altitude_clipped[i],
+                ) = fallback
+                combined_actions[i] = fallback_action
+                break
+
+    applied_acceleration = combined_actions * max_accel
+    apf_correction_acceleration = applied_acceleration - nominal_acceleration
 
     for i, uav in enumerate(uavs):
         if not uav.active:
