@@ -4602,7 +4602,7 @@ def _init_gpu_wandb_run(
             "num_obstacles": int(
                 CONFIG["num_obstacles"]
             ),
-            "metric_schema_version": "paper-kpi-v4",
+            "metric_schema_version": "paper-kpi-v5",
             "metric_groups": (
                 "train,episode,paper,evaluation,visualization"
             ),
@@ -5381,6 +5381,10 @@ def build_paper_curve_payload(
             if item.get(source_key) is not None
             and math.isfinite(
                 float(item[source_key])
+            )
+            and (
+                output_key != "paper/network_phy_success_percent"
+                or float(item.get("network_tx_attempts", 0.0)) > 0.0
             )
         ]
         if not source_values:
@@ -7535,7 +7539,7 @@ def _train_full_gpu_ddp_worker(
                         motion[..., 2].square().sum(),
                         tx_action.sum(),
                         tx_action.square().sum(),
-                        (motion.abs() >= 0.95).float().sum(),
+                        (torch.linalg.vector_norm(motion, dim=-1) >= 0.95).float().sum(),
                         (motion[..., 2].abs() >= 0.95).float().sum(),
                         (destination == 0).float().sum(),
                         (
@@ -7692,7 +7696,7 @@ def _train_full_gpu_ddp_worker(
                         "train/action_tx_power_mean": tx_mean,
                         "train/action_tx_power_std": float(tx_std),
                         "train/action_motion_saturation_rate": float(
-                            action_stats[8].item() / (3.0 * action_n)
+                            action_stats[8].item() / action_n
                         ),
                         "train/action_altitude_saturation_rate": float(
                             action_stats[9].item() / action_n

@@ -598,6 +598,7 @@ def postprocess_checkpoint_cpu(
             eval_backend = "simple"
             backend_kwargs = {}
 
+        evaluation_seed = seed + int(CONFIG["training_eval_seed_offset"])
         env = UAVSearchEnv(
             backend_name=eval_backend,
             network_backend_kwargs=backend_kwargs,
@@ -616,7 +617,7 @@ def postprocess_checkpoint_cpu(
                     env,
                     trainer,
                     episodes=episodes,
-                    seed=seed + int(CONFIG["training_eval_seed_offset"]),
+                    seed=evaluation_seed,
                 )
             else:
                 loaded = load_matd3_checkpoint(
@@ -631,7 +632,7 @@ def postprocess_checkpoint_cpu(
                     env,
                     trainer,
                     episodes=episodes,
-                    seed=seed + int(CONFIG["training_eval_seed_offset"]),
+                    seed=evaluation_seed,
                 )
             actor_devices = {
                 str(parameter.device)
@@ -650,7 +651,7 @@ def postprocess_checkpoint_cpu(
             raise RuntimeError("evaluation did not produce visualization_trace")
         fig = render_evaluation_trace_2d(
             trace,
-            title=f"{algorithm.upper()} CPU evaluation | seed={seed}",
+            title=f"{algorithm.upper()} CPU evaluation | seed={evaluation_seed}",
         )
         image_path = output_dir / f"{algorithm}_cpu_evaluation.png"
         fig.savefig(image_path, dpi=140, bbox_inches="tight")

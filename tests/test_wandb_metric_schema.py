@@ -231,3 +231,21 @@ def test_wandb_training_and_cpu_runs_expose_kaggle_account():
     assert '"kaggle_account": str(kaggle_account)' in gpu_source
     assert 'run.summary["kaggle_account"] = str(kaggle_account)' in gpu_source
     assert '"kaggle_account": resolve_kaggle_account()' in cpu_source
+
+
+def test_paper_phy_success_ignores_episodes_without_network_traffic():
+    active = _episode()
+    idle = _episode()
+    active["network_tx_attempts"] = 10.0
+    active["network_phy_success_percent"] = 80.0
+    idle["network_tx_attempts"] = 0.0
+    idle["network_phy_success_percent"] = 0.0
+
+    payload = build_paper_curve_payload(
+        [active, idle],
+        episodes_completed=2,
+        ema_state={},
+        ema_beta=0.85,
+    )
+
+    assert payload["paper/network_phy_success_percent"] == pytest.approx(80.0)

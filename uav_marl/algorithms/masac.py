@@ -7,6 +7,80 @@ Migrated from notebook cells 164..187.
 
 from ..envs.uav_search import *  # noqa: F401,F403
 
+
+def transform_actor_observations(
+    observations,
+    discrete_dim,
+):
+    """Center belief features around the uninformative mission prior."""
+    num_uavs = int(discrete_dim) - 1
+    prefix = (
+        9
+        + 3
+        + 5 * (num_uavs - 1)
+        + 5 * int(
+            CONFIG["observation_nearest_obstacles"]
+        )
+    )
+    patch_count = int(
+        CONFIG["belief_patch_cells"]
+    ) ** 2
+    coarse_count = int(
+        CONFIG["belief_coarse_cells"]
+    ) ** 2
+    patch_end = prefix + patch_count
+    coarse_end = patch_end + coarse_count
+    expected_dim = (
+        coarse_end
+        + 5
+        + int(discrete_dim)
+    )
+
+    if observations.shape[-1] != expected_dim:
+        raise ValueError(
+            "actor observation dimension does not match "
+            "the configured UAV observation contract"
+        )
+
+    belief_prior = float(
+        CONFIG["belief_prior"]
+    )
+    return torch.cat(
+        (
+            observations[..., :prefix],
+            2.0
+            * (
+                observations[
+                    ..., prefix:patch_end
+                ]
+                - belief_prior
+            ),
+            1.0
+            - observations[
+                ..., patch_end:coarse_end
+            ],
+            observations[..., coarse_end:],
+        ),
+        dim=-1,
+    )
+
+
+def build_actor_encoder(
+    observation_dim,
+    hidden_dims,
+):
+    return build_mlp(
+        observation_dim,
+        hidden_dims[:-1],
+        hidden_dims[-1],
+        activation_factory=(
+            lambda: nn.LeakyReLU(
+                negative_slope=0.01
+            )
+        ),
+    )
+
+
 # --- frozen notebook cell 164 ---
 class HybridMASACActor(nn.Module):
     def __init__(
@@ -39,10 +113,9 @@ class HybridMASACActor(nn.Module):
             discrete_dim
         )
 
-        self.encoder = build_mlp(
+        self.encoder = build_actor_encoder(
             self.observation_dim,
-            hidden_dims[:-1],
-            hidden_dims[-1],
+            hidden_dims,
         )
 
         feature_dim = (
@@ -67,7 +140,10 @@ class HybridMASACActor(nn.Module):
         observations,
     ):
         features = self.encoder(
-            observations
+            transform_actor_observations(
+                observations,
+                self.discrete_dim,
+            )
         )
 
         mean = self.mean_head(

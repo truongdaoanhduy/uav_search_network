@@ -39,10 +39,9 @@ class HybridMATD3Actor(nn.Module):
             discrete_dim
         )
 
-        self.encoder = build_mlp(
+        self.encoder = build_actor_encoder(
             self.observation_dim,
-            hidden_dims[:-1],
-            hidden_dims[-1],
+            hidden_dims,
         )
 
         feature_dim = hidden_dims[-1]
@@ -61,7 +60,10 @@ class HybridMATD3Actor(nn.Module):
         observations,
     ):
         features = self.encoder(
-            observations
+            transform_actor_observations(
+                observations,
+                self.discrete_dim,
+            )
         )
 
         raw_continuous = self.continuous_head(

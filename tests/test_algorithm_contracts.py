@@ -7,7 +7,95 @@ import pytest
 import torch
 
 from config import CONFIG
+from uav_marl.algorithms.masac import HybridMASACActor
+from uav_marl.algorithms.matd3 import HybridMATD3Actor
 from uav_marl.training.gpu import _trainer, train_full_gpu
+
+
+def _actor_observation_layout():
+    prefix = (
+        9
+        + 3
+        + 5 * (int(CONFIG["num_uavs"]) - 1)
+        + 5 * int(CONFIG["observation_nearest_obstacles"])
+    )
+    patch_cells = int(CONFIG["belief_patch_cells"]) ** 2
+    coarse_cells = int(CONFIG["belief_coarse_cells"]) ** 2
+    patch = slice(prefix, prefix + patch_cells)
+    coarse = slice(patch.stop, patch.stop + coarse_cells)
+    observation_dim = coarse.stop + 5 + int(CONFIG["num_uavs"]) + 1
+    return observation_dim, patch, coarse
+
+
+@pytest.mark.parametrize(
+    "actor_type",
+    [HybridMASACActor, HybridMATD3Actor],
+)
+def test_actor_centers_uninformative_belief_before_encoder(actor_type):
+    observation_dim, patch, coarse = _actor_observation_layout()
+    actor = actor_type(
+        observation_dim=observation_dim,
+        continuous_dim=4,
+        discrete_dim=int(CONFIG["num_uavs"]) + 1,
+        hidden_dims=(8, 8),
+    )
+    observations = torch.full((2, observation_dim), 0.25)
+    observations[0, patch] = float(CONFIG["belief_prior"])
+    observations[0, coarse] = 1.0
+    observations[1, patch] = float(CONFIG["belief_prior"])
+    observations[1, coarse] = 1.0
+    observations[1, patch.start] = 0.0
+    observations[1, patch.start + 1] = 1.0
+    observations[1, coarse.start] = 0.0
+
+    encoder_inputs = []
+    hook = actor.encoder[0].register_forward_pre_hook(
+        lambda _module, args: encoder_inputs.append(args[0].detach().clone())
+    )
+    try:
+        actor(observations)
+    finally:
+        hook.remove()
+
+    transformed = encoder_inputs[0]
+    torch.testing.assert_close(
+        transformed[0, patch],
+        torch.zeros(patch.stop - patch.start),
+    )
+    torch.testing.assert_close(
+        transformed[0, coarse],
+        torch.zeros(coarse.stop - coarse.start),
+    )
+    assert transformed[1, patch.start].item() == pytest.approx(-1.0)
+    assert transformed[1, patch.start + 1].item() == pytest.approx(1.0)
+    assert transformed[1, coarse.start].item() == pytest.approx(1.0)
+    assert transformed[0, 0].item() == pytest.approx(0.25)
+
+
+@pytest.mark.parametrize(
+    "actor_type",
+    [HybridMASACActor, HybridMATD3Actor],
+)
+def test_actor_encoder_keeps_gradient_path_for_negative_preactivations(actor_type):
+    observation_dim, _, _ = _actor_observation_layout()
+    actor = actor_type(
+        observation_dim=observation_dim,
+        continuous_dim=4,
+        discrete_dim=int(CONFIG["num_uavs"]) + 1,
+        hidden_dims=(8, 8),
+    )
+    first = actor.encoder[0]
+    second = actor.encoder[2]
+    with torch.no_grad():
+        first.weight.zero_()
+        first.bias.fill_(-1.0)
+        second.weight.zero_()
+        second.bias.zero_()
+        second.weight.copy_(torch.eye(8))
+
+    features = actor.encoder(torch.zeros(1, observation_dim))
+    assert torch.count_nonzero(features).item() == features.numel()
+    assert (features < 0).all()
 
 
 def _small_learner_config(monkeypatch, algorithm):

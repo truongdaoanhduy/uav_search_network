@@ -4380,6 +4380,7 @@ def build_mlp(
     input_dim,
     hidden_dims,
     output_dim,
+    activation_factory=nn.ReLU,
 ):
     dims = (
         int(input_dim),
@@ -4402,7 +4403,7 @@ def build_mlp(
                     dims[index],
                     dims[index + 1],
                 ),
-                nn.ReLU(),
+                activation_factory(),
             ]
         )
 
