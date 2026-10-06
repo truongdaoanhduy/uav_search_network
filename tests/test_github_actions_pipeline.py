@@ -32,3 +32,18 @@ def test_cloud_pipeline_defaults_to_requested_20k_3000step_run():
     assert 'default: "4096"' in source
     assert 'default: "3000"' in source
     assert "default: true" in source
+
+
+def test_cloud_pipeline_dispatches_selected_algorithm():
+    source = WORKFLOW.read_text()
+    data = yaml.safe_load(source)
+    workflow_root = data.get("on", data.get(True))
+    inputs = workflow_root["workflow_dispatch"]["inputs"]
+
+    assert inputs["algorithm"]["type"] == "choice"
+    assert inputs["algorithm"]["default"] == "masac"
+    assert inputs["algorithm"]["options"] == ["masac", "matd3"]
+    assert 'ALGORITHM="${{ inputs.algorithm }}"' in source
+    assert '--algorithm "${ALGORITHM}"' in source
+    assert 'GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"' in source
+    assert 'CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"' in source

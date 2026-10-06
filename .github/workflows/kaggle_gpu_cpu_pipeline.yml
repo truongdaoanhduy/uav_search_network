@@ -3,6 +3,14 @@ name: Kaggle UAV GPU -> CPU Pipeline
 on:
   workflow_dispatch:
     inputs:
+      algorithm:
+        description: Training algorithm
+        required: true
+        type: choice
+        options:
+          - masac
+          - matd3
+        default: masac
       episodes:
         description: Total training episodes
         required: true
@@ -61,13 +69,14 @@ jobs:
       - name: Run GPU -> CPU pipeline
         shell: bash
         run: |
-          GPU_SLUG="uav-masac-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"
-          CPU_SLUG="uav-masac-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"
+          ALGORITHM="${{ inputs.algorithm }}"
+          GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"
+          CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"
           CUDA_GRAPH="${{ inputs.cuda_graph }}"
 
           python scripts/kaggle_pipeline.py \
             --username "${KAGGLE_USERNAME}" \
-            --algorithm masac \
+            --algorithm "${ALGORITHM}" \
             --runtime kaggle_2xt4 \
             --experiment paper_20k \
             --seed 44 \
@@ -99,8 +108,9 @@ jobs:
         if: always()
         shell: bash
         run: |
-          GPU_SLUG="uav-masac-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"
-          CPU_SLUG="uav-masac-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"
+          ALGORITHM="${{ inputs.algorithm }}"
+          GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"
+          CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"
           {
             echo "### Kaggle GPU → CPU pipeline"
             echo "- GPU Kaggle kernel: https://www.kaggle.com/code/${KAGGLE_USERNAME}/${GPU_SLUG}"
