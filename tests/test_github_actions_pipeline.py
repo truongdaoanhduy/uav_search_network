@@ -88,5 +88,6 @@ def test_cloud_workflows_match_the_current_github_kaggle_credential_owner():
 
     for source in (pipeline_source, reconcile_source):
         assert "KAGGLE_USERNAME: haibro1234" in source
+        assert 'python -m pip install "kaggle>=2.2.4,<3"' in source
         assert "haibro1234/uav-wandb-credential-masac50k-d59860c" in source
     assert "KAGGLE_ACCOUNT_NAME: account_02" in pipeline_source
