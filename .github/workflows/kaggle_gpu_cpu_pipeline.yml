@@ -42,16 +42,16 @@ jobs:
     timeout-minutes: 30
     env:
       KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
-      KAGGLE_USERNAME: vuliu123456
-      KAGGLE_ACCOUNT_NAME: account_03
+      KAGGLE_USERNAME: haibro1234
+      KAGGLE_ACCOUNT_NAME: account_02
       PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -85,9 +85,9 @@ jobs:
             --machine-shape NvidiaTeslaT4 \
             --gpu-kernel-slug "${GPU_SLUG}" \
             --cpu-kernel-slug "${CPU_SLUG}" \
-            --gpu-credential-dataset vuliu123456/uav-wandb-secret-20261001-v5 \
+            --gpu-credential-dataset haibro1234/uav-wandb-credential-masac50k-d59860c \
             --cpu-log-wandb \
-            --cpu-credential-dataset vuliu123456/uav-wandb-secret-20261001-v5 \
+            --cpu-credential-dataset haibro1234/uav-wandb-credential-masac50k-d59860c \
             --launch-only \
             --gpu-session-timeout-seconds 43200 \
             --cpu-session-timeout-seconds 10800 \
@@ -117,7 +117,7 @@ jobs:
 
       - name: Upload launch manifest
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kaggle-uav-pipeline-${{ github.run_id }}-${{ github.run_attempt }}
           path: pipeline_outputs/

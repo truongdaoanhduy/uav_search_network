@@ -22,7 +22,9 @@ def test_cloud_pipeline_workflow_has_gpu_then_cpu_contract():
     assert "runtime.cuda_graph_policy_actions=${CUDA_GRAPH}" in source
     assert "--cpu-log-wandb" in source
     assert "--cpu-credential-dataset" in source
-    assert "actions/upload-artifact@v4" in source
+    assert "actions/checkout@v7" in source
+    assert "actions/setup-python@v7" in source
+    assert "actions/upload-artifact@v7" in source
 
 
 def test_cloud_pipeline_defaults_to_requested_20k_3000step_run():
@@ -77,12 +79,12 @@ def test_cloud_pipeline_has_scheduled_reconciler():
     assert "secrets.KAGGLE_API_TOKEN" in source
 
 
-def test_cloud_workflows_use_high_quota_account_with_matching_wandb_dataset():
+def test_cloud_workflows_match_the_current_github_kaggle_credential_owner():
     pipeline_source = WORKFLOW.read_text()
     reconcile = ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_reconcile.yml"
     reconcile_source = reconcile.read_text()
 
     for source in (pipeline_source, reconcile_source):
-        assert "KAGGLE_USERNAME: vuliu123456" in source
-        assert "vuliu123456/uav-wandb-secret-20261001-v5" in source
-    assert "KAGGLE_ACCOUNT_NAME: account_03" in pipeline_source
+        assert "KAGGLE_USERNAME: haibro1234" in source
+        assert "haibro1234/uav-wandb-credential-masac50k-d59860c" in source
+    assert "KAGGLE_ACCOUNT_NAME: account_02" in pipeline_source

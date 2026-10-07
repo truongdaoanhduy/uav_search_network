@@ -217,3 +217,17 @@ def test_reconciler_retries_failed_existing_cpu_stage(tmp_path, monkeypatch):
 
     assert result == "cpu_submitted"
     assert len(submitted) == 1
+
+
+def test_explicit_kaggle_username_must_match_authenticated_account(monkeypatch):
+    payload = '[{"ref":"haibro1234/existing-kernel"}]'
+    monkeypatch.setattr(
+        pipeline,
+        "_run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, payload, ""),
+    )
+    with pytest.raises(RuntimeError, match="authenticated Kaggle account"):
+        pipeline.resolve_kaggle_username(
+            env={"KAGGLE_USERNAME": "vuliu123456"},
+            explicit="vuliu123456",
+        )

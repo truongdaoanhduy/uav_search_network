@@ -107,10 +107,11 @@ def resolve_kaggle_username(
     env: dict[str, str],
     explicit: str | None,
 ) -> str:
-    if explicit:
-        return explicit.strip()
-    if env.get("KAGGLE_USERNAME"):
-        return str(env["KAGGLE_USERNAME"]).strip()
+    requested = (
+        explicit.strip()
+        if explicit
+        else str(env.get("KAGGLE_USERNAME", "")).strip() or None
+    )
 
     probes = [
         [
@@ -143,8 +144,15 @@ def resolve_kaggle_username(
         except json.JSONDecodeError:
             username = None
         if username:
-            return username
+            if requested and username != requested:
+                raise RuntimeError(
+                    f"authenticated Kaggle account {username!r} does not match "
+                    f"requested username {requested!r}"
+                )
+            return requested or username
 
+    if requested:
+        return requested
     raise RuntimeError(
         "could not resolve Kaggle username for the selected account; "
         "pass --username explicitly"
