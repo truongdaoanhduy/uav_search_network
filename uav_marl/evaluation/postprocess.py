@@ -487,6 +487,27 @@ def configure_kaggle_huggingface():
     return result
 
 
+def _final_training_summary(summary):
+    """Translate deterministic CPU evaluation into durable training-run summaries."""
+    final = {
+        f"final/{key}": float(value)
+        for key, value in summary.items()
+        if isinstance(value, (bool, int, float))
+    }
+    aliases = {
+        "return": "final_return",
+        "coverage_percent": "final_coverage_percent",
+        "target_search_rate_percent": "final_target_search_rate_percent",
+        "target_delivery_rate_percent": "final_target_delivery_rate_percent",
+        "success_rate": "final_success_rate",
+    }
+    for source_key, output_key in aliases.items():
+        value = summary.get(source_key)
+        if isinstance(value, (bool, int, float)):
+            final[output_key] = float(value)
+    return final
+
+
 # --- frozen notebook cell 297 ---
 def postprocess_checkpoint_cpu(
     checkpoint_path=None,
@@ -753,6 +774,8 @@ def postprocess_checkpoint_cpu(
                     format="mp4",
                 )
             wandb_run.log(payload)
+            final_summary = _final_training_summary(summary)
+            wandb_run.summary.update(final_summary)
             wandb_run.summary["execution_platform"] = (
                 "kaggle" if running_on_kaggle() else "None"
             )
@@ -760,6 +783,21 @@ def postprocess_checkpoint_cpu(
             wandb_run.summary["cpu_postprocess/huggingface_uploaded"] = bool(
                 hf_status.get("uploaded", False)
             )
+            if source_run_id:
+                source_run = wandb_module.Api().run(
+                    f"{CONFIG['training_wandb_entity']}/"
+                    f"{CONFIG['training_wandb_project']}/"
+                    f"{source_run_id}"
+                )
+                source_run.summary.update(
+                    {
+                        **final_summary,
+                        "cpu_postprocess/status": "complete",
+                        "cpu_postprocess/checkpoint_sha256": digest.hexdigest(),
+                        "cpu_postprocess/run_id": wandb_run.id,
+                        "cpu_postprocess/run_url": wandb_run.url,
+                    }
+                )
 
         return {
             "device": "cpu",

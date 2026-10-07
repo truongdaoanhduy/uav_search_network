@@ -2,7 +2,6 @@ from pathlib import Path
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_pipeline.yml"
 
@@ -45,5 +44,45 @@ def test_cloud_pipeline_dispatches_selected_algorithm():
     assert inputs["algorithm"]["options"] == ["masac", "matd3"]
     assert 'ALGORITHM="${{ inputs.algorithm }}"' in source
     assert '--algorithm "${ALGORITHM}"' in source
-    assert 'GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"' in source
-    assert 'CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"' in source
+    assert 'GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-1-gpu"' in source
+    assert 'CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-1-cpu"' in source
+
+
+def test_cloud_pipeline_launch_is_detached_from_long_kaggle_runtime():
+    source = WORKFLOW.read_text()
+    data = yaml.safe_load(source)
+    job = data["jobs"]["gpu_train_then_cpu_visualize"]
+
+    assert int(job["timeout-minutes"]) <= 30
+    assert "--launch-only" in source
+    assert "--gpu-session-timeout-seconds 43200" in source
+    assert "--gpu-timeout-seconds 14400" not in source
+
+
+def test_cloud_pipeline_keeps_periodic_checkpoint_defaults_for_recovery():
+    source = WORKFLOW.read_text()
+    assert "experiment.checkpoint.interval_episodes=${{ inputs.episodes }}" not in source
+    assert "experiment.checkpoint.interval_steps=100000000" not in source
+
+
+def test_cloud_pipeline_has_scheduled_reconciler():
+    reconcile = ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_reconcile.yml"
+    assert reconcile.is_file()
+    source = reconcile.read_text()
+    data = yaml.safe_load(source)
+    workflow_root = data.get("on", data.get(True))
+    assert "schedule" in workflow_root
+    assert "workflow_dispatch" in workflow_root
+    assert "scripts/reconcile_kaggle_pipeline.py" in source
+    assert "secrets.KAGGLE_API_TOKEN" in source
+
+
+def test_cloud_workflows_use_high_quota_account_with_matching_wandb_dataset():
+    pipeline_source = WORKFLOW.read_text()
+    reconcile = ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_reconcile.yml"
+    reconcile_source = reconcile.read_text()
+
+    for source in (pipeline_source, reconcile_source):
+        assert "KAGGLE_USERNAME: vuliu123456" in source
+        assert "vuliu123456/uav-wandb-secret-20261001-v5" in source
+    assert "KAGGLE_ACCOUNT_NAME: account_03" in pipeline_source

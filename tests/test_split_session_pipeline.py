@@ -8,7 +8,7 @@ import pytest
 from hydra import compose, initialize_config_dir
 from omegaconf import OmegaConf
 
-from scripts.kaggle_pipeline import build_kernels
+from scripts.kaggle_pipeline import _push_kernel, build_kernels
 from uav_marl.handoff import (
     CHECKPOINT_FILENAME,
     HANDOFF_FILENAME,
@@ -182,7 +182,7 @@ def test_cpu_completion_manifest_keeps_training_provenance(tmp_path, monkeypatch
             "wandb_run_url": kwargs.get("source_run_id"),
         }
 
-    import uav_marl.evaluation as evaluation
+    from uav_marl import evaluation
 
     monkeypatch.setattr(
         evaluation,
@@ -220,7 +220,7 @@ def test_ddp_final_artifact_is_attached_after_result_initialization():
 
 def test_kaggle_cpu_kernel_can_log_wandb_with_private_credential_dataset(tmp_path):
     credential_ref = "demo-user/private-wandb-credential"
-    gpu_dir, cpu_dir, gpu_ref, cpu_ref = build_kernels(
+    _gpu_dir, cpu_dir, gpu_ref, cpu_ref = build_kernels(
         tmp_path,
         username="demo-user",
         commit="c" * 40,
@@ -245,6 +245,8 @@ def test_kaggle_cpu_kernel_can_log_wandb_with_private_credential_dataset(tmp_pat
     assert cpu_meta["kernel_sources"] == [gpu_ref]
     assert cpu_meta["dataset_sources"] == [credential_ref]
     assert "wandb_api_key.txt" in cpu_script
+    assert "wandb_secret.json" in cpu_script
+    assert 'credential_payload["api_key"]' in cpu_script
     assert 'command.append("--log-wandb")' in cpu_script
     assert 'os.environ["WANDB_API_KEY"] = api_key' in cpu_script
     compile(cpu_script, "<cpu-authoritative-eval>", "exec")
@@ -305,6 +307,8 @@ def test_kaggle_gpu_kernel_can_read_private_wandb_credential_dataset(tmp_path):
     assert gpu_meta["enable_gpu"] is True
     assert gpu_meta["dataset_sources"] == [credential_ref]
     assert "wandb_api_key.txt" in gpu_script
+    assert "wandb_secret.json" in gpu_script
+    assert 'credential_payload["api_key"]' in gpu_script
     assert 'os.environ["WANDB_API_KEY"] = api_key' in gpu_script
     compile(gpu_script, "<gpu-wandb-dataset>", "exec")
 
@@ -323,3 +327,84 @@ def test_github_workflow_summary_links_gpu_and_cpu_kernels():
     assert "CPU visualization kernel" in source
     assert "https://www.kaggle.com/code/${KAGGLE_USERNAME}/${GPU_SLUG}" in source
     assert "https://www.kaggle.com/code/${KAGGLE_USERNAME}/${CPU_SLUG}" in source
+
+
+def test_kaggle_push_session_timeout_is_separate_from_controller_wait(tmp_path, monkeypatch):
+    calls = []
+
+    class Result:
+        stdout = "pushed"
+        stderr = ""
+        returncode = 0
+
+    def fake_run(args, **kwargs):
+        calls.append((list(args), dict(kwargs)))
+        return Result()
+
+    monkeypatch.setattr("scripts.kaggle_pipeline._run", fake_run)
+    _push_kernel(
+        tmp_path,
+        env={},
+        accelerator="NvidiaTeslaT4",
+        session_timeout_seconds=43_200,
+    )
+
+    command, kwargs = calls[0]
+    assert command[0:3] == ["kaggle", "kernels", "push"]
+    assert command[command.index("--timeout") + 1] == "43200"
+    assert kwargs["timeout"] < 43_200
+
+
+def test_full_gpu_checkpoint_directory_persists_on_kaggle(tmp_path, monkeypatch):
+    import uav_marl.training.gpu as training
+
+    monkeypatch.setattr(training, "running_on_kaggle", lambda: True)
+    assert training._full_gpu_checkpoint_dir(tmp_path) == Path(
+        "/kaggle/working/checkpoints_full_gpu"
+    )
+
+
+def test_full_gpu_checkpoint_directory_stays_local_off_kaggle(tmp_path, monkeypatch):
+    import uav_marl.training.gpu as training
+
+    monkeypatch.setattr(training, "running_on_kaggle", lambda: False)
+    assert training._full_gpu_checkpoint_dir(tmp_path) == tmp_path / "checkpoints_full_gpu"
+
+
+def test_reconciler_only_selects_pipeline_gpu_refs_for_requested_user():
+    from scripts.reconcile_kaggle_pipeline import _cpu_ref_for_gpu, _gpu_refs
+
+    refs = {
+        "haibro1234/uav-masac-gha-123-1-gpu",
+        "haibro1234/uav-matd3-gha-456-2-gpu",
+        "haibro1234/unrelated-gpu",
+        "someone/uav-masac-gha-789-1-gpu",
+    }
+    assert _gpu_refs(refs, "haibro1234") == [
+        "haibro1234/uav-masac-gha-123-1-gpu",
+        "haibro1234/uav-matd3-gha-456-2-gpu",
+    ]
+    assert _cpu_ref_for_gpu("haibro1234/uav-masac-gha-123-1-gpu") == (
+        "haibro1234/uav-masac-gha-123-1-cpu"
+    )
+
+
+def test_reconciler_does_not_duplicate_active_gpu_stage(tmp_path, monkeypatch):
+    from scripts import reconcile_kaggle_pipeline as reconcile
+
+    monkeypatch.setattr(reconcile, "_kernel_status", lambda ref, env: "running")
+    monkeypatch.setattr(
+        reconcile,
+        "_kernel_source_commit",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("must not pull active GPU")),
+    )
+    result = reconcile.reconcile_one(
+        "haibro1234/uav-masac-gha-123-1-gpu",
+        refs={"haibro1234/uav-masac-gha-123-1-gpu"},
+        env={},
+        temp_root=tmp_path,
+        cpu_credential_dataset=None,
+        cpu_log_wandb=False,
+        cpu_session_timeout_seconds=10_800,
+    )
+    assert result == "gpu_active"

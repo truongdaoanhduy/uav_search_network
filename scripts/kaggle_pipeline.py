@@ -17,6 +17,8 @@ consume the checkpoint.
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import os
 import re
@@ -149,29 +151,46 @@ def resolve_kaggle_username(
     )
 
 
+def _parse_kernel_refs(output: str) -> set[str]:
+    # Kaggle may prepend a version warning before the CSV header.
+    lines = output.splitlines()
+    header = next((i for i, line in enumerate(lines) if line.startswith("ref,")), None)
+    if header is None:
+        if lines and lines[-1].strip() == "Not found":
+            return set()
+        raise RuntimeError("Kaggle kernel listing did not contain a CSV ref header")
+    return {
+        row["ref"].strip()
+        for row in csv.DictReader(io.StringIO("\n".join(lines[header:])))
+        if row.get("ref")
+    }
+
+
 def _kernel_status(ref: str, *, env: dict[str, str]) -> str:
     proc = _run(
         ["kaggle", "kernels", "status", ref],
         env=env,
         check=False,
     )
-    text = (proc.stdout + "\n" + proc.stderr).strip().lower()
-    for state in (
-        "complete",
-        "error",
-        "cancelled",
-        "failed",
-        "running",
-        "queued",
-        "pending",
-    ):
-        if state in text:
-            return state
+    text = (proc.stdout + "\n" + proc.stderr).strip()
     if proc.returncode != 0:
         raise RuntimeError(
             f"could not read Kaggle kernel status for {ref}: {text[-2000:]}"
         )
-    return "unknown"
+    match = re.search(
+        r'has status [\"\'](?:KernelWorkerStatus\.)?([a-z_]+)[\"\']',
+        proc.stdout,
+        re.IGNORECASE,
+    )
+    if match is None:
+        return "unknown"
+    state = match.group(1).lower()
+    return {
+        "cancel_acknowledged": "cancelled",
+        "cancel_requested": "running",
+        "new_script": "pending",
+    }.get(state, state if state in TERMINAL_STATES | {"running", "queued", "pending"} else "unknown")
+
 
 
 def _kernel_logs(ref: str, *, env: dict[str, str]) -> str:
@@ -285,18 +304,27 @@ def _gpu_script(
 
         if WANDB_CREDENTIAL_DATASET:
             dataset_slug = str(WANDB_CREDENTIAL_DATASET).split("/", 1)[-1]
-            preferred = Path("/kaggle/input") / dataset_slug / "wandb_api_key.txt"
-            if preferred.is_file():
-                key_path = preferred
+            dataset_root = Path("/kaggle/input") / dataset_slug
+            preferred_txt = dataset_root / "wandb_api_key.txt"
+            preferred_json = dataset_root / "wandb_secret.json"
+            if preferred_txt.is_file():
+                api_key = preferred_txt.read_text().strip()
+            elif preferred_json.is_file():
+                credential_payload = json.loads(preferred_json.read_text())
+                api_key = str(credential_payload["api_key"]).strip()
             else:
-                matches = sorted(Path("/kaggle/input").rglob("wandb_api_key.txt"))
-                if len(matches) != 1:
+                txt_matches = sorted(Path("/kaggle/input").rglob("wandb_api_key.txt"))
+                json_matches = sorted(Path("/kaggle/input").rglob("wandb_secret.json"))
+                if len(txt_matches) == 1:
+                    api_key = txt_matches[0].read_text().strip()
+                elif len(json_matches) == 1:
+                    credential_payload = json.loads(json_matches[0].read_text())
+                    api_key = str(credential_payload["api_key"]).strip()
+                else:
                     raise RuntimeError(
                         "expected exactly one W&B credential file, found "
-                        + repr([str(path) for path in matches])
+                        + repr([str(path) for path in txt_matches + json_matches])
                     )
-                key_path = matches[0]
-            api_key = key_path.read_text().strip()
             if not api_key:
                 raise RuntimeError("W&B credential file is empty")
             os.environ["WANDB_API_KEY"] = api_key
@@ -318,6 +346,11 @@ def _gpu_script(
             raise RuntimeError(f"expected exactly one GPU handoff, found {{handoffs}}")
         next_stage = {{
             "stage": "cpu_visualization",
+            "source_git_commit": COMMIT,
+            "algorithm": {algorithm!r},
+            "runtime": {runtime!r},
+            "experiment": {experiment!r},
+            "seed": {int(seed)},
             "cpu_kernel_ref": CPU_KERNEL_REF,
             "cpu_kernel_url": CPU_KERNEL_URL,
             "note": (
@@ -345,6 +378,7 @@ def _cpu_script(
         )
     return textwrap.dedent(
         f"""
+        import json
         import os
         import subprocess
         import sys
@@ -373,18 +407,27 @@ def _cpu_script(
 
         if LOG_WANDB:
             dataset_slug = str(WANDB_CREDENTIAL_DATASET).split("/", 1)[-1]
-            preferred = Path("/kaggle/input") / dataset_slug / "wandb_api_key.txt"
-            if preferred.is_file():
-                key_path = preferred
+            dataset_root = Path("/kaggle/input") / dataset_slug
+            preferred_txt = dataset_root / "wandb_api_key.txt"
+            preferred_json = dataset_root / "wandb_secret.json"
+            if preferred_txt.is_file():
+                api_key = preferred_txt.read_text().strip()
+            elif preferred_json.is_file():
+                credential_payload = json.loads(preferred_json.read_text())
+                api_key = str(credential_payload["api_key"]).strip()
             else:
-                matches = sorted(Path("/kaggle/input").rglob("wandb_api_key.txt"))
-                if len(matches) != 1:
+                txt_matches = sorted(Path("/kaggle/input").rglob("wandb_api_key.txt"))
+                json_matches = sorted(Path("/kaggle/input").rglob("wandb_secret.json"))
+                if len(txt_matches) == 1:
+                    api_key = txt_matches[0].read_text().strip()
+                elif len(json_matches) == 1:
+                    credential_payload = json.loads(json_matches[0].read_text())
+                    api_key = str(credential_payload["api_key"]).strip()
+                else:
                     raise RuntimeError(
                         "expected exactly one W&B credential file, found "
-                        + repr([str(path) for path in matches])
+                        + repr([str(path) for path in txt_matches + json_matches])
                     )
-                key_path = matches[0]
-            api_key = key_path.read_text().strip()
             if not api_key:
                 raise RuntimeError("W&B credential file is empty")
             os.environ["WANDB_API_KEY"] = api_key
@@ -501,8 +544,28 @@ def _push_kernel(
     *,
     env: dict[str, str],
     accelerator: str | None,
-    timeout_seconds: int,
+    session_timeout_seconds: int,
+    reuse_existing: bool = False,
 ) -> None:
+    if reuse_existing:
+        ref = json.loads((folder / "kernel-metadata.json").read_text())["id"]
+        existing = _run(
+            ["kaggle", "kernels", "list", "--mine", "--search",
+             ref.split("/", 1)[1], "--page-size", "100", "-v"],
+            env=env,
+        )
+        if ref in _parse_kernel_refs(existing.stdout):
+            existing_status = _kernel_status(ref, env=env)
+            if existing_status not in {"error", "cancelled", "failed"}:
+                print(
+                    f"KAGGLE_KERNEL_REUSED {ref} status={existing_status}",
+                    flush=True,
+                )
+                return
+            print(
+                f"KAGGLE_KERNEL_RETRY {ref} status={existing_status}",
+                flush=True,
+            )
     command = [
         "kaggle",
         "kernels",
@@ -510,14 +573,14 @@ def _push_kernel(
         "-p",
         str(folder),
         "--timeout",
-        str(int(timeout_seconds)),
+        str(int(session_timeout_seconds)),
     ]
     if accelerator:
         command += ["--accelerator", accelerator]
     proc = _run(
         command,
         env=env,
-        timeout=min(int(timeout_seconds) + 120, 1800),
+        timeout=min(int(session_timeout_seconds) + 120, 1800),
     )
     print(proc.stdout.strip(), flush=True)
 
@@ -580,7 +643,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Optional private Kaggle dataset ref containing wandb_api_key.txt "
-            "for GPU training when Kaggle Secrets are unavailable."
+            "or wandb_secret.json for GPU training when Kaggle Secrets are unavailable."
         ),
     )
     parser.add_argument(
@@ -592,13 +655,20 @@ def parse_args() -> argparse.Namespace:
         "--cpu-credential-dataset",
         default=None,
         help=(
-            "Private Kaggle dataset ref containing wandb_api_key.txt. "
-            "Required with --cpu-log-wandb."
+            "Private Kaggle dataset ref containing wandb_api_key.txt or "
+            "wandb_secret.json. Required with --cpu-log-wandb."
         ),
     )
     parser.add_argument("--poll-seconds", type=int, default=20)
-    parser.add_argument("--gpu-timeout-seconds", type=int, default=12 * 3600)
-    parser.add_argument("--cpu-timeout-seconds", type=int, default=3 * 3600)
+    parser.add_argument("--gpu-session-timeout-seconds", type=int, default=12 * 3600)
+    parser.add_argument("--cpu-session-timeout-seconds", type=int, default=3 * 3600)
+    parser.add_argument("--gpu-wait-timeout-seconds", type=int, default=12 * 3600)
+    parser.add_argument("--cpu-wait-timeout-seconds", type=int, default=3 * 3600)
+    parser.add_argument(
+        "--launch-only",
+        action="store_true",
+        help="Submit the GPU kernel, persist a launch manifest, and return without polling.",
+    )
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -718,13 +788,28 @@ def main() -> int:
             gpu_dir,
             env=env,
             accelerator=args.machine_shape,
-            timeout_seconds=args.gpu_timeout_seconds,
+            session_timeout_seconds=args.gpu_session_timeout_seconds,
+            reuse_existing=bool(args.launch_only),
         )
+        if args.launch_only:
+            output_dir = args.output_dir / username / run_tag
+            output_dir.mkdir(parents=True, exist_ok=True)
+            launch_manifest = output_dir / "kaggle_pipeline_launch.json"
+            launch_manifest.write_text(
+                json.dumps(
+                    {**plan, "stage": "gpu_submitted", "status": "submitted"},
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            print("KAGGLE_GPU_SUBMITTED")
+            print(launch_manifest)
+            return 0
         wait_for_kernel(
             gpu_ref,
             env=env,
             poll_seconds=args.poll_seconds,
-            timeout_seconds=args.gpu_timeout_seconds,
+            timeout_seconds=args.gpu_wait_timeout_seconds,
         )
 
         print(
@@ -736,13 +821,13 @@ def main() -> int:
             cpu_dir,
             env=env,
             accelerator=None,
-            timeout_seconds=args.cpu_timeout_seconds,
+            session_timeout_seconds=args.cpu_session_timeout_seconds,
         )
         wait_for_kernel(
             cpu_ref,
             env=env,
             poll_seconds=args.poll_seconds,
-            timeout_seconds=args.cpu_timeout_seconds,
+            timeout_seconds=args.cpu_wait_timeout_seconds,
         )
 
         print("STEP 4/4: download and verify CPU outputs", flush=True)

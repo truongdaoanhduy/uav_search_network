@@ -1,0 +1,46 @@
+name: Kaggle UAV GPU -> CPU Reconciler
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaggle-uav-gpu-cpu-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_USERNAME: vuliu123456
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Kaggle CLI
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "kaggle>=1.7,<2"
+
+      - name: Reconcile completed GPU jobs into CPU visualization
+        shell: bash
+        run: |
+          test -n "${KAGGLE_API_TOKEN}"
+          python scripts/reconcile_kaggle_pipeline.py \
+            --username "${KAGGLE_USERNAME}" \
+            --cpu-log-wandb \
+            --cpu-credential-dataset vuliu123456/uav-wandb-secret-20261001-v5 \
+            --cpu-session-timeout-seconds 10800

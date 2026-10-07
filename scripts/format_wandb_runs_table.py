@@ -6,9 +6,10 @@ from __future__ import annotations
 import argparse
 import json
 
-import wandb
 from wandb_workspaces import expr
 from wandb_workspaces.workspaces import internal
+
+import wandb
 
 ENTITY = "uav_search_paper"
 PROJECT = "uav_search_target"
@@ -19,13 +20,24 @@ DESIRED_COLUMNS = [
     "run:state",
     "run:createdAt",
     "run:duration",
+    "config:kaggle_account.value",
     "config:algorithm.value",
     "config:seed.value",
-    "config:kaggle_account.value",
     "config:num_envs.value",
     "config:target_episodes.value",
+    "config:num_targets.value",
+    "config:num_obstacles.value",
     "config:network_backend.value",
+    "summary:global_step",
     "summary:episodes_completed",
+    "summary:latest_episode_return",
+    "summary:latest_episode_target_search_rate_percent",
+    "summary:latest_episode_target_delivery_rate_percent",
+    "summary:final_return",
+    "summary:final_coverage_percent",
+    "summary:final_target_search_rate_percent",
+    "summary:final_target_delivery_rate_percent",
+    "summary:final_success_rate",
 ]
 
 

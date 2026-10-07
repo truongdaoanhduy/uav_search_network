@@ -39,11 +39,11 @@ permissions:
 jobs:
   gpu_train_then_cpu_visualize:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 30
     env:
       KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
-      KAGGLE_USERNAME: haibro1234
-      KAGGLE_ACCOUNT_NAME: account_02
+      KAGGLE_USERNAME: vuliu123456
+      KAGGLE_ACCOUNT_NAME: account_03
       PYTHONUNBUFFERED: "1"
 
     steps:
@@ -70,9 +70,10 @@ jobs:
         shell: bash
         run: |
           ALGORITHM="${{ inputs.algorithm }}"
-          GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"
-          CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"
+          GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-1-gpu"
+          CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-1-cpu"
           CUDA_GRAPH="${{ inputs.cuda_graph }}"
+          if [ "$ALGORITHM" = "matd3" ]; then CUDA_GRAPH="false"; fi
 
           python scripts/kaggle_pipeline.py \
             --username "${KAGGLE_USERNAME}" \
@@ -84,12 +85,12 @@ jobs:
             --machine-shape NvidiaTeslaT4 \
             --gpu-kernel-slug "${GPU_SLUG}" \
             --cpu-kernel-slug "${CPU_SLUG}" \
-            --gpu-credential-dataset haibro1234/uav-wandb-credential-masac50k-d59860c \
+            --gpu-credential-dataset vuliu123456/uav-wandb-secret-20261001-v5 \
             --cpu-log-wandb \
-            --cpu-credential-dataset haibro1234/uav-wandb-credential-masac50k-d59860c \
-            --poll-seconds 20 \
-            --gpu-timeout-seconds 14400 \
-            --cpu-timeout-seconds 10800 \
+            --cpu-credential-dataset vuliu123456/uav-wandb-secret-20261001-v5 \
+            --launch-only \
+            --gpu-session-timeout-seconds 43200 \
+            --cpu-session-timeout-seconds 10800 \
             --output-dir pipeline_outputs \
             runtime.num_envs=${{ inputs.envs }} \
             runtime.cuda_graph_policy_actions=${CUDA_GRAPH} \
@@ -97,29 +98,24 @@ jobs:
             runtime.auto_multi_gpu=true \
             task.scenario.max_steps=${{ inputs.max_steps }} \
             experiment.total_episodes=${{ inputs.episodes }} \
-            experiment.name=rewardv2_cloud_pipeline \
-            experiment.checkpoint.interval_episodes=${{ inputs.episodes }} \
-            experiment.checkpoint.interval_steps=100000000 \
-            experiment.evaluation.interval_episodes=${{ inputs.episodes }} \
-            experiment.evaluation.interval_steps=100000000 \
-            experiment.visualization.interval_episodes=${{ inputs.episodes }}
+            experiment.name=rewardv2_cloud_pipeline
 
       - name: Publish Kaggle stage links
         if: always()
         shell: bash
         run: |
           ALGORITHM="${{ inputs.algorithm }}"
-          GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-gpu"
-          CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-cpu"
+          GPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-1-gpu"
+          CPU_SLUG="uav-${ALGORITHM}-gha-${GITHUB_RUN_ID}-1-cpu"
           {
             echo "### Kaggle GPU → CPU pipeline"
             echo "- GPU Kaggle kernel: https://www.kaggle.com/code/${KAGGLE_USERNAME}/${GPU_SLUG}"
-            echo "- CPU visualization kernel: https://www.kaggle.com/code/${KAGGLE_USERNAME}/${CPU_SLUG}"
+            echo "- CPU visualization kernel (pending scheduled reconciler): https://www.kaggle.com/code/${KAGGLE_USERNAME}/${CPU_SLUG}"
             echo "- GPU Output contains the training checkpoint/handoff plus CPU_VISUALIZATION_NEXT_STAGE.json."
             echo "- PNG/MP4 are produced in the separate CPU visualization kernel Output tab."
           } >> "${GITHUB_STEP_SUMMARY}"
 
-      - name: Upload verified CPU visualization outputs
+      - name: Upload launch manifest
         if: always()
         uses: actions/upload-artifact@v4
         with:

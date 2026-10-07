@@ -3337,6 +3337,15 @@ def save_full_gpu_model_checkpoint(
     return Path(saved)
 
 
+
+
+def _full_gpu_checkpoint_dir(repo: Path) -> Path:
+    """Persist production checkpoints in Kaggle output storage when available."""
+    if running_on_kaggle():
+        return Path("/kaggle/working/checkpoints_full_gpu")
+    return Path(repo) / "checkpoints_full_gpu"
+
+
 # --- frozen notebook cell 253 ---
 def evaluate_full_gpu_reference(
     trainer,
@@ -4084,8 +4093,7 @@ def train_full_gpu(
             )
             if should_checkpoint:
                 checkpoint_path = (
-                    Path(repo)
-                    / "checkpoints_full_gpu"
+                    _full_gpu_checkpoint_dir(Path(repo))
                     / (
                         f"{algorithm}_episode_"
                         f"{accepted_episodes:08d}.pt"
@@ -4103,6 +4111,14 @@ def train_full_gpu(
                 checkpoint_paths.append(
                     str(saved_path)
                 )
+                if wandb_run is not None and bool(
+                    CONFIG.get("training_upload_periodic_checkpoints_wandb", False)
+                ):
+                    wandb_run.save(
+                        str(saved_path),
+                        base_path=str(Path(saved_path).parent),
+                        policy="now",
+                    )
                 last_checkpoint_episode = (
                     accepted_episodes
                 )
@@ -4229,8 +4245,7 @@ def train_full_gpu(
         ),
     }
     final_checkpoint_path = save_full_gpu_model_checkpoint(
-        Path(repo)
-        / "checkpoints_full_gpu"
+        _full_gpu_checkpoint_dir(Path(repo))
         / (
             f"{algorithm}_final_step_{int(global_step):012d}.pt"
         ),
@@ -7774,8 +7789,7 @@ def _train_full_gpu_ddp_worker(
                 )
                 if rank == 0:
                     checkpoint_path = (
-                        Path(repo)
-                        / "checkpoints_full_gpu"
+                        _full_gpu_checkpoint_dir(Path(repo))
                         / (
                             f"{algorithm}_episode_"
                             f"{completed_episodes:08d}.pt"
@@ -7808,7 +7822,7 @@ def _train_full_gpu_ddp_worker(
                     ):
                         wandb_run.save(
                             str(saved_path),
-                            base_path=str(Path(repo)),
+                            base_path=str(Path(saved_path).parent),
                             policy="now",
                         )
                 dist.barrier(
@@ -8177,8 +8191,7 @@ def _train_full_gpu_ddp_worker(
             )
             if final_checkpoint_path is None:
                 final_checkpoint_path = (
-                    Path(repo)
-                    / "checkpoints_full_gpu"
+                    _full_gpu_checkpoint_dir(Path(repo))
                     / (
                         f"{algorithm}_episode_"
                         f"{completed_episodes:08d}.pt"
@@ -9281,8 +9294,7 @@ def train_full_gpu_sharded(
         ),
     }
     final_checkpoint_path = save_full_gpu_model_checkpoint(
-        Path(repo)
-        / "checkpoints_full_gpu"
+        _full_gpu_checkpoint_dir(Path(repo))
         / (
             f"{algorithm}_final_step_{int(global_step):012d}.pt"
         ),

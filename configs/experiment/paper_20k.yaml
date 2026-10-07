@@ -27,7 +27,7 @@ checkpoint:
   interval_steps: 50000
   interval_episodes: 5000
   include_replay: false
-  upload_periodic_to_wandb: false
+  upload_periodic_to_wandb: true
   publish_final_wandb_artifact: true
   final_artifact_alias: final
 wandb:

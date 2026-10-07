@@ -249,3 +249,43 @@ def test_paper_phy_success_ignores_episodes_without_network_traffic():
     )
 
     assert payload["paper/network_phy_success_percent"] == pytest.approx(80.0)
+
+
+def test_cpu_evaluation_maps_final_metrics_back_to_training_run():
+    from uav_marl.evaluation.postprocess import _final_training_summary
+
+    payload = _final_training_summary(
+        {
+            "return": 12.5,
+            "coverage_percent": 33.0,
+            "target_search_rate_percent": 40.0,
+            "target_delivery_rate_percent": 25.0,
+            "success_rate": 0.5,
+            "network_pdr_percent": 80.0,
+        }
+    )
+    assert payload["final_return"] == 12.5
+    assert payload["final_coverage_percent"] == 33.0
+    assert payload["final_target_search_rate_percent"] == 40.0
+    assert payload["final_target_delivery_rate_percent"] == 25.0
+    assert payload["final_success_rate"] == 0.5
+    assert payload["final/network_pdr_percent"] == 80.0
+
+
+def test_runs_table_exposes_requested_training_and_final_columns():
+    source = (ROOT / "scripts" / "format_wandb_runs_table.py").read_text()
+    required = (
+        '"config:num_targets.value"',
+        '"config:num_obstacles.value"',
+        '"summary:global_step"',
+        '"summary:latest_episode_return"',
+        '"summary:latest_episode_target_search_rate_percent"',
+        '"summary:latest_episode_target_delivery_rate_percent"',
+        '"summary:final_return"',
+        '"summary:final_coverage_percent"',
+        '"summary:final_target_search_rate_percent"',
+        '"summary:final_target_delivery_rate_percent"',
+        '"summary:final_success_rate"',
+    )
+    for column in required:
+        assert column in source

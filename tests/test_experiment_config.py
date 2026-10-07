@@ -240,3 +240,12 @@ def test_risk_aware_apf_config_is_minimal_and_maps_to_legacy_bridge():
     assert legacy["apf_braking_margin"] == pytest.approx(1.5)
     assert legacy["safety_distance"] == pytest.approx(30.0)
     assert legacy["launch_min_spacing_m"] == pytest.approx(60.0)
+
+
+def test_paper_20k_persists_periodic_checkpoints_for_cloud_recovery():
+    cfg = compose_cfg("experiment=paper_20k")
+    assert cfg.experiment.checkpoint.interval_episodes == 5000
+    assert cfg.experiment.checkpoint.upload_periodic_to_wandb is True
+
+    source = (ROOT / "uav_marl" / "training" / "gpu.py").read_text()
+    assert 'base_path=str(Path(saved_path).parent)' in source

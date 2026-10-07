@@ -97,3 +97,59 @@ def test_train_full_gpu_cpu_runs_optimizer_and_checkpoint_for_both_algorithms(
         assert rows[0]["truncated"] is False
     finally:
         env.close()
+
+
+def test_periodic_single_device_checkpoint_is_uploaded_before_finish(monkeypatch, tmp_path):
+    import uav_marl.training.gpu as training
+
+    class RunConfig(dict):
+        def update(self, *args, **kwargs):
+            kwargs.pop("allow_val_change", None)
+            return super().update(*args, **kwargs)
+
+    class Run:
+        id = "checkpoint-test"
+        name = "checkpoint-test"
+        url = "https://example.invalid/checkpoint-test"
+        config = RunConfig()
+        summary = {}
+        uploaded = []
+        finished = False
+
+        def log(self, payload):
+            pass
+
+        def save(self, path, *, base_path, policy):
+            assert not self.finished
+            assert Path(path).is_file()
+            assert Path(path).is_relative_to(base_path)
+            assert policy == "now"
+            self.uploaded.append(path)
+
+        def finish(self):
+            self.finished = True
+
+    run = Run()
+    monkeypatch.setattr(training, "_init_gpu_wandb_run", lambda *args, **kwargs: run)
+    for key, value in {
+        "masac_hidden_dims": (16, 16),
+        "masac_learning_starts": 2000,
+        "masac_batch_size": 4,
+        "masac_replay_capacity": 64,
+        "training_inline_evaluation": False,
+        "training_checkpoint_interval_episodes": 1,
+        "training_upload_periodic_checkpoints_wandb": True,
+        "training_publish_final_checkpoint_wandb_artifact": False,
+        "max_steps": 2,
+    }.items():
+        monkeypatch.setitem(CONFIG, key, value)
+
+    result = train_full_gpu(
+        repo=tmp_path, algorithm="masac", num_envs=1,
+        total_transitions=2, seed=44, device="cpu",
+        network_backend="simple", strict_cuda=False,
+        enable_wandb=True, enable_evaluation=False, target_episodes=1,
+    )
+    assert result["episodes_completed"] == 1
+    assert len(run.uploaded) == 1
+    assert "episode_00000001" in Path(run.uploaded[0]).name
