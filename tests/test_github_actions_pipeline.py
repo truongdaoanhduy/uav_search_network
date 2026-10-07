@@ -55,6 +55,7 @@ def test_cloud_pipeline_launch_is_detached_from_long_kaggle_runtime():
     data = yaml.safe_load(source)
     job = data["jobs"]["gpu_train_then_cpu_visualize"]
 
+    assert job["runs-on"] == "ubuntu-24.04"
     assert int(job["timeout-minutes"]) <= 30
     assert "--launch-only" in source
     assert "--gpu-session-timeout-seconds 43200" in source
@@ -73,6 +74,7 @@ def test_cloud_pipeline_has_scheduled_reconciler():
     source = reconcile.read_text()
     data = yaml.safe_load(source)
     workflow_root = data.get("on", data.get(True))
+    assert data["jobs"]["reconcile"]["runs-on"] == "ubuntu-24.04"
     assert "schedule" in workflow_root
     assert "workflow_dispatch" in workflow_root
     assert "scripts/reconcile_kaggle_pipeline.py" in source
