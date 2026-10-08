@@ -230,6 +230,8 @@ def build_pipeline_args(
         "--gpu-credential-dataset", str(credential_dataset),
         "--cpu-log-wandb",
         "--cpu-credential-dataset", str(credential_dataset),
+        "--launch-only",
+        "--cpu-watch-gpu",
         "--gpu-session-timeout-seconds", "43200",
         "--cpu-session-timeout-seconds", "10800",
         "--gpu-wait-timeout-seconds", "43200",

@@ -397,22 +397,28 @@ def _cpu_script(
     commit: str,
     log_wandb: bool = False,
     wandb_credential_dataset: str | None = None,
+    source_gpu_ref: str | None = None,
+    watch_timeout_seconds: int = 12 * 3600,
 ) -> str:
-    if log_wandb and not wandb_credential_dataset:
+    if (log_wandb or source_gpu_ref) and not wandb_credential_dataset:
         raise ValueError(
-            "wandb_credential_dataset is required when CPU W&B logging is enabled"
+            "wandb_credential_dataset is required for W&B logging or GPU watching"
         )
     return textwrap.dedent(
         f"""
         import json
         import os
+        import re
         import subprocess
         import sys
+        import time
         from pathlib import Path
 
         COMMIT = {commit!r}
         LOG_WANDB = {bool(log_wandb)!r}
         WANDB_CREDENTIAL_DATASET = {wandb_credential_dataset!r}
+        SOURCE_GPU_REF = {source_gpu_ref!r}
+        WATCH_TIMEOUT_SECONDS = {int(watch_timeout_seconds)}
         REPO_URL = "https://github.com/truongdaoanhduy/uav_search_network.git"
         REPO = Path("/tmp/uav_search_network")
         if REPO.exists():
@@ -477,11 +483,42 @@ def _cpu_script(
                 os.environ["HF_TOKEN"] = hf_token
                 os.environ["HF_REPO_ID"] = hf_repo_id
 
+        handoff_root = Path("/kaggle/input")
+        if SOURCE_GPU_REF:
+            deadline = time.monotonic() + WATCH_TIMEOUT_SECONDS
+            while True:
+                status_proc = subprocess.run(
+                    ["kaggle", "kernels", "status", SOURCE_GPU_REF],
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                status_text = status_proc.stdout + "\\n" + status_proc.stderr
+                match = re.search(r"KernelWorkerStatus\\.([A-Z_]+)", status_text)
+                status = match.group(1) if match else "UNKNOWN"
+                print("CPU_WATCH_GPU_STATUS", SOURCE_GPU_REF, status, flush=True)
+                if status == "COMPLETE":
+                    break
+                if status in {"ERROR", "FAILED", "CANCELLED"}:
+                    raise RuntimeError("source GPU kernel failed before CPU visualization: " + status)
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("timed out waiting for source GPU kernel: " + SOURCE_GPU_REF)
+                time.sleep(20)
+
+            source_output = Path("/kaggle/working/source_gpu_output")
+            source_output.mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                ["kaggle", "kernels", "output", SOURCE_GPU_REF, "-p", str(source_output), "-o", "-q"],
+                check=True,
+            )
+            handoff_root = source_output
+            print("CPU_WATCH_GPU_COMPLETE", SOURCE_GPU_REF, flush=True)
+
         command = [
             sys.executable,
             str(REPO / "visualize.py"),
             "--handoff",
-            "/kaggle/input",
+            str(handoff_root),
             "--output-dir",
             "/kaggle/working/post_train_visualization",
             "--repo",
@@ -516,6 +553,8 @@ def build_kernels(
     gpu_dataset_sources: list[str] | None = None,
     cpu_log_wandb: bool = False,
     cpu_dataset_sources: list[str] | None = None,
+    cpu_watch_gpu: bool = False,
+    cpu_session_timeout_seconds: int = 3 * 3600,
 ) -> tuple[Path, Path, str, str]:
     gpu_ref = f"{username}/{gpu_kernel_slug}"
     cpu_ref = f"{username}/{cpu_kernel_slug}"
@@ -547,17 +586,21 @@ def build_kernels(
         )
     )
     cpu_dataset_sources = list(cpu_dataset_sources or [])
-    if cpu_log_wandb and len(cpu_dataset_sources) != 1:
+    if (cpu_log_wandb or cpu_watch_gpu) and len(cpu_dataset_sources) != 1:
         raise ValueError(
-            "CPU W&B logging requires exactly one credential dataset source"
+            "CPU W&B logging or GPU watching requires exactly one credential dataset source"
         )
     (cpu_dir / cpu_code).write_text(
         _cpu_script(
             commit=commit,
             log_wandb=bool(cpu_log_wandb),
             wandb_credential_dataset=(
-                cpu_dataset_sources[0] if cpu_log_wandb else None
+                cpu_dataset_sources[0]
+                if (cpu_log_wandb or cpu_watch_gpu) and cpu_dataset_sources
+                else None
             ),
+            source_gpu_ref=(gpu_ref if cpu_watch_gpu else None),
+            watch_timeout_seconds=int(cpu_session_timeout_seconds),
         )
     )
 
@@ -577,7 +620,7 @@ def build_kernels(
         code_file=cpu_code,
         enable_gpu=False,
         machine_shape="",
-        kernel_sources=[gpu_ref],
+        kernel_sources=([] if cpu_watch_gpu else [gpu_ref]),
         dataset_sources=cpu_dataset_sources,
     )
     return gpu_dir, cpu_dir, gpu_ref, cpu_ref
@@ -714,6 +757,14 @@ def parse_args() -> argparse.Namespace:
         help="Submit the GPU kernel, persist a launch manifest, and return without polling.",
     )
     parser.add_argument(
+        "--cpu-watch-gpu",
+        action="store_true",
+        help=(
+            "Launch a detached CPU watcher alongside the GPU job so visualization "
+            "continues on Kaggle without a local controller."
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=ROOT / "pipeline_outputs",
@@ -767,6 +818,14 @@ def main() -> int:
     )
     gpu_slug = _slugify(args.gpu_kernel_slug)
     cpu_slug = _slugify(args.cpu_kernel_slug)
+    cpu_runtime_timeout = (
+        max(
+            int(args.cpu_session_timeout_seconds),
+            int(args.gpu_session_timeout_seconds),
+        )
+        if args.cpu_watch_gpu
+        else int(args.cpu_session_timeout_seconds)
+    )
 
     gpu_dir, cpu_dir, gpu_ref, cpu_ref = build_kernels(
         build_root,
@@ -791,6 +850,8 @@ def main() -> int:
             if args.cpu_credential_dataset
             else []
         ),
+        cpu_watch_gpu=bool(args.cpu_watch_gpu),
+        cpu_session_timeout_seconds=cpu_runtime_timeout,
     )
 
     plan = {
@@ -807,6 +868,7 @@ def main() -> int:
         ),
         "cpu_enable_gpu": False,
         "cpu_log_wandb": bool(args.cpu_log_wandb),
+        "cpu_watch_gpu": bool(args.cpu_watch_gpu),
         "cpu_credential_dataset": (
             str(args.cpu_credential_dataset)
             if args.cpu_credential_dataset
@@ -835,6 +897,15 @@ def main() -> int:
             session_timeout_seconds=args.gpu_session_timeout_seconds,
             reuse_existing=bool(args.launch_only),
         )
+        if args.cpu_watch_gpu:
+            print("STEP 1B/4: launch detached CPU watcher kernel", flush=True)
+            _push_kernel(
+                cpu_dir,
+                env=env,
+                accelerator=None,
+                session_timeout_seconds=cpu_runtime_timeout,
+                reuse_existing=True,
+            )
         if args.launch_only:
             output_dir = args.output_dir / username / run_tag
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -860,18 +931,25 @@ def main() -> int:
             "STEP 2/4: GPU kernel COMPLETE; GPU session is no longer needed",
             flush=True,
         )
-        print("STEP 3/4: launch CPU-only visualization kernel", flush=True)
-        _push_kernel(
-            cpu_dir,
-            env=env,
-            accelerator=None,
-            session_timeout_seconds=args.cpu_session_timeout_seconds,
-        )
+        if args.cpu_watch_gpu:
+            print("STEP 3/4: CPU watcher already submitted; wait for visualization", flush=True)
+        else:
+            print("STEP 3/4: launch CPU-only visualization kernel", flush=True)
+            _push_kernel(
+                cpu_dir,
+                env=env,
+                accelerator=None,
+                session_timeout_seconds=args.cpu_session_timeout_seconds,
+            )
         wait_for_kernel(
             cpu_ref,
             env=env,
             poll_seconds=args.poll_seconds,
-            timeout_seconds=args.cpu_wait_timeout_seconds,
+            timeout_seconds=(
+                cpu_runtime_timeout
+                if args.cpu_watch_gpu
+                else args.cpu_wait_timeout_seconds
+            ),
         )
 
         print("STEP 4/4: download and verify CPU outputs", flush=True)

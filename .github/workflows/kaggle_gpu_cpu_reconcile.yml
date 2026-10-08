@@ -1,8 +1,6 @@
 name: Kaggle UAV GPU -> CPU Reconciler
 
 on:
-  schedule:
-    - cron: "17,47 * * * *"
   workflow_dispatch:
 
 permissions:

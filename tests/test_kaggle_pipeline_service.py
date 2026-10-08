@@ -60,7 +60,8 @@ def test_architecture_ablation_pipeline_args_are_self_describing_and_chain_cpu_w
     assert "architecture=leaky_kaiming_ln" in args
     assert "uav-masac-leaky-kaiming-ln-h512x256-seed44-gpu" in joined
     assert "uav-masac-leaky-kaiming-ln-h512x256-seed44-cpu-viz" in joined
-    assert "--launch-only" not in args
+    assert "--launch-only" in args
+    assert "--cpu-watch-gpu" in args
 
 
 def test_architecture_ablation_credential_dataset_is_account_private():

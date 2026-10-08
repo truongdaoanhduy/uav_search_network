@@ -68,26 +68,37 @@ def test_cloud_pipeline_keeps_periodic_checkpoint_defaults_for_recovery():
     assert "experiment.checkpoint.interval_steps=100000000" not in source
 
 
-def test_cloud_pipeline_has_scheduled_reconciler():
+def test_cloud_reconciler_is_manual_fallback_only():
     reconcile = ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_reconcile.yml"
     assert reconcile.is_file()
     source = reconcile.read_text()
     data = yaml.safe_load(source)
     workflow_root = data.get("on", data.get(True))
     assert data["jobs"]["reconcile"]["runs-on"] == "ubuntu-24.04"
-    assert "schedule" in workflow_root
+    assert "schedule" not in workflow_root
     assert "workflow_dispatch" in workflow_root
     assert "scripts/reconcile_kaggle_pipeline.py" in source
-    assert "secrets.KAGGLE_API_TOKEN" in source
+    assert "secrets[matrix.token_secret]" in source
 
 
-def test_cloud_workflows_match_the_current_github_kaggle_credential_owner():
+def test_cloud_pipeline_keeps_legacy_owner_and_manual_reconciler_lists_ablation_accounts():
     pipeline_source = WORKFLOW.read_text()
     reconcile = ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_reconcile.yml"
     reconcile_source = reconcile.read_text()
 
-    for source in (pipeline_source, reconcile_source):
-        assert "KAGGLE_USERNAME: haibro1234" in source
-        assert 'python -m pip install "kaggle>=2.2.4,<3"' in source
-        assert "haibro1234/uav-wandb-credential-masac50k-d59860c" in source
+    assert "KAGGLE_USERNAME: haibro1234" in pipeline_source
+    assert 'python -m pip install "kaggle>=2.2.4,<3"' in pipeline_source
+    assert "haibro1234/uav-wandb-credential-masac50k-d59860c" in pipeline_source
     assert "KAGGLE_ACCOUNT_NAME: account_02" in pipeline_source
+
+    for account, username in {
+        "account_01": "duytrngoanh",
+        "account_03": "vuliu123456",
+        "account_04": "saoling1234",
+        "account_05": "riujick",
+        "account_06": "libiu123",
+        "account_07": "bduy2378",
+    }.items():
+        assert account in reconcile_source
+        assert username in reconcile_source
+    assert 'python -m pip install "kaggle>=2.2.4,<3"' in reconcile_source

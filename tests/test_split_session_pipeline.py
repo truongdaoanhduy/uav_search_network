@@ -471,3 +471,36 @@ def test_reconciler_workflow_lists_all_six_ablation_accounts():
         assert account in source
         assert credential_ref in source
         assert f"KAGGLE_API_TOKEN_{account.upper()}" in source
+
+
+def test_cpu_watcher_fetches_gpu_output_without_kernel_source(tmp_path):
+    gpu_dir, cpu_dir, gpu_ref, cpu_ref = build_kernels(
+        tmp_path,
+        username="demo-user",
+        commit="9" * 40,
+        algorithm="masac",
+        runtime="kaggle_2xt4",
+        experiment="paper_20k",
+        seed=44,
+        gpu_kernel_slug="uav-masac-prelu-kaiming-h512x256-seed44-gpu",
+        cpu_kernel_slug="uav-masac-prelu-kaiming-h512x256-seed44-cpu-viz",
+        machine_shape="NvidiaTeslaT4",
+        overrides=["architecture=prelu_kaiming"],
+        gpu_dataset_sources=["demo-user/uav-wandb-credential-arch-ablation"],
+        cpu_log_wandb=True,
+        cpu_dataset_sources=["demo-user/uav-wandb-credential-arch-ablation"],
+        cpu_watch_gpu=True,
+    )
+    cpu_meta = json.loads((cpu_dir / "kernel-metadata.json").read_text())
+    cpu_script = next(cpu_dir.glob("*.py")).read_text()
+    gpu_script = next(gpu_dir.glob("*.py")).read_text()
+
+    assert cpu_meta["kernel_sources"] == []
+    assert f"SOURCE_GPU_REF = {gpu_ref!r}" in cpu_script
+    assert "kaggle_api_token.txt" not in cpu_script
+    assert "kaggle kernels output" not in cpu_script
+    assert '["kaggle", "kernels", "output", SOURCE_GPU_REF' in cpu_script
+    assert "CPU_WATCH_GPU_COMPLETE" in cpu_script
+    pipeline_source = (ROOT / "scripts" / "kaggle_pipeline.py").read_text()
+    assert "STEP 1B/4: launch detached CPU watcher kernel" in pipeline_source
+    assert "reuse_existing=True" in pipeline_source
