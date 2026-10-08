@@ -14,11 +14,40 @@ concurrency:
 
 jobs:
   reconcile:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - account: account_01
+            username: duytrngoanh
+            token_secret: KAGGLE_API_TOKEN_ACCOUNT_01
+            credential_dataset: duytrngoanh/uav-wandb-credential-arch-ablation
+          - account: account_03
+            username: vuliu123456
+            token_secret: KAGGLE_API_TOKEN_ACCOUNT_03
+            credential_dataset: vuliu123456/uav-wandb-credential-arch-ablation
+          - account: account_04
+            username: saoling1234
+            token_secret: KAGGLE_API_TOKEN_ACCOUNT_04
+            credential_dataset: saoling1234/uav-wandb-credential-arch-ablation
+          - account: account_05
+            username: riujick
+            token_secret: KAGGLE_API_TOKEN_ACCOUNT_05
+            credential_dataset: riujick/uav-wandb-credential-arch-ablation
+          - account: account_06
+            username: libiu123
+            token_secret: KAGGLE_API_TOKEN_ACCOUNT_06
+            credential_dataset: libiu123/uav-wandb-credential-arch-ablation
+          - account: account_07
+            username: bduy2378
+            token_secret: KAGGLE_API_TOKEN_ACCOUNT_07
+            credential_dataset: bduy2378/uav-wandb-credential-arch-ablation
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
-      KAGGLE_USERNAME: haibro1234
+      KAGGLE_API_TOKEN: ${{ secrets[matrix.token_secret] }}
+      KAGGLE_USERNAME: ${{ matrix.username }}
+      KAGGLE_ACCOUNT_NAME: ${{ matrix.account }}
       PYTHONUNBUFFERED: "1"
 
     steps:
@@ -35,12 +64,17 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "kaggle>=2.2.4,<3"
 
-      - name: Reconcile completed GPU jobs into CPU visualization
+      - name: Validate Kaggle cloud credential
         shell: bash
         run: |
           test -n "${KAGGLE_API_TOKEN}"
+          kaggle kernels list --mine --page-size 1 >/dev/null
+
+      - name: Reconcile completed GPU jobs into CPU visualization
+        shell: bash
+        run: |
           python scripts/reconcile_kaggle_pipeline.py \
             --username "${KAGGLE_USERNAME}" \
             --cpu-log-wandb \
-            --cpu-credential-dataset haibro1234/uav-wandb-credential-masac50k-d59860c \
+            --cpu-credential-dataset "${{ matrix.credential_dataset }}" \
             --cpu-session-timeout-seconds 10800

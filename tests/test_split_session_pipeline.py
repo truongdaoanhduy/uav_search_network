@@ -439,3 +439,35 @@ def test_huggingface_checkpoint_prefix_separates_architecture_variants():
         seed=44,
         episode_index=20000,
     ) == "checkpoints/masac/prelu_kaiming_ln/seed-44/episode-20000"
+
+
+def test_reconciler_accepts_current_architecture_ablation_gpu_refs():
+    from scripts.reconcile_kaggle_pipeline import _cpu_ref_for_gpu, _gpu_refs
+
+    refs = {
+        "duytrngoanh/uav-masac-leaky-default-h512x256-seed44-gpu",
+        "vuliu123456/uav-masac-prelu-default-h512x256-seed44-gpu",
+        "duytrngoanh/not-a-pipeline-gpu",
+    }
+    assert _gpu_refs(refs, "duytrngoanh") == [
+        "duytrngoanh/uav-masac-leaky-default-h512x256-seed44-gpu",
+    ]
+    assert _cpu_ref_for_gpu(
+        "duytrngoanh/uav-masac-leaky-default-h512x256-seed44-gpu"
+    ) == "duytrngoanh/uav-masac-leaky-default-h512x256-seed44-cpu-viz"
+
+
+def test_reconciler_workflow_lists_all_six_ablation_accounts():
+    source = (ROOT / ".github" / "workflows" / "kaggle_gpu_cpu_reconcile.yml").read_text()
+    expected = {
+        "account_01": "duytrngoanh/uav-wandb-credential-arch-ablation",
+        "account_03": "vuliu123456/uav-wandb-credential-arch-ablation",
+        "account_04": "saoling1234/uav-wandb-credential-arch-ablation",
+        "account_05": "riujick/uav-wandb-credential-arch-ablation",
+        "account_06": "libiu123/uav-wandb-credential-arch-ablation",
+        "account_07": "bduy2378/uav-wandb-credential-arch-ablation",
+    }
+    for account, credential_ref in expected.items():
+        assert account in source
+        assert credential_ref in source
+        assert f"KAGGLE_API_TOKEN_{account.upper()}" in source

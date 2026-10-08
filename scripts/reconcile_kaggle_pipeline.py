@@ -32,8 +32,13 @@ except ImportError:
         build_kernels,
     )
 
-GPU_REF_RE = re.compile(
+GHA_GPU_REF_RE = re.compile(
     r"^(?P<user>[^/]+)/(?P<slug>uav-(?P<algorithm>masac|matd3)-gha-\d+-\d+-gpu)$"
+)
+ABLATION_GPU_REF_RE = re.compile(
+    r"^(?P<user>[^/]+)/(?P<slug>uav-(?P<algorithm>masac|matd3)-"
+    r"(?P<architecture>leaky-default|prelu-default|leaky-kaiming|prelu-kaiming|"
+    r"leaky-kaiming-ln|prelu-kaiming-ln)-h\d+x\d+-seed\d+-gpu)$"
 )
 COMMIT_RE = re.compile(r"^\s*COMMIT\s*=\s*['\"](?P<sha>[0-9a-f]{40})['\"]\s*$", re.MULTILINE)
 ACTIVE_STATES = {"queued", "pending", "running", "unknown"}
@@ -62,11 +67,22 @@ def _owned_kernel_refs(*, env: dict[str, str], username: str, limit: int) -> set
 
 
 
+def _parse_gpu_ref(ref: str):
+    for kind, pattern in (
+        ("gha", GHA_GPU_REF_RE),
+        ("ablation", ABLATION_GPU_REF_RE),
+    ):
+        parsed = pattern.match(ref)
+        if parsed is not None:
+            return kind, parsed
+    return None
+
+
 def _gpu_refs(refs: set[str], username: str) -> list[str]:
     matches = []
     for ref in refs:
-        parsed = GPU_REF_RE.match(ref)
-        if parsed and parsed.group("user") == username:
+        parsed = _parse_gpu_ref(ref)
+        if parsed is not None and parsed[1].group("user") == username:
             matches.append(ref)
     return sorted(matches)
 
@@ -87,9 +103,11 @@ def _kernel_source_commit(ref: str, *, env: dict[str, str], temp_root: Path) -> 
 
 
 def _cpu_ref_for_gpu(gpu_ref: str) -> str:
-    if not gpu_ref.endswith("-gpu"):
+    parsed = _parse_gpu_ref(gpu_ref)
+    if parsed is None:
         raise ValueError(f"not a GPU pipeline ref: {gpu_ref}")
-    return gpu_ref[:-4] + "-cpu"
+    kind, _match = parsed
+    return gpu_ref[:-4] + ("-cpu" if kind == "gha" else "-cpu-viz")
 
 
 def reconcile_one(
@@ -123,8 +141,9 @@ def reconcile_one(
             return "cpu_unhandled"
         print(f"RECONCILE_CPU_RETRY {cpu_ref} status={cpu_status}", flush=True)
 
-    parsed = GPU_REF_RE.match(gpu_ref)
-    assert parsed is not None
+    parsed_info = _parse_gpu_ref(gpu_ref)
+    assert parsed_info is not None
+    _kind, parsed = parsed_info
     commit = _kernel_source_commit(gpu_ref, env=env, temp_root=temp_root)
     gpu_slug = parsed.group("slug")
     cpu_slug = cpu_ref.split("/", 1)[1]
