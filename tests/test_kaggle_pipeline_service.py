@@ -173,3 +173,15 @@ def test_cpu_kernel_reads_shared_huggingface_credentials_from_dataset(tmp_path):
     assert "hf_repo_id.txt" in cpu_script
     assert 'os.environ["HF_TOKEN"] = hf_token' in cpu_script
     assert 'os.environ["HF_REPO_ID"] = hf_repo_id' in cpu_script
+
+
+def test_build_systemd_command_creates_log_parent_before_redirect():
+    command = build_systemd_command(
+        unit="uav-test-log-parent",
+        log_file=Path("/tmp/nonexistent-uav-log-dir/run.log"),
+        pipeline_args=["--algorithm", "masac"],
+    )
+    shell = command[-1]
+    assert "mkdir -p" in shell
+    assert "/tmp/nonexistent-uav-log-dir" in shell
+    assert shell.index("mkdir -p") < shell.index(">>")

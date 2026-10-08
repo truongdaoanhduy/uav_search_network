@@ -33,6 +33,7 @@ def build_systemd_command(
 ) -> list[str]:
     command = [sys.executable, str(PIPELINE), *pipeline_args]
     shell = (
+        f"mkdir -p {shlex.quote(str(log_file.parent))} && "
         f"cd {shlex.quote(str(ROOT))} && "
         f"exec {shlex.join(command)} >> {shlex.quote(str(log_file))} 2>&1"
     )
