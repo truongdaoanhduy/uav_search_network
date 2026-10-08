@@ -9,6 +9,7 @@ submits the CPU visualization job after the GPU job reaches COMPLETE.
 from __future__ import annotations
 
 import argparse
+import os
 import shlex
 import shutil
 import subprocess
@@ -41,6 +42,7 @@ def build_systemd_command(
         "systemd-run",
         "--user",
         f"--unit={_safe_unit_name(unit)}",
+        f"--setenv=PATH={os.environ.get('PATH', '')}",
         "--collect",
         "--property=Type=exec",
         "--property=Restart=no",

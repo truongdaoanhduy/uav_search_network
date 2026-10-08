@@ -185,3 +185,13 @@ def test_build_systemd_command_creates_log_parent_before_redirect():
     assert "mkdir -p" in shell
     assert "/tmp/nonexistent-uav-log-dir" in shell
     assert shell.index("mkdir -p") < shell.index(">>")
+
+
+def test_build_systemd_command_propagates_current_path(monkeypatch):
+    monkeypatch.setenv("PATH", "/opt/custom/bin:/usr/bin")
+    command = build_systemd_command(
+        unit="uav-test-path",
+        log_file=Path("/tmp/uav-test-path/run.log"),
+        pipeline_args=["--algorithm", "masac"],
+    )
+    assert "--setenv=PATH=/opt/custom/bin:/usr/bin" in command
