@@ -11,7 +11,7 @@ log_std_min: -5.0
 log_std_max: 2.0
 gumbel_temperature: 1.0
 continuous_target_entropy_scale: 1.0
-discrete_target_entropy_ratio: 0.98
+discrete_target_entropy_ratio: 0.89
 initial_alpha_continuous: 0.2
 initial_alpha_discrete: 0.2
 learning_starts: 2000

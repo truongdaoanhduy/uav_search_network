@@ -249,3 +249,12 @@ def test_paper_20k_persists_periodic_checkpoints_for_cloud_recovery():
 
     source = (ROOT / "uav_marl" / "training" / "gpu.py").read_text()
     assert 'base_path=str(Path(saved_path).parent)' in source
+
+
+def test_kaggle_profile_preserves_masac_entropy_stability_setting():
+    cfg = compose_cfg("runtime=kaggle_2xt4", "algorithm=masac")
+    legacy = dict(BASE_CONFIG)
+    apply_to_legacy_config(legacy, cfg)
+    assert legacy["masac_discrete_target_entropy_ratio"] == pytest.approx(
+        BASE_CONFIG["masac_discrete_target_entropy_ratio"]
+    )

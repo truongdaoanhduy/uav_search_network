@@ -226,3 +226,86 @@ def test_training_same_seed_reproduces_weights_optimizer_and_episode_budget(monk
     assert runs[0]["latest_update_metrics"] == runs[1]["latest_update_metrics"]
     saved = [torch.load(r["final_checkpoint_path"], map_location="cpu", weights_only=True) for r in runs]
     _assert_identical(saved[0]["trainer_state"], saved[1]["trainer_state"])
+
+
+@pytest.mark.parametrize("alpha", [127.0, 129.0, 1000.0])
+def test_masked_entropy_large_temperature_has_finite_correct_gradients(alpha):
+    from uav_marl.envs.uav_search import straight_through_categorical_sample
+
+    # The failed 2-GPU run used 128 replay rows per rank and six agents.
+    logits = torch.zeros(128 * 6, 7, requires_grad=True)
+    with torch.no_grad():
+        logits[:, 0] = np.log(3.0)
+    masks = torch.zeros_like(logits)
+    masks[:, :2] = 1
+    masks[::2, 1] = 0  # Include silent-only rows.
+    sampled = straight_through_categorical_sample(logits, masks, 1.0)
+    entropy = sampled["entropy"].reshape(128, 6, 1).sum(dim=1)
+    (-alpha * entropy.mean()).backward()
+
+    assert torch.isfinite(logits.grad).all()
+    assert torch.count_nonzero(logits.grad[::2]) == 0
+    assert torch.count_nonzero(logits.grad[:, 2:]) == 0
+    # d(-alpha*H)/dx0 = alpha/B * p0*p1*log(p0/p1).
+    expected = alpha / 128 * 0.75 * 0.25 * np.log(3.0)
+    torch.testing.assert_close(
+        logits.grad[1::2, 0], torch.full_like(logits.grad[1::2, 0], expected)
+    )
+    torch.testing.assert_close(logits.grad[1::2, 1], -logits.grad[1::2, 0])
+
+
+def test_radial_squash_keeps_entropy_gradient_when_motion_saturates():
+    from uav_marl.envs.uav_search import radial_squash_motion_action
+
+    latent = torch.tensor([[0.0, 0.0, 0.0], [20.0, 0.0, 0.0]], requires_grad=True)
+    actions, log_det = radial_squash_motion_action(latent)
+    log_det.sum().backward()
+    assert torch.isfinite(latent.grad).all()
+    assert log_det[0].item() == pytest.approx(0.0, abs=1e-6)
+    # At r=20: log(sech(r)^2) + 2*log(tanh(r)/r).
+    assert log_det[1].item() == pytest.approx(-44.605170186, abs=1e-5)
+    assert latent.grad[1, 0].item() == pytest.approx(-2.1, abs=1e-5)
+    assert torch.linalg.vector_norm(actions[1]).item() <= 1.0
+
+
+@pytest.mark.parametrize("ddp_forward", [False, True])
+def test_masac_saturated_power_keeps_entropy_gradient(ddp_forward):
+    from uav_marl.training.gpu import _MASACDDPActorForward
+    from uav_marl.envs.uav_search import (
+        radial_squash_motion_action, straight_through_categorical_sample,
+    )
+
+    observation_dim, _, _ = _actor_observation_layout()
+    actor = HybridMASACActor(observation_dim, 4, 7, (8, 8))
+    with torch.no_grad():
+        actor.mean_head.weight.zero_()
+        actor.mean_head.bias.zero_()
+        actor.mean_head.bias[3] = 20.0
+        actor.log_std_head.weight.zero_()
+        actor.log_std_head.bias.zero_()
+    observations = torch.zeros(2, observation_dim)
+    masks = torch.ones(2, 7)
+    if ddp_forward:
+        wrapper = _MASACDDPActorForward(actor, {
+            "radial_squash_motion_action": radial_squash_motion_action,
+            "straight_through_categorical_sample": straight_through_categorical_sample,
+        })
+        log_probability = wrapper(observations, masks)[1]
+    else:
+        log_probability = actor.sample(observations, masks, deterministic=True)[
+            "continuous_log_probability"
+        ]
+    log_probability.mean().backward()
+    assert actor.mean_head.bias.grad[3].item() == pytest.approx(2.0, abs=1e-5)
+
+
+def test_masked_categorical_log_probability_ignores_invalid_half_precision_logits():
+    from uav_marl.envs.uav_search import straight_through_categorical_sample
+
+    logits = torch.tensor([[64.0, 0.0, -5.0]], dtype=torch.float16, requires_grad=True)
+    masks = torch.tensor([[1.0, 0.0, 0.0]], dtype=torch.float16)
+    sampled = straight_through_categorical_sample(logits, masks, 1.0)
+    assert sampled["log_probability"].item() == 0.0
+    assert sampled["entropy"].item() == 0.0
+    (-sampled["log_probability"] - 10.0 * sampled["entropy"]).sum().backward()
+    assert torch.equal(logits.grad, torch.zeros_like(logits))

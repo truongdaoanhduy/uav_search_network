@@ -4549,17 +4549,20 @@ def straight_through_categorical_sample(
             + soft
         )
 
-    selected_log_probability = (
-        hard
-        * log_probabilities
-    ).sum(
-        dim=-1,
-        keepdim=True,
+    # Gather the selected legal entry; a one-hot product can form 0 * -inf
+    # on masked entries in low precision.
+    selected_log_probability = log_probabilities.gather(
+        -1, indices.unsqueeze(-1)
     )
 
+    # Mask before multiplication: scaling finfo.min by alpha/batch can
+    # overflow in backward, producing 0 * inf = NaN even when H is finite.
+    entropy_log_probabilities = log_probabilities.masked_fill(
+        destination_mask <= 0.5, 0.0
+    )
     entropy = -(
         probabilities
-        * log_probabilities
+        * entropy_log_probabilities
     ).sum(
         dim=-1,
         keepdim=True,
@@ -4615,16 +4618,12 @@ def radial_squash_motion_action(
     )
     action = pre_squash * scale
 
-    radial_derivative = (
-        1.0
-        - squashed_radius.pow(2)
-    ).clamp_min(eps)
-    tangential_scale = scale.clamp_min(eps)
-    log_abs_det_jacobian = (
-        torch.log(radial_derivative)
-        + 2.0
-        * torch.log(tangential_scale)
+    # Evaluate log(sech(radius)^2) from the latent radius, before tanh
+    # rounds to one. Clamping 1-tanh(radius)^2 erases its entropy gradient.
+    radial_log_det = torch.distributions.transforms.TanhTransform().log_abs_det_jacobian(
+        radius, squashed_radius
     )
+    log_abs_det_jacobian = radial_log_det + 2.0 * torch.log(scale)
 
     return action, log_abs_det_jacobian
 

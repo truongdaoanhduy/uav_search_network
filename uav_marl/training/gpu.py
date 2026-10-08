@@ -4370,8 +4370,8 @@ class _MASACDDPActorForward(torch.nn.Module):
         motion_action, motion_log_det = self._radial_squash(pre_tanh[..., :3])
         power_action = torch.tanh(pre_tanh[..., 3:4])
         continuous_action = torch.cat((motion_action, power_action), dim=-1)
-        power_log_det = torch.log(
-            1.0 - power_action.pow(2) + 1e-6
+        power_log_det = torch.distributions.transforms.TanhTransform().log_abs_det_jacobian(
+            pre_tanh[..., 3:4], power_action
         ).sum(dim=-1, keepdim=True)
         log_probability = (
             distribution.log_prob(pre_tanh).sum(dim=-1, keepdim=True)
