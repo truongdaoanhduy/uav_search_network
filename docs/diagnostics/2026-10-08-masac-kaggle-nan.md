@@ -69,12 +69,17 @@ Mixed bounded ranges are not the source of the reproduced NaN.
 - Original episode-15010 checkpoint: model/optimizer load and high-alpha
   actor-gradient check passed. Its resume_safe flag is false; it is not
   sufficient for exact replay/environment/RNG resumption.
-- A private, bounded two-T4 Kaggle validation of this working patch was
-  submitted as haibro1234/uav-masac-nan-fix-validation-20261008. It reproduces
-  the old CUDA failure then tests fixed entropy at alpha=1000 and 64 actual
-  DDP updates (batch 128 per rank) with CUDA Graph action collection.
-  Its result must be checked separately; submission is not a passing result.
+- The bounded two-T4 Kaggle validator
+  `haibro1234/uav-masac-nan-fix-validation-20261008` completed successfully.
+  Both Tesla T4 ranks reproduced the historical CUDA masked-entropy failure,
+  then kept the fixed entropy finite at alpha=1000 and completed 64 real DDP
+  optimizer updates (batch 128 per rank) plus 128 CUDA Graph action steps.
+  Actor/critic gradient norms and all reported metrics remained finite; actor
+  observations and critic states stayed finite within [-1, 1].
+- The detached GPU -> CPU smoke pipeline was also reconciled successfully:
+  the CPU UavNetSim stage produced both PNG and MP4 evaluation artifacts.
 
 The failed historical run remains failed. No new 20,000-episode training
 run was launched during this investigation. Passing regression/smoke tests
-does not establish full-horizon learning quality or absence of all bugs.
+and the bounded two-T4 stress test do not by themselves establish
+full-horizon learning quality or absence of all bugs.
