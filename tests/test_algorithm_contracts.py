@@ -7,7 +7,7 @@ import pytest
 import torch
 
 from config import CONFIG
-from uav_marl.algorithms.masac import HybridMASACActor
+from uav_marl.algorithms.masac import HybridMASACActor, clip_grad_norm_finite
 from uav_marl.algorithms.matd3 import HybridMATD3Actor
 from uav_marl.training.gpu import _trainer, train_full_gpu
 
@@ -96,6 +96,26 @@ def test_actor_encoder_keeps_gradient_path_for_negative_preactivations(actor_typ
     features = actor.encoder(torch.zeros(1, observation_dim))
     assert torch.count_nonzero(features).item() == features.numel()
     assert (features < 0).all()
+
+
+def test_masac_rejects_nonfinite_gradients_before_optimizer_step():
+    parameter = torch.nn.Parameter(torch.tensor([1.0]))
+    parameter.grad = torch.tensor([float("inf")])
+
+    with pytest.raises(FloatingPointError, match="non-finite MASAC actor gradient"):
+        clip_grad_norm_finite(
+            [parameter],
+            max_norm=10.0,
+            label="MASAC actor",
+        )
+
+    assert parameter.item() == pytest.approx(1.0)
+
+
+def test_masac_default_discrete_entropy_target_avoids_near_uniform_runaway():
+    # Long-horizon discrete SAC is more stable below the historical 0.98*Hmax
+    # target. The failed paper run drove alpha_discrete from ~0.5 to >127.
+    assert float(CONFIG["masac_discrete_target_entropy_ratio"]) <= 0.89
 
 
 def _small_learner_config(monkeypatch, algorithm):

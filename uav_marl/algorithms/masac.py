@@ -81,6 +81,26 @@ def build_actor_encoder(
     )
 
 
+def clip_grad_norm_finite(
+    parameters,
+    max_norm,
+    label,
+):
+    """Clip gradients and fail before an optimizer can apply NaN/Inf values."""
+    try:
+        return torch.nn.utils.clip_grad_norm_(
+            list(parameters),
+            max_norm,
+            error_if_nonfinite=True,
+        )
+    except RuntimeError as exc:
+        if "non-finite" not in str(exc):
+            raise
+        raise FloatingPointError(
+            f"non-finite {label} gradient"
+        ) from exc
+
+
 # --- frozen notebook cell 164 ---
 class HybridMASACActor(nn.Module):
     def __init__(
@@ -1725,7 +1745,7 @@ class HybridMASAC:
             critic_loss.backward()
 
         critic_grad_norm = (
-            torch.nn.utils.clip_grad_norm_(
+            clip_grad_norm_finite(
                 list(
                     self.critic_1.parameters()
                 )
@@ -1733,6 +1753,7 @@ class HybridMASAC:
                     self.critic_2.parameters()
                 ),
                 self.gradient_clip_norm,
+                "MASAC critic",
             )
         )
 
@@ -1808,9 +1829,10 @@ class HybridMASAC:
             actor_loss.backward()
 
         actor_grad_norm = (
-            torch.nn.utils.clip_grad_norm_(
+            clip_grad_norm_finite(
                 self.actor.parameters(),
                 self.gradient_clip_norm,
+                "MASAC actor",
             )
         )
 

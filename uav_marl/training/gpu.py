@@ -4866,10 +4866,11 @@ def _ddp_update_masac(
         trainer.grad_scaler.unscale_(trainer.critic_optimizer)
     else:
         critic_loss.backward()
-    critic_grad_norm = torch.nn.utils.clip_grad_norm_(
+    critic_grad_norm = clip_grad_norm_finite(
         list(trainer.critic_1.parameters())
         + list(trainer.critic_2.parameters()),
         trainer.gradient_clip_norm,
+        "MASAC DDP critic",
     )
     if trainer.amp_enabled:
         trainer.grad_scaler.step(trainer.critic_optimizer)
@@ -4913,9 +4914,10 @@ def _ddp_update_masac(
         trainer.grad_scaler.unscale_(trainer.actor_optimizer)
     else:
         actor_loss.backward()
-    actor_grad_norm = torch.nn.utils.clip_grad_norm_(
+    actor_grad_norm = clip_grad_norm_finite(
         trainer.actor.parameters(),
         trainer.gradient_clip_norm,
+        "MASAC DDP actor",
     )
     if trainer.amp_enabled:
         trainer.grad_scaler.step(trainer.actor_optimizer)
@@ -5089,10 +5091,11 @@ def _ddp_update_matd3(
         trainer.grad_scaler.unscale_(trainer.critic_optimizer)
     else:
         critic_loss.backward()
-    critic_grad_norm = torch.nn.utils.clip_grad_norm_(
+    critic_grad_norm = clip_grad_norm_finite(
         list(trainer.critic_1.parameters())
         + list(trainer.critic_2.parameters()),
         trainer.gradient_clip_norm,
+        "MATD3 DDP critic",
     )
     if trainer.amp_enabled:
         trainer.grad_scaler.step(trainer.critic_optimizer)
@@ -5133,9 +5136,10 @@ def _ddp_update_matd3(
             trainer.grad_scaler.unscale_(trainer.actor_optimizer)
         else:
             actor_loss.backward()
-        actor_grad_norm = torch.nn.utils.clip_grad_norm_(
+        actor_grad_norm = clip_grad_norm_finite(
             trainer.actor.parameters(),
             trainer.gradient_clip_norm,
+            "MATD3 DDP actor",
         )
         if trainer.amp_enabled:
             trainer.grad_scaler.step(trainer.actor_optimizer)

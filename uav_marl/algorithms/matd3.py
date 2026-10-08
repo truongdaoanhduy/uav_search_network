@@ -891,7 +891,7 @@ class HybridMATD3:
             critic_loss.backward()
 
         critic_grad_norm = (
-            torch.nn.utils.clip_grad_norm_(
+            clip_grad_norm_finite(
                 list(
                     self.critic_1.parameters()
                 )
@@ -899,6 +899,7 @@ class HybridMATD3:
                     self.critic_2.parameters()
                 ),
                 self.gradient_clip_norm,
+                "MATD3 critic",
             )
         )
 
@@ -975,9 +976,10 @@ class HybridMATD3:
                 actor_loss.backward()
 
             actor_grad_norm = (
-                torch.nn.utils.clip_grad_norm_(
+                clip_grad_norm_finite(
                     self.actor.parameters(),
                     self.gradient_clip_norm,
+                    "MATD3 actor",
                 )
             )
 

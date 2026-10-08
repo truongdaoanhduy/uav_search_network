@@ -169,7 +169,10 @@ CONFIG = {
     "masac_gumbel_temperature": 1.0,
     # Multiplier for SAC continuous target entropy -|A|.
     "masac_continuous_target_entropy_scale": 1.0,
-    "masac_discrete_target_entropy_ratio": 0.98,
+    # 0.98*Hmax caused long-run discrete-temperature runaway on the 20k
+    # masked-destination training job. CleanRL likewise uses 0.89 for better
+    # long-horizon discrete SAC stability.
+    "masac_discrete_target_entropy_ratio": 0.89,
     "masac_initial_alpha_continuous": 0.2,
     "masac_initial_alpha_discrete": 0.2,
     "masac_learning_starts": 2_000,
