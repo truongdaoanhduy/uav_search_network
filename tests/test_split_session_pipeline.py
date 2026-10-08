@@ -428,3 +428,14 @@ def test_training_handoff_preserves_architecture_metadata(tmp_path):
     assert payload["architecture"]["weight_init"] == "kaiming"
     assert payload["architecture"]["layer_norm"] is False
     assert payload["source_wandb_run_name"].startswith("MASAC-LeakyReLU-Kaiming-NoLN")
+
+
+def test_huggingface_checkpoint_prefix_separates_architecture_variants():
+    from uav_marl.evaluation.postprocess import huggingface_checkpoint_prefix
+
+    assert huggingface_checkpoint_prefix(
+        algorithm="masac",
+        architecture="prelu_kaiming_ln",
+        seed=44,
+        episode_index=20000,
+    ) == "checkpoints/masac/prelu_kaiming_ln/seed-44/episode-20000"

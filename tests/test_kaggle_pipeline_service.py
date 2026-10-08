@@ -95,3 +95,81 @@ def test_architecture_ablation_defaults_to_each_accounts_private_credential_data
     }
     shared = credential_datasets_for_runs(usernames, override="shared/wandb")
     assert set(shared.values()) == {"shared/wandb"}
+
+
+def test_ablation_selects_six_highest_quota_accounts_strictly_above_12h():
+    from scripts.launch_architecture_ablation import select_ablation_runs_from_statuses
+
+    statuses = [
+        {"name": "account_01", "ok": True, "resources": {"GPU": {"remaining_hours": 29.0}}},
+        {"name": "account_02", "ok": True, "resources": {"GPU": {"remaining_hours": 12.0}}},
+        {"name": "account_03", "ok": True, "resources": {"GPU": {"remaining_hours": 28.0}}},
+        {"name": "account_04", "ok": True, "resources": {"GPU": {"remaining_hours": 27.0}}},
+        {"name": "account_05", "ok": True, "resources": {"GPU": {"remaining_hours": 26.0}}},
+        {"name": "account_06", "ok": True, "resources": {"GPU": {"remaining_hours": 25.0}}},
+        {"name": "account_07", "ok": True, "resources": {"GPU": {"remaining_hours": 24.0}}},
+    ]
+    runs = select_ablation_runs_from_statuses(statuses, required_gpu_hours=12.0)
+    assert [item["account"] for item in runs] == [
+        "account_01", "account_03", "account_04",
+        "account_05", "account_06", "account_07",
+    ]
+    assert all(item["remaining_gpu_hours"] > 12.0 for item in runs)
+    assert len({item["architecture"] for item in runs}) == 6
+
+
+def test_shared_service_credentials_bundle_contains_one_wandb_and_hf_identity(tmp_path):
+    from scripts.launch_architecture_ablation import write_service_credential_bundle
+
+    data = {
+        "kaggle": {
+            "accounts": [
+                {"name": "account_01", "token": "kaggle-secret-1"},
+                {"name": "account_02", "token": "kaggle-secret-2"},
+            ]
+        },
+        "wandb": {"api_key": "wandb-shared-key", "entity": "entity", "project": "project"},
+        "huggingface": {"token": "hf-shared-token"},
+    }
+    write_service_credential_bundle(
+        tmp_path,
+        data,
+        kaggle_username="demo-user",
+        hf_repo_id="hf-user/uav-search-target-checkpoints",
+    )
+
+    assert (tmp_path / "wandb_api_key.txt").read_text() == "wandb-shared-key"
+    assert (tmp_path / "hf_token.txt").read_text() == "hf-shared-token"
+    assert (tmp_path / "hf_repo_id.txt").read_text() == "hf-user/uav-search-target-checkpoints"
+    metadata = __import__("json").loads((tmp_path / "dataset-metadata.json").read_text())
+    assert metadata["id"] == "demo-user/uav-wandb-credential-arch-ablation"
+    assert metadata["isPrivate"] is True
+    all_text = "\n".join(path.read_text() for path in tmp_path.iterdir() if path.is_file())
+    assert "kaggle-secret-1" not in all_text
+    assert "kaggle-secret-2" not in all_text
+
+
+def test_cpu_kernel_reads_shared_huggingface_credentials_from_dataset(tmp_path):
+    from scripts.kaggle_pipeline import build_kernels
+
+    _gpu_dir, cpu_dir, _gpu_ref, _cpu_ref = build_kernels(
+        tmp_path,
+        username="demo-user",
+        commit="f" * 40,
+        algorithm="masac",
+        runtime="kaggle_2xt4",
+        experiment="paper_20k",
+        seed=44,
+        gpu_kernel_slug="gpu-shared-services",
+        cpu_kernel_slug="cpu-shared-services",
+        machine_shape="NvidiaTeslaT4",
+        overrides=[],
+        gpu_dataset_sources=["demo-user/uav-wandb-credential-arch-ablation"],
+        cpu_log_wandb=True,
+        cpu_dataset_sources=["demo-user/uav-wandb-credential-arch-ablation"],
+    )
+    cpu_script = next(cpu_dir.glob("*.py")).read_text()
+    assert "hf_token.txt" in cpu_script
+    assert "hf_repo_id.txt" in cpu_script
+    assert 'os.environ["HF_TOKEN"] = hf_token' in cpu_script
+    assert 'os.environ["HF_REPO_ID"] = hf_repo_id' in cpu_script

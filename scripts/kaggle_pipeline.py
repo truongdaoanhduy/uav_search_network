@@ -338,6 +338,24 @@ def _gpu_script(
             os.environ["WANDB_API_KEY"] = api_key
             os.environ.setdefault("WANDB_SILENT", "true")
 
+            hf_token_path = dataset_root / "hf_token.txt"
+            hf_repo_path = dataset_root / "hf_repo_id.txt"
+            if not hf_token_path.is_file():
+                matches = sorted(Path("/kaggle/input").rglob("hf_token.txt"))
+                if len(matches) == 1:
+                    hf_token_path = matches[0]
+            if not hf_repo_path.is_file():
+                matches = sorted(Path("/kaggle/input").rglob("hf_repo_id.txt"))
+                if len(matches) == 1:
+                    hf_repo_path = matches[0]
+            if hf_token_path.is_file() and hf_repo_path.is_file():
+                hf_token = hf_token_path.read_text().strip()
+                hf_repo_id = hf_repo_path.read_text().strip()
+                if not hf_token or not hf_repo_id:
+                    raise RuntimeError("Hugging Face credential files are empty")
+                os.environ["HF_TOKEN"] = hf_token
+                os.environ["HF_REPO_ID"] = hf_repo_id
+
         command = [
             sys.executable,
             str(REPO / "train.py"),
@@ -440,6 +458,24 @@ def _cpu_script(
                 raise RuntimeError("W&B credential file is empty")
             os.environ["WANDB_API_KEY"] = api_key
             os.environ.setdefault("WANDB_SILENT", "true")
+
+            hf_token_path = dataset_root / "hf_token.txt"
+            hf_repo_path = dataset_root / "hf_repo_id.txt"
+            if not hf_token_path.is_file():
+                matches = sorted(Path("/kaggle/input").rglob("hf_token.txt"))
+                if len(matches) == 1:
+                    hf_token_path = matches[0]
+            if not hf_repo_path.is_file():
+                matches = sorted(Path("/kaggle/input").rglob("hf_repo_id.txt"))
+                if len(matches) == 1:
+                    hf_repo_path = matches[0]
+            if hf_token_path.is_file() and hf_repo_path.is_file():
+                hf_token = hf_token_path.read_text().strip()
+                hf_repo_id = hf_repo_path.read_text().strip()
+                if not hf_token or not hf_repo_id:
+                    raise RuntimeError("Hugging Face credential files are empty")
+                os.environ["HF_TOKEN"] = hf_token
+                os.environ["HF_REPO_ID"] = hf_repo_id
 
         command = [
             sys.executable,

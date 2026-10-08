@@ -489,6 +489,21 @@ def configure_kaggle_huggingface():
     return result
 
 
+def huggingface_checkpoint_prefix(
+    *,
+    algorithm: str,
+    architecture: str,
+    seed: int,
+    episode_index,
+) -> str:
+    algorithm = str(algorithm).strip().lower()
+    architecture = str(architecture).strip().lower() or "unknown"
+    return (
+        f"checkpoints/{algorithm}/{architecture}/seed-{int(seed)}/"
+        f"episode-{episode_index}"
+    )
+
+
 def _final_training_summary(summary):
     """Translate deterministic CPU evaluation into durable training-run summaries."""
     final = {
@@ -747,7 +762,12 @@ def postprocess_checkpoint_cpu(
                     exist_ok=True,
                 )
                 episode_index = training_state.get("episode_index", "unknown")
-                prefix = f"checkpoints/{algorithm}/seed-{seed}/episode-{episode_index}"
+                prefix = huggingface_checkpoint_prefix(
+                    algorithm=algorithm,
+                    architecture=str(CONFIG.get("model_architecture_name", "unknown")),
+                    seed=seed,
+                    episode_index=episode_index,
+                )
                 api.upload_file(
                     path_or_fileobj=str(checkpoint_path),
                     path_in_repo=f"{prefix}/checkpoint.pt",
