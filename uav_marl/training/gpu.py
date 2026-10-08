@@ -6,6 +6,7 @@ Migrated from notebook cells 226..287.
 """
 
 from ..envs.gpu import *  # noqa: F401,F403
+from ..configuration import make_wandb_run_identity
 
 # --- frozen notebook cell 227 ---
 def load_project_namespace(repo: Path | None = None):
@@ -4489,17 +4490,14 @@ def _init_gpu_wandb_run(
     wandb = importlib.import_module("wandb")
     import secrets
     run_id = secrets.token_hex(4)
-    name_template = str(
-        CONFIG.get(
-            "training_wandb_name_format",
-            "{algorithm}-seed{seed}-{id}",
-        )
+    run_identity = make_wandb_run_identity(
+        CONFIG,
+        algorithm=algorithm,
+        seed=seed,
+        stage="gpu_training",
+        run_id=run_id,
     )
-    run_name = name_template.format(
-        algorithm=str(algorithm).upper(),
-        seed=int(seed),
-        id=run_id,
-    )
+    run_name = run_identity["name"]
     try:
         run = wandb.init(
             entity=CONFIG.get("training_wandb_entity"),
@@ -4517,9 +4515,12 @@ def _init_gpu_wandb_run(
                 )
             ),
             save_code=False,
-            tags=None,
-            group=None,
-            job_type=None,
+            tags=[
+                str(CONFIG.get("model_architecture_name", "unknown")),
+                "gpu-training",
+            ],
+            group=run_identity["group"],
+            job_type="gpu_training",
         )
     except Exception:
         if bool(CONFIG.get("training_wandb_required", True)):
@@ -4621,6 +4622,9 @@ def _init_gpu_wandb_run(
             "metric_groups": (
                 "train,episode,paper,evaluation,visualization"
             ),
+            **run_identity["config"],
+            "wandb_group": run_identity["group"],
+            "wandb_stage": run_identity["stage"],
         },
         allow_val_change=True,
     )

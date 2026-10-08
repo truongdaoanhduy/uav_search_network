@@ -7,7 +7,12 @@ import pytest
 import torch
 
 from config import CONFIG
-from uav_marl.algorithms.masac import HybridMASACActor, clip_grad_norm_finite
+from uav_marl.algorithms.masac import (
+    CentralizedQNetwork,
+    HybridMASACActor,
+    build_actor_encoder,
+    clip_grad_norm_finite,
+)
 from uav_marl.algorithms.matd3 import HybridMATD3Actor
 from uav_marl.training.gpu import _trainer, train_full_gpu
 
@@ -70,6 +75,51 @@ def test_actor_centers_uninformative_belief_before_encoder(actor_type):
     assert transformed[1, patch.start + 1].item() == pytest.approx(1.0)
     assert transformed[1, coarse.start].item() == pytest.approx(1.0)
     assert transformed[0, 0].item() == pytest.approx(0.25)
+
+
+def test_centralized_critic_uses_leaky_relu_matched_kaiming_initialization():
+    torch.manual_seed(4321)
+    state_dim = 257
+    joint_action_dim = 31
+    critic = CentralizedQNetwork(
+        state_dim=state_dim,
+        joint_action_dim=joint_action_dim,
+        hidden_dims=(1024, 1024),
+    )
+
+    assert isinstance(critic.network[1], torch.nn.LeakyReLU)
+    assert critic.network[1].negative_slope == pytest.approx(0.01)
+
+    first = critic.network[0]
+    assert isinstance(first, torch.nn.Linear)
+    torch.testing.assert_close(first.bias, torch.zeros_like(first.bias))
+
+    fan_in = state_dim + joint_action_dim
+    expected_variance = 2.0 / (1.0 + 0.01**2) / float(fan_in)
+    actual_variance = float(first.weight.detach().var(unbiased=False))
+    assert actual_variance == pytest.approx(expected_variance, rel=0.08)
+
+
+def test_actor_encoder_uses_leaky_relu_matched_kaiming_initialization():
+    torch.manual_seed(1234)
+    observation_dim = 257
+    encoder = build_actor_encoder(
+        observation_dim=observation_dim,
+        hidden_dims=(1024, 1024),
+    )
+
+    assert isinstance(encoder[1], torch.nn.LeakyReLU)
+    assert encoder[1].negative_slope == pytest.approx(0.01)
+
+    first = encoder[0]
+    assert isinstance(first, torch.nn.Linear)
+    torch.testing.assert_close(first.bias, torch.zeros_like(first.bias))
+
+    expected_variance = (
+        2.0 / (1.0 + 0.01**2) / float(observation_dim)
+    )
+    actual_variance = float(first.weight.detach().var(unbiased=False))
+    assert actual_variance == pytest.approx(expected_variance, rel=0.08)
 
 
 @pytest.mark.parametrize(
@@ -309,3 +359,47 @@ def test_masked_categorical_log_probability_ignores_invalid_half_precision_logit
     assert sampled["entropy"].item() == 0.0
     (-sampled["log_probability"] - 10.0 * sampled["entropy"]).sum().backward()
     assert torch.equal(logits.grad, torch.zeros_like(logits))
+
+
+def test_prelu_kaiming_layernorm_variant_builds_requested_actor_and_critic(monkeypatch):
+    monkeypatch.setitem(CONFIG, "model_activation", "prelu")
+    monkeypatch.setitem(CONFIG, "model_weight_init", "kaiming")
+    monkeypatch.setitem(CONFIG, "model_layer_norm", True)
+    monkeypatch.setitem(CONFIG, "model_prelu_init", 0.25)
+    monkeypatch.setitem(CONFIG, "masac_hidden_dims", (512, 256))
+
+    observation_dim, _, _ = _actor_observation_layout()
+    actor = HybridMASACActor(
+        observation_dim=observation_dim,
+        continuous_dim=4,
+        discrete_dim=int(CONFIG["num_uavs"]) + 1,
+        hidden_dims=(512, 256),
+    )
+    critic = CentralizedQNetwork(
+        state_dim=3075,
+        joint_action_dim=66,
+        hidden_dims=(512, 256),
+    )
+
+    actor_layers = list(actor.encoder)
+    assert isinstance(actor_layers[0], torch.nn.Linear)
+    assert actor_layers[0].in_features == observation_dim
+    assert actor_layers[0].out_features == 512
+    assert isinstance(actor_layers[1], torch.nn.LayerNorm)
+    assert isinstance(actor_layers[2], torch.nn.PReLU)
+    assert isinstance(actor_layers[3], torch.nn.Linear)
+    assert actor_layers[3].in_features == 512
+    assert actor_layers[3].out_features == 256
+
+    critic_layers = list(critic.network)
+    assert isinstance(critic_layers[0], torch.nn.Linear)
+    assert critic_layers[0].in_features == 3141
+    assert critic_layers[0].out_features == 512
+    assert isinstance(critic_layers[1], torch.nn.LayerNorm)
+    assert isinstance(critic_layers[2], torch.nn.PReLU)
+    assert isinstance(critic_layers[3], torch.nn.Linear)
+    assert critic_layers[3].out_features == 256
+    assert isinstance(critic_layers[4], torch.nn.LayerNorm)
+    assert isinstance(critic_layers[5], torch.nn.PReLU)
+    assert isinstance(critic_layers[6], torch.nn.Linear)
+    assert critic_layers[6].out_features == 1

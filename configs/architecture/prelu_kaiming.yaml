@@ -1,0 +1,6 @@
+name: prelu_kaiming
+activation: prelu
+weight_init: kaiming
+layer_norm: false
+leaky_relu_negative_slope: 0.01
+prelu_init: 0.25

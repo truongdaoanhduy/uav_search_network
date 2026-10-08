@@ -6,11 +6,13 @@ Migrated from notebook cells 288..298.
 """
 
 import os
+import secrets
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 from ..training.gpu import *  # noqa: F401,F403
+from ..configuration import make_wandb_run_identity
 
 # --- frozen notebook cell 289 ---
 def _uavnetsim_cpu_worker(payload):
@@ -559,16 +561,25 @@ def postprocess_checkpoint_cpu(
                     + str(wandb_status.get("error"))
                 )
         wandb_module = importlib.import_module("wandb")
+        cpu_run_id = secrets.token_hex(4)
+        run_identity = make_wandb_run_identity(
+            CONFIG,
+            algorithm=algorithm,
+            seed=seed,
+            stage="cpu_visualization",
+            run_id=cpu_run_id,
+        )
         wandb_run = wandb_module.init(
             entity=CONFIG["training_wandb_entity"],
             project=CONFIG["training_wandb_project"],
+            id=cpu_run_id,
             job_type="cpu_visualization",
-            name=f"{algorithm.upper()}-seed{seed}-cpu-viz",
-            group=(
-                str(source_run_id)
-                if source_run_id
-                else f"{algorithm}-seed{seed}"
-            ),
+            name=run_identity["name"],
+            group=run_identity["group"],
+            tags=[
+                str(CONFIG.get("model_architecture_name", "unknown")),
+                "cpu-visualization",
+            ],
             mode="online",
             config={
                 "algorithm": algorithm,
@@ -580,6 +591,9 @@ def postprocess_checkpoint_cpu(
                 "artifact_ref": artifact_ref,
                 "execution_device": "cpu",
                 "network_backend_train": str(network_backend),
+                "wandb_group": run_identity["group"],
+                "wandb_stage": run_identity["stage"],
+                **run_identity["config"],
             },
             settings=wandb_module.Settings(
                 x_disable_stats=True,

@@ -46,13 +46,17 @@ class HybridMATD3Actor(nn.Module):
 
         feature_dim = hidden_dims[-1]
 
-        self.continuous_head = nn.Linear(
-            feature_dim,
-            self.continuous_dim,
+        self.continuous_head = initialize_configured_linear(
+            nn.Linear(
+                feature_dim,
+                self.continuous_dim,
+            )
         )
-        self.discrete_head = nn.Linear(
-            feature_dim,
-            self.discrete_dim,
+        self.discrete_head = initialize_configured_linear(
+            nn.Linear(
+                feature_dim,
+                self.discrete_dim,
+            )
         )
 
     def forward(

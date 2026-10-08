@@ -107,11 +107,13 @@ def create_training_handoff(
             resolved_config["runtime"]["network_backend"]
         ),
         "experiment": str(resolved_config["experiment"]["name"]),
+        "architecture": deepcopy(dict(resolved_config["architecture"])),
         "source_provider": str(resolved_config["runtime"]["provider"]),
         "source_execution_mode": str(
             resolved_config["runtime"]["execution_mode"]
         ),
         "source_wandb_run_id": result.get("wandb_run_id"),
+        "source_wandb_run_name": result.get("wandb_run_name"),
         "source_wandb_run_url": result.get("wandb_run_url"),
         "source_wandb_artifact": artifact_ref,
         "source_git_commit": _git_commit(repo),
@@ -304,6 +306,7 @@ def run_cpu_postprocess_from_handoff(
             result.get("evaluation_backend", "uavnetsim")
         ),
         "experiment": str(payload["experiment"]),
+        "architecture": deepcopy(dict(payload["architecture"])),
         "source_provider": str(payload["source_provider"]),
         "source_git_commit": payload.get("source_git_commit"),
         "source_wandb_run_id": payload.get("source_wandb_run_id"),

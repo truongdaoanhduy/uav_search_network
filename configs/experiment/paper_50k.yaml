@@ -39,7 +39,7 @@ wandb:
   require_online_gpu: true
   disable_system_stats: true
   require_kaggle_account_name: true
-  name_format: "{algorithm}-seed{seed}-{id}"
+  name_format: "{group}-{stage}-{id}"
 postprocess:
   eval_episodes: 1
   video_fps: 8

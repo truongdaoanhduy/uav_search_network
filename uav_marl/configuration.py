@@ -1,7 +1,7 @@
 """Configuration composition and legacy compatibility.
 
-New experiments use five independent config groups:
-Task / Reward / Algorithm / Runtime / Experiment.
+New experiments use six independent config groups:
+Task / Reward / Architecture / Algorithm / Runtime / Experiment.
 
 The notebook implementation still consumes the historical flat CONFIG mapping.
 apply_to_legacy_config() is the compatibility bridge while the training engine
@@ -87,6 +87,21 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
     plain = to_plain_dict(cfg)
     algorithm = str(_get(plain, "algorithm.name")).strip().lower()
     get_algorithm(algorithm)
+
+    architecture = _get(plain, "architecture")
+    activation = str(architecture["activation"]).strip().lower()
+    if activation not in {"leaky_relu", "prelu"}:
+        raise ValueError("architecture.activation must be leaky_relu or prelu")
+    weight_init = str(architecture["weight_init"]).strip().lower()
+    if weight_init not in {"default", "kaiming"}:
+        raise ValueError("architecture.weight_init must be default or kaiming")
+    if float(architecture["leaky_relu_negative_slope"]) <= 0.0:
+        raise ValueError("architecture.leaky_relu_negative_slope must be > 0")
+    if float(architecture["prelu_init"]) <= 0.0:
+        raise ValueError("architecture.prelu_init must be > 0")
+    hidden_dims = tuple(int(v) for v in _get(plain, "algorithm.hidden_dims"))
+    if len(hidden_dims) != 2 or any(v <= 0 for v in hidden_dims):
+        raise ValueError("algorithm.hidden_dims must contain two positive widths")
 
     seed = int(_get(plain, "seed"))
     if seed < 0:
@@ -445,6 +460,16 @@ def apply_to_legacy_config(
             continue
         legacy_config[f"reward_{key}"] = deepcopy(value)
 
+    architecture_cfg = _get(plain, "architecture")
+    legacy_config["model_architecture_name"] = str(architecture_cfg["name"])
+    legacy_config["model_activation"] = str(architecture_cfg["activation"]).strip().lower()
+    legacy_config["model_weight_init"] = str(architecture_cfg["weight_init"]).strip().lower()
+    legacy_config["model_layer_norm"] = bool(architecture_cfg["layer_norm"])
+    legacy_config["model_leaky_relu_negative_slope"] = float(
+        architecture_cfg["leaky_relu_negative_slope"]
+    )
+    legacy_config["model_prelu_init"] = float(architecture_cfg["prelu_init"])
+
     algorithm_cfg = _get(plain, "algorithm")
     prefix = algorithm.legacy_prefix
     for key, value in algorithm_cfg.items():
@@ -483,6 +508,82 @@ def apply_to_legacy_config(
     return legacy_config
 
 
+def make_wandb_run_identity(
+    legacy_config: Mapping[str, Any],
+    *,
+    algorithm: str,
+    seed: int,
+    stage: str,
+    run_id: str,
+) -> dict[str, Any]:
+    """Build stable, self-describing W&B names/groups for ablation runs."""
+    algorithm_key = str(algorithm).strip().lower()
+    activation = str(legacy_config.get("model_activation", "leaky_relu")).strip().lower()
+    activation_label = {
+        "leaky_relu": "LeakyReLU",
+        "prelu": "PReLU",
+    }.get(activation)
+    if activation_label is None:
+        raise ValueError(f"unsupported model activation: {activation!r}")
+    weight_init = str(legacy_config.get("model_weight_init", "default")).strip().lower()
+    init_label = {"default": "Default", "kaiming": "Kaiming"}.get(weight_init)
+    if init_label is None:
+        raise ValueError(f"unsupported model weight_init: {weight_init!r}")
+    layer_norm = bool(legacy_config.get("model_layer_norm", False))
+    norm_label = "LN" if layer_norm else "NoLN"
+    hidden_dims = [
+        int(value)
+        for value in legacy_config[f"{algorithm_key}_hidden_dims"]
+    ]
+    hidden_label = "H" + "x".join(str(value) for value in hidden_dims)
+    group = (
+        f"{algorithm_key.upper()}-{activation_label}-{init_label}-"
+        f"{norm_label}-{hidden_label}-seed{int(seed)}"
+    )
+    stage_label = {
+        "gpu_training": "GPU",
+        "cpu_visualization": "CPU-VIZ",
+    }.get(str(stage).strip().lower())
+    if stage_label is None:
+        raise ValueError("stage must be gpu_training or cpu_visualization")
+    template = str(
+        legacy_config.get(
+            "training_wandb_name_format",
+            "{group}-{stage}-{id}",
+        )
+    )
+    name = template.format(
+        algorithm=algorithm_key.upper(),
+        seed=int(seed),
+        id=str(run_id),
+        group=group,
+        stage=stage_label,
+        architecture=str(legacy_config.get("model_architecture_name", "unknown")),
+        activation=activation_label,
+        weight_init=init_label,
+        norm=norm_label,
+        hidden=hidden_label,
+    )
+    return {
+        "name": name,
+        "group": group,
+        "stage": stage_label,
+        "config": {
+            "architecture_variant": str(
+                legacy_config.get("model_architecture_name", "unknown")
+            ),
+            "activation": activation,
+            "weight_init": weight_init,
+            "layer_norm": layer_norm,
+            "hidden_dims": hidden_dims,
+            "leaky_relu_negative_slope": float(
+                legacy_config.get("model_leaky_relu_negative_slope", 0.01)
+            ),
+            "prelu_init": float(legacy_config.get("model_prelu_init", 0.25)),
+        },
+    }
+
+
 def describe_run(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
     plain = validate_config(cfg)
     total_episodes = int(_get(plain, "experiment.total_episodes"))
@@ -490,6 +591,11 @@ def describe_run(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
     max_steps = int(_get(plain, "task.scenario.max_steps"))
     return {
         "algorithm": str(_get(plain, "algorithm.name")),
+        "architecture": str(_get(plain, "architecture.name")),
+        "activation": str(_get(plain, "architecture.activation")),
+        "weight_init": str(_get(plain, "architecture.weight_init")),
+        "layer_norm": bool(_get(plain, "architecture.layer_norm")),
+        "hidden_dims": list(_get(plain, "algorithm.hidden_dims")),
         "task": str(_get(plain, "task.name")),
         "reward": str(_get(plain, "reward.name")),
         "runtime_provider": str(_get(plain, "runtime.provider")),

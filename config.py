@@ -155,8 +155,16 @@ CONFIG = {
     "reward_step_penalty": 0.01,
     "reward_all_delivered_bonus": 500.0,
 
+    # Neural-network ablation profile shared by MASAC and MATD3.
+    "model_architecture_name": "leaky_kaiming",
+    "model_activation": "leaky_relu",
+    "model_weight_init": "kaiming",
+    "model_layer_norm": False,
+    "model_leaky_relu_negative_slope": 0.01,
+    "model_prelu_init": 0.25,
+
     # Hybrid multi-agent SAC (CTDE).
-    "masac_hidden_dims": (256, 256),
+    "masac_hidden_dims": (512, 256),
     "masac_replay_capacity": 50_000,
     "masac_batch_size": 256,
     "masac_gamma": 0.99,
@@ -324,10 +332,10 @@ CONFIG = {
     # GPU training logs a single W&B run from rank 0. The display name is
     # exactly: <ALGORITHM>-seed<SEED>-<WANDB_RUN_ID>.
     "training_wandb_required": True,
-    "training_wandb_name_format": "{algorithm}-seed{seed}-{id}",
+    "training_wandb_name_format": "{group}-{stage}-{id}",
 
     # Hybrid MATD3 (CTDE + discrete destination adaptation).
-    "matd3_hidden_dims": (256, 256),
+    "matd3_hidden_dims": (512, 256),
     "matd3_replay_capacity": 50_000,
     "matd3_batch_size": 256,
     "matd3_gamma": 0.99,

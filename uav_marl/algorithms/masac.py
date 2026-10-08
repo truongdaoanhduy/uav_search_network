@@ -65,19 +65,117 @@ def transform_actor_observations(
     )
 
 
+def _configured_activation():
+    activation = str(
+        CONFIG.get("model_activation", "leaky_relu")
+    ).strip().lower()
+    if activation == "leaky_relu":
+        return nn.LeakyReLU(
+            negative_slope=float(
+                CONFIG.get("model_leaky_relu_negative_slope", 0.01)
+            )
+        )
+    if activation == "prelu":
+        return nn.PReLU(
+            num_parameters=1,
+            init=float(CONFIG.get("model_prelu_init", 0.25)),
+        )
+    raise ValueError(
+        "model_activation must be leaky_relu or prelu"
+    )
+
+
+def _kaiming_slope():
+    activation = str(
+        CONFIG.get("model_activation", "leaky_relu")
+    ).strip().lower()
+    if activation == "leaky_relu":
+        return float(
+            CONFIG.get("model_leaky_relu_negative_slope", 0.01)
+        )
+    if activation == "prelu":
+        return float(CONFIG.get("model_prelu_init", 0.25))
+    raise ValueError(
+        "model_activation must be leaky_relu or prelu"
+    )
+
+
+def initialize_configured_linear(
+    layer,
+    *,
+    followed_by_activation=False,
+):
+    if not isinstance(layer, nn.Linear):
+        raise TypeError("layer must be nn.Linear")
+    weight_init = str(
+        CONFIG.get("model_weight_init", "default")
+    ).strip().lower()
+    if weight_init == "default":
+        return layer
+    if weight_init != "kaiming":
+        raise ValueError(
+            "model_weight_init must be default or kaiming"
+        )
+    if followed_by_activation:
+        nn.init.kaiming_uniform_(
+            layer.weight,
+            a=_kaiming_slope(),
+            mode="fan_in",
+            nonlinearity="leaky_relu",
+        )
+    else:
+        nn.init.kaiming_uniform_(
+            layer.weight,
+            mode="fan_in",
+            nonlinearity="linear",
+        )
+    if layer.bias is not None:
+        nn.init.zeros_(layer.bias)
+    return layer
+
+
+def build_configured_mlp(
+    input_dim,
+    hidden_dims,
+    output_dim,
+):
+    dims = (
+        int(input_dim),
+        *tuple(int(value) for value in hidden_dims),
+        int(output_dim),
+    )
+    layers = []
+    use_layer_norm = bool(
+        CONFIG.get("model_layer_norm", False)
+    )
+    for index in range(len(dims) - 2):
+        linear = nn.Linear(dims[index], dims[index + 1])
+        initialize_configured_linear(
+            linear,
+            followed_by_activation=True,
+        )
+        layers.append(linear)
+        if use_layer_norm:
+            layers.append(nn.LayerNorm(dims[index + 1]))
+        layers.append(_configured_activation())
+
+    output = nn.Linear(dims[-2], dims[-1])
+    initialize_configured_linear(
+        output,
+        followed_by_activation=False,
+    )
+    layers.append(output)
+    return nn.Sequential(*layers)
+
+
 def build_actor_encoder(
     observation_dim,
     hidden_dims,
 ):
-    return build_mlp(
+    return build_configured_mlp(
         observation_dim,
         hidden_dims[:-1],
         hidden_dims[-1],
-        activation_factory=(
-            lambda: nn.LeakyReLU(
-                negative_slope=0.01
-            )
-        ),
     )
 
 
@@ -142,17 +240,23 @@ class HybridMASACActor(nn.Module):
             hidden_dims[-1]
         )
 
-        self.mean_head = nn.Linear(
-            feature_dim,
-            self.continuous_dim,
+        self.mean_head = initialize_configured_linear(
+            nn.Linear(
+                feature_dim,
+                self.continuous_dim,
+            )
         )
-        self.log_std_head = nn.Linear(
-            feature_dim,
-            self.continuous_dim,
+        self.log_std_head = initialize_configured_linear(
+            nn.Linear(
+                feature_dim,
+                self.continuous_dim,
+            )
         )
-        self.discrete_head = nn.Linear(
-            feature_dim,
-            self.discrete_dim,
+        self.discrete_head = initialize_configured_linear(
+            nn.Linear(
+                feature_dim,
+                self.discrete_dim,
+            )
         )
 
     def forward(
@@ -316,7 +420,7 @@ class CentralizedQNetwork(nn.Module):
             joint_action_dim
         )
 
-        self.network = build_mlp(
+        self.network = build_configured_mlp(
             self.state_dim
             + self.joint_action_dim,
             hidden_dims,

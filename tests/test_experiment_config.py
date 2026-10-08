@@ -258,3 +258,67 @@ def test_kaggle_profile_preserves_masac_entropy_stability_setting():
     assert legacy["masac_discrete_target_entropy_ratio"] == pytest.approx(
         BASE_CONFIG["masac_discrete_target_entropy_ratio"]
     )
+
+
+@pytest.mark.parametrize(
+    "variant,activation,weight_init,layer_norm",
+    [
+        ("leaky_default", "leaky_relu", "default", False),
+        ("prelu_default", "prelu", "default", False),
+        ("leaky_kaiming", "leaky_relu", "kaiming", False),
+        ("prelu_kaiming", "prelu", "kaiming", False),
+        ("leaky_kaiming_ln", "leaky_relu", "kaiming", True),
+        ("prelu_kaiming_ln", "prelu", "kaiming", True),
+    ],
+)
+def test_ablation_architecture_variants_are_explicit_and_relu_free(
+    variant, activation, weight_init, layer_norm
+):
+    cfg = compose_cfg(f"architecture={variant}", "algorithm=masac")
+    assert cfg.architecture.name == variant
+    assert cfg.architecture.activation == activation
+    assert cfg.architecture.weight_init == weight_init
+    assert cfg.architecture.layer_norm is layer_norm
+    assert list(cfg.algorithm.hidden_dims) == [512, 256]
+    assert activation != "relu"
+
+
+def test_architecture_profile_maps_into_legacy_runtime_config():
+    cfg = compose_cfg("architecture=prelu_kaiming_ln", "algorithm=masac")
+    legacy = dict(BASE_CONFIG)
+    apply_to_legacy_config(legacy, cfg)
+    assert legacy["model_architecture_name"] == "prelu_kaiming_ln"
+    assert legacy["model_activation"] == "prelu"
+    assert legacy["model_weight_init"] == "kaiming"
+    assert legacy["model_layer_norm"] is True
+    assert legacy["model_prelu_init"] == pytest.approx(0.25)
+    assert legacy["masac_hidden_dims"] == (512, 256)
+
+
+def test_wandb_identity_exposes_full_model_variant():
+    from uav_marl.configuration import make_wandb_run_identity
+
+    legacy = dict(BASE_CONFIG)
+    legacy.update(
+        {
+            "model_architecture_name": "prelu_kaiming_ln",
+            "model_activation": "prelu",
+            "model_weight_init": "kaiming",
+            "model_layer_norm": True,
+            "model_prelu_init": 0.25,
+            "masac_hidden_dims": (512, 256),
+        }
+    )
+    identity = make_wandb_run_identity(
+        legacy,
+        algorithm="masac",
+        seed=44,
+        stage="gpu_training",
+        run_id="deadbeef",
+    )
+    assert identity["group"] == "MASAC-PReLU-Kaiming-LN-H512x256-seed44"
+    assert identity["name"] == "MASAC-PReLU-Kaiming-LN-H512x256-seed44-GPU-deadbeef"
+    assert identity["config"]["activation"] == "prelu"
+    assert identity["config"]["weight_init"] == "kaiming"
+    assert identity["config"]["layer_norm"] is True
+    assert identity["config"]["hidden_dims"] == [512, 256]

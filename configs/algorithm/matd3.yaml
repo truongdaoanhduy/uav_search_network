@@ -1,5 +1,5 @@
 name: matd3
-hidden_dims: [256, 256]
+hidden_dims: [512, 256]
 replay_capacity: 50000
 batch_size: 256
 gamma: 0.99

@@ -408,3 +408,23 @@ def test_reconciler_does_not_duplicate_active_gpu_stage(tmp_path, monkeypatch):
         cpu_session_timeout_seconds=10_800,
     )
     assert result == "gpu_active"
+
+
+def test_training_handoff_preserves_architecture_metadata(tmp_path):
+    checkpoint = tmp_path / "source.pt"
+    checkpoint.write_bytes(b"checkpoint")
+    cfg = _cfg()
+    training = create_training_handoff(
+        {
+            "final_checkpoint_path": str(checkpoint),
+            "wandb_run_id": "run-architecture",
+            "wandb_run_name": "MASAC-LeakyReLU-Kaiming-NoLN-H512x256-seed44-GPU-run-architecture",
+        },
+        cfg,
+        repo=tmp_path,
+    )
+    payload, _ = load_training_handoff(training["handoff_path"])
+    assert payload["architecture"]["activation"] == "leaky_relu"
+    assert payload["architecture"]["weight_init"] == "kaiming"
+    assert payload["architecture"]["layer_norm"] is False
+    assert payload["source_wandb_run_name"].startswith("MASAC-LeakyReLU-Kaiming-NoLN")
