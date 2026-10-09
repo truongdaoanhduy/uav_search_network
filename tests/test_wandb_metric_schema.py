@@ -194,8 +194,11 @@ def test_workspace_formatter_uses_episode_axis_paper_style_and_kaggle_column():
     assert "episode/apf_intervention_rate" in source
     assert "episode/apf_peer_intervention_rate" in source
     assert "episode/apf_obstacle_intervention_rate" in source
+    assert "episode/apf_boundary_intervention_rate" in source
     assert "episode/apf_emergency_rate" in source
     assert "episode/apf_correction_norm_mean_mps2" in source
+    assert "train/reward_investigation_shaping_mean" in source
+    assert "train/reward_apf_intervention_mean" in source
     assert "episode/blocked_motion_rate" not in source
 
 
@@ -289,3 +292,29 @@ def test_runs_table_exposes_requested_training_and_final_columns():
     )
     for column in required:
         assert column in source
+
+
+def test_gpu_training_logs_apf_intervention_reward_component():
+    source = (ROOT / "uav_marl" / "training" / "gpu.py").read_text()
+    assert '"reward_apf_intervention",' in source
+
+
+def test_episode_metrics_expose_boundary_apf_intervention_rate():
+    episode = _episode()
+    episode["apf_boundary_intervention_rate"] = 0.07
+    payload = build_episode_curve_payload(
+        [episode],
+        episodes_completed=1,
+        episode_component_keys=(),
+    )
+    assert payload["episode/apf_boundary_intervention_rate"] == pytest.approx(0.07)
+
+
+def test_gpu_training_logs_inactive_horizon_makeup_reward_component():
+    source = (ROOT / "uav_marl" / "training" / "gpu.py").read_text()
+    assert '"reward_inactive_horizon_makeup",' in source
+
+
+def test_evaluation_summary_exposes_inactive_horizon_makeup():
+    source = (ROOT / "uav_marl" / "algorithms" / "masac.py").read_text()
+    assert '"reward_component_inactive_horizon_makeup",' in source

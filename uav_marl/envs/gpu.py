@@ -5,9 +5,10 @@ reference/regression artifact. Production changes belong in Python modules.
 Migrated from notebook cells 221..225.
 """
 
-from ..algorithms.matd3 import *  # noqa: F401,F403
+from ..algorithms.matd3 import *
 from ..common import contact_graph_reachability_fraction_torch
-from ..world.apf import apf_repulsion_torch, _peer_path_conflicts_torch
+from ..world.apf import _peer_path_conflicts_torch, apf_repulsion_torch
+
 
 # --- frozen notebook cell 221 ---
 class FullGpuUAVBatchEnv:
@@ -565,6 +566,94 @@ class FullGpuUAVBatchEnv:
     def _coverage_potential(self):
         return self.coverage_seen.float().mean(-1)
 
+    def _investigation_potential(self):
+        """Batched belief-only potential for approaching and descending to evidence."""
+        threshold = float(
+            CONFIG.get("reward_investigation_belief_threshold", 0.8)
+        )
+        confirmation = float(CONFIG["confirmation_threshold"])
+        if not float(CONFIG["belief_prior"]) < threshold < confirmation:
+            raise ValueError(
+                "reward_investigation_belief_threshold must lie between "
+                "belief_prior and confirmation_threshold"
+            )
+
+        center = torch.floor(
+            self.positions[..., :2] / self.cell_size
+        ).long()
+        patch_cells = (
+            center.unsqueeze(2)
+            + self.belief_patch_offsets.view(1, 1, -1, 2)
+        )
+        gx = patch_cells[..., 0]
+        gy = patch_cells[..., 1]
+        valid = (
+            (gx >= 0)
+            & (gx < self.grid_n)
+            & (gy >= 0)
+            & (gy < self.grid_n)
+        )
+        flat_idx = (
+            gy.clamp(0, self.grid_n - 1) * self.grid_n
+            + gx.clamp(0, self.grid_n - 1)
+        )
+        patch = torch.gather(
+            self.belief.view(self.num_envs, self.num_uavs, -1),
+            2,
+            flat_idx,
+        )
+        patch = torch.where(
+            valid,
+            patch,
+            torch.full_like(patch, float(CONFIG["belief_prior"])),
+        )
+        local_peak, peak_index = patch.max(dim=-1)
+        evidence = (
+            (local_peak - threshold) / max(confirmation - threshold, 1e-6)
+        ).clamp(0.0, 1.0)
+        peak_flat = torch.gather(
+            flat_idx,
+            2,
+            peak_index.unsqueeze(-1),
+        ).squeeze(-1)
+        peak_gx = torch.remainder(peak_flat, self.grid_n).to(self.positions.dtype)
+        peak_gy = torch.div(
+            peak_flat,
+            self.grid_n,
+            rounding_mode="floor",
+        ).to(self.positions.dtype)
+        peak_xy = (
+            torch.stack((peak_gx, peak_gy), dim=-1) + 0.5
+        ) * self.cell_size
+        patch_radius = int(CONFIG["belief_patch_cells"]) // 2
+        max_patch_distance = max(
+            math.sqrt(2.0) * (patch_radius + 0.5) * self.cell_size,
+            1e-6,
+        )
+        proximity = (
+            1.0
+            - torch.linalg.vector_norm(
+                peak_xy - self.positions[..., :2],
+                dim=-1,
+            )
+            / max_patch_distance
+        ).clamp(0.0, 1.0)
+        altitude_span = max(
+            self.altitude_max - float(CONFIG["fine_altitude"]),
+            1e-6,
+        )
+        descent = (
+            (self.altitude_max - self.positions[..., 2]) / altitude_span
+        ).clamp(0.0, 1.0)
+        readiness = (
+            evidence
+            * 0.5
+            * (proximity + descent)
+            * self.active.float()
+        )
+        return readiness.sum(dim=-1) / float(max(1, self.num_uavs))
+
+
     def _communication_progress_potential(self):
         report_size = float(CONFIG["report_bytes"])
         report_progress = torch.where(
@@ -743,6 +832,8 @@ class FullGpuUAVBatchEnv:
             ),
             control_dt=self.dt,
             enabled=bool(CONFIG.get("apf_enabled", True)),
+            boundary_lower=[0.0, 0.0, self.altitude_min],
+            boundary_upper=[self.map_size, self.map_size, self.altitude_max],
         )
 
         soft_desired_accel = (
@@ -829,6 +920,8 @@ class FullGpuUAVBatchEnv:
                     braking_margin=float(CONFIG.get("apf_braking_margin", 1.5)),
                     control_dt=self.dt,
                     enabled=True,
+                    boundary_lower=[0.0, 0.0, self.altitude_min],
+                    boundary_upper=[self.map_size, self.map_size, self.altitude_max],
                 )
                 refined_desired = torch.where(
                     refined_apf["emergency"].unsqueeze(-1),
@@ -995,11 +1088,13 @@ class FullGpuUAVBatchEnv:
             "apf_obstacle_active": (
                 apf["obstacle_active"]
             ),
+            "apf_boundary_active": apf["boundary_active"],
             "apf_emergency": apf["emergency"],
             "apf_peer_emergency": apf["peer_emergency"],
             "apf_obstacle_emergency": (
                 apf["obstacle_emergency"]
             ),
+            "apf_boundary_emergency": apf["boundary_emergency"],
             "apf_acceleration_mps2": (
                 apf_correction_accel
             ),
@@ -1009,11 +1104,17 @@ class FullGpuUAVBatchEnv:
             "apf_obstacle_acceleration_mps2": (
                 apf["obstacle_acceleration_mps2"]
             ),
+            "apf_boundary_acceleration_mps2": (
+                apf["boundary_acceleration_mps2"]
+            ),
             "apf_min_peer_clearance_m": (
                 apf["min_peer_clearance_m"]
             ),
             "apf_min_obstacle_clearance_m": (
                 apf["min_obstacle_clearance_m"]
+            ),
+            "apf_min_boundary_clearance_m": (
+                apf["min_boundary_clearance_m"]
             ),
             "boundary": hclip | zclip,
             "horizontal_boundary": hclip,
@@ -3210,6 +3311,7 @@ class FullGpuUAVBatchEnv:
             raise ValueError("destination_idx has wrong shape")
 
         old_coverage_potential = self._coverage_potential()
+        old_investigation_potential = self._investigation_potential()
         old_communication_progress = (
             self._communication_progress_potential()
         )
@@ -3446,6 +3548,7 @@ class FullGpuUAVBatchEnv:
             new_potential,
         )
         coverage_potential = self._coverage_potential()
+        investigation_potential = self._investigation_potential()
         communication_progress = (
             self._communication_progress_potential()
         )
@@ -3458,6 +3561,11 @@ class FullGpuUAVBatchEnv:
             done,
             torch.zeros_like(communication_progress),
             communication_progress,
+        )
+        next_investigation_potential = torch.where(
+            done,
+            torch.zeros_like(investigation_potential),
+            investigation_potential,
         )
         shaping = float(CONFIG["reward_info_gain"]) * (
             shaping_gamma * next_phi - old_potential
@@ -3481,6 +3589,16 @@ class FullGpuUAVBatchEnv:
             shaping_gamma
             * next_communication_progress
             - old_communication_progress
+        )
+        reward_investigation_shaping = float(
+            CONFIG.get(
+                "reward_investigation_shaping",
+                0.0,
+            )
+        ) * (
+            shaping_gamma
+            * next_investigation_potential
+            - old_investigation_potential
         )
         reward_information_gain = shaping
         reward_confirmation = (
@@ -3518,6 +3636,13 @@ class FullGpuUAVBatchEnv:
             * motion[
                 "blocked"
             ].sum(-1).float()
+            / safety_denominator
+        )
+        reward_apf_intervention = (
+            -float(
+                CONFIG["reward_apf_intervention"]
+            )
+            * motion["apf_active"].sum(-1).float()
             / safety_denominator
         )
         reward_boundary = (
@@ -3564,6 +3689,14 @@ class FullGpuUAVBatchEnv:
                 ]
             ),
         )
+        remaining_horizon_steps = (
+            int(self.max_steps) - self.step_count
+        ).clamp_min(0).float()
+        reward_inactive_horizon_makeup = (
+            -float(CONFIG["reward_step_penalty"])
+            * remaining_horizon_steps
+            * end_inactive.float()
+        )
         reward_success_bonus = torch.where(
             success,
             torch.full_like(
@@ -3581,6 +3714,7 @@ class FullGpuUAVBatchEnv:
         reward_search = (
             reward_information_gain
             + reward_coverage_shaping
+            + reward_investigation_shaping
             + reward_confirmation
             + reward_false_confirmation
         )
@@ -3592,25 +3726,30 @@ class FullGpuUAVBatchEnv:
         )
         reward_safety = (
             reward_blocked_motion
+            + reward_apf_intervention
             + reward_boundary
         )
         reward_mission = (
             reward_step
+            + reward_inactive_horizon_makeup
             + reward_success_bonus
         )
         reward = (
             reward_information_gain
             + reward_coverage_shaping
+            + reward_investigation_shaping
             + reward_communication_progress
             + reward_confirmation
             + reward_delivery
             + reward_false_confirmation
             + reward_blocked_motion
+            + reward_apf_intervention
             + reward_boundary
             + reward_expired_report
             + reward_dropped_report
             + reward_energy
             + reward_step
+            + reward_inactive_horizon_makeup
             + reward_success_bonus
         )
 
@@ -3651,6 +3790,9 @@ class FullGpuUAVBatchEnv:
             ].sum(-1),
             "apf_obstacle_active": motion[
                 "apf_obstacle_active"
+            ].sum(-1),
+            "apf_boundary_active": motion[
+                "apf_boundary_active"
             ].sum(-1),
             "apf_emergency": motion[
                 "apf_emergency"
@@ -3787,6 +3929,9 @@ class FullGpuUAVBatchEnv:
             "reward_coverage_shaping": (
                 reward_coverage_shaping
             ),
+            "reward_investigation_shaping": (
+                reward_investigation_shaping
+            ),
             "reward_communication_progress": (
                 reward_communication_progress
             ),
@@ -3800,6 +3945,9 @@ class FullGpuUAVBatchEnv:
             "reward_blocked_motion": (
                 reward_blocked_motion
             ),
+            "reward_apf_intervention": (
+                reward_apf_intervention
+            ),
             "reward_boundary": reward_boundary,
             "reward_expired_report": (
                 reward_expired_report
@@ -3808,6 +3956,9 @@ class FullGpuUAVBatchEnv:
                 reward_dropped_report
             ),
             "reward_step": reward_step,
+            "reward_inactive_horizon_makeup": (
+                reward_inactive_horizon_makeup
+            ),
             "reward_success_bonus": (
                 reward_success_bonus
             ),

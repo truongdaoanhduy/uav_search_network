@@ -5248,6 +5248,7 @@ def add_episode_diagnostic_metrics(payload, chunk):
         "apf_intervention_rate": "apf_intervention_rate",
         "apf_peer_intervention_rate": "apf_peer_intervention_rate",
         "apf_obstacle_intervention_rate": "apf_obstacle_intervention_rate",
+        "apf_boundary_intervention_rate": "apf_boundary_intervention_rate",
         "apf_emergency_rate": "apf_emergency_rate",
         "apf_correction_norm_mean_mps2": "apf_correction_norm_mean_mps2",
         "boundary_clip_rate": "boundary_clip_rate",
@@ -6097,7 +6098,10 @@ def _train_full_gpu_ddp_worker(
         "reward_energy",
         "reward_mission",
         "reward_coverage_shaping",
+        "reward_investigation_shaping",
         "reward_communication_progress",
+        "reward_apf_intervention",
+        "reward_inactive_horizon_makeup",
     )
     episode_components = {
         key: torch.zeros(
@@ -6119,6 +6123,7 @@ def _train_full_gpu_ddp_worker(
         "apf_active",
         "apf_peer_active",
         "apf_obstacle_active",
+        "apf_boundary_active",
         "apf_emergency",
         "apf_correction_norm_sum",
         "boundary",
@@ -6962,6 +6967,12 @@ def _train_full_gpu_ddp_worker(
                                 "apf_obstacle_intervention_rate": (
                                     diag[
                                         "apf_obstacle_active"
+                                    ]
+                                    / possible_agent_steps
+                                ),
+                                "apf_boundary_intervention_rate": (
+                                    diag[
+                                        "apf_boundary_active"
                                     ]
                                     / possible_agent_steps
                                 ),

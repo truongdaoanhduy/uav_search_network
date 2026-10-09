@@ -537,6 +537,94 @@ class UAVSearchEnv(gym.Env):
             / coverage.size
         )
 
+    def _investigation_potential(self):
+        """Belief-only readiness for descending to perform target confirmation.
+
+        The potential never reads ground-truth target positions. It becomes
+        positive only when an active UAV has high posterior belief inside its
+        local observation patch. It increases as the UAV approaches the
+        strongest local belief cell and descends toward ``fine_altitude``.
+        """
+        if self.belief_maps is None or self.uavs is None:
+            return 0.0
+
+        threshold = float(
+            CONFIG.get("reward_investigation_belief_threshold", 0.8)
+        )
+        confirmation = float(CONFIG["confirmation_threshold"])
+        if not float(CONFIG["belief_prior"]) < threshold < confirmation:
+            raise ValueError(
+                "reward_investigation_belief_threshold must lie between "
+                "belief_prior and confirmation_threshold"
+            )
+
+        patch_n = int(CONFIG["belief_patch_cells"])
+        radius = patch_n // 2
+        grid_n = int(self.belief_maps.shape[-1])
+        cell_size = float(CONFIG["grid_cell_m"])
+        altitude_span = max(
+            float(CONFIG["altitude_max"]) - float(CONFIG["fine_altitude"]),
+            1e-6,
+        )
+        total = 0.0
+        for uav_id, uav in enumerate(self.uavs):
+            if not uav.active:
+                continue
+            gx = int(np.floor(float(uav.position[0]) / cell_size))
+            gy = int(np.floor(float(uav.position[1]) / cell_size))
+            gx = int(np.clip(gx, 0, grid_n - 1))
+            gy = int(np.clip(gy, 0, grid_n - 1))
+            x0 = max(0, gx - radius)
+            x1 = min(grid_n, gx + radius + 1)
+            y0 = max(0, gy - radius)
+            y1 = min(grid_n, gy + radius + 1)
+            local_patch = self.belief_maps[uav_id, y0:y1, x0:x1]
+            peak_offset = np.unravel_index(
+                int(np.argmax(local_patch)),
+                local_patch.shape,
+            )
+            peak_gy = y0 + int(peak_offset[0])
+            peak_gx = x0 + int(peak_offset[1])
+            local_peak = float(local_patch[peak_offset])
+            evidence = float(
+                np.clip(
+                    (local_peak - threshold) / max(confirmation - threshold, 1e-6),
+                    0.0,
+                    1.0,
+                )
+            )
+            peak_xy = np.asarray(
+                [
+                    (peak_gx + 0.5) * cell_size,
+                    (peak_gy + 0.5) * cell_size,
+                ],
+                dtype=np.float64,
+            )
+            max_patch_distance = max(
+                np.sqrt(2.0) * (radius + 0.5) * cell_size,
+                1e-6,
+            )
+            proximity = float(
+                np.clip(
+                    1.0
+                    - np.linalg.norm(peak_xy - np.asarray(uav.position[:2], dtype=np.float64))
+                    / max_patch_distance,
+                    0.0,
+                    1.0,
+                )
+            )
+            descent = float(
+                np.clip(
+                    (float(CONFIG["altitude_max"]) - float(uav.position[2]))
+                    / altitude_span,
+                    0.0,
+                    1.0,
+                )
+            )
+            total += evidence * 0.5 * (proximity + descent)
+        return float(total / max(1, self.num_uavs))
+
+
     def _communication_progress_potential(self):
         """Fractional GCS-delivery progress averaged across mission targets."""
         progress = np.zeros(
@@ -979,6 +1067,9 @@ class UAVSearchEnv(gym.Env):
         )
         coverage_potential_before = (
             self._coverage_potential()
+        )
+        investigation_potential_before = (
+            self._investigation_potential()
         )
         communication_progress_before = (
             self._communication_progress_potential()
@@ -1485,6 +1576,17 @@ class UAVSearchEnv(gym.Env):
                 )
             )
         )
+        apf_intervention_count = int(
+            np.count_nonzero(
+                motion_result.get(
+                    "apf_active",
+                    np.zeros(
+                        self.num_uavs,
+                        dtype=bool,
+                    ),
+                )
+            )
+        )
         boundary_count = int(
             np.count_nonzero(
                 motion_result[
@@ -1530,6 +1632,9 @@ class UAVSearchEnv(gym.Env):
         communication_progress_after = (
             self._communication_progress_potential()
         )
+        investigation_potential_after = (
+            self._investigation_potential()
+        )
         shaping_next_coverage = (
             0.0
             if episode_will_end
@@ -1539,6 +1644,11 @@ class UAVSearchEnv(gym.Env):
             0.0
             if episode_will_end
             else communication_progress_after
+        )
+        shaping_next_investigation = (
+            0.0
+            if episode_will_end
+            else investigation_potential_after
         )
 
         information_shaping = float(
@@ -1568,6 +1678,16 @@ class UAVSearchEnv(gym.Env):
             * shaping_next_communication
             - communication_progress_before
         )
+        investigation_shaping = float(
+            CONFIG.get(
+                "reward_investigation_shaping",
+                0.0,
+            )
+        ) * (
+            shaping_gamma
+            * shaping_next_investigation
+            - investigation_potential_before
+        )
         safety_denominator = (
             float(max(1, self.num_uavs))
             if bool(
@@ -1579,6 +1699,13 @@ class UAVSearchEnv(gym.Env):
             else 1.0
         )
 
+        inactive_horizon_makeup = (
+            -float(CONFIG["reward_step_penalty"])
+            * max(0, int(CONFIG["max_steps"]) - int(next_step))
+            if all_inactive and not success
+            else 0.0
+        )
+
         reward_components = {
             "information_gain": (
                 information_shaping
@@ -1588,6 +1715,9 @@ class UAVSearchEnv(gym.Env):
             ),
             "communication_progress": (
                 communication_progress_shaping
+            ),
+            "investigation_shaping": (
+                investigation_shaping
             ),
             "confirmation": (
                 float(
@@ -1624,6 +1754,15 @@ class UAVSearchEnv(gym.Env):
                     ]
                 )
                 * blocked_motion_count
+                / safety_denominator
+            ),
+            "apf_intervention": (
+                -float(
+                    CONFIG[
+                        "reward_apf_intervention"
+                    ]
+                )
+                * apf_intervention_count
                 / safety_denominator
             ),
             "boundary": (
@@ -1674,6 +1813,9 @@ class UAVSearchEnv(gym.Env):
                         "reward_step_penalty"
                     ]
                 )
+            ),
+            "inactive_horizon_makeup": (
+                inactive_horizon_makeup
             ),
             "success_bonus": (
                 float(
@@ -1807,6 +1949,15 @@ class UAVSearchEnv(gym.Env):
             ),
             "information_shaping": (
                 information_shaping
+            ),
+            "investigation_potential_before": (
+                investigation_potential_before
+            ),
+            "investigation_potential_after": (
+                investigation_potential_after
+            ),
+            "investigation_shaping": (
+                investigation_shaping
             ),
             "newly_confirmed_target_ids": (
                 newly_confirmed

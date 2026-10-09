@@ -471,6 +471,149 @@ def _obstacle_soft_direction_torch(
     )
 
 
+
+def _boundary_repulsion_numpy(
+    positions,
+    nominal_velocities,
+    active,
+    *,
+    lower,
+    upper,
+    params,
+):
+    """Predictive APF correction for the six axis-aligned world boundaries."""
+    positions = np.asarray(positions, dtype=np.float64)
+    nominal_velocities = np.asarray(nominal_velocities, dtype=np.float64)
+    lower = np.asarray(lower, dtype=np.float64).reshape(3)
+    upper = np.asarray(upper, dtype=np.float64).reshape(3)
+    if np.any(~np.isfinite(lower)) or np.any(~np.isfinite(upper)):
+        raise ValueError("boundary limits must be finite")
+    if np.any(upper <= lower):
+        raise ValueError("boundary upper limits must exceed lower limits")
+
+    predicted = positions + nominal_velocities * params["lookahead_s"]
+    current = np.stack((positions - lower, upper - positions), axis=-1)
+    future = np.stack((predicted - lower, upper - predicted), axis=-1)
+    closing = np.stack(
+        (
+            np.maximum(0.0, -nominal_velocities),
+            np.maximum(0.0, nominal_velocities),
+        ),
+        axis=-1,
+    )
+    risk = np.minimum(current, future)
+    stopping = closing * closing / max(2.0 * params["max_accel"], 1e-12)
+    warning = params["braking_margin"] * stopping
+    reaction = stopping + closing * params["control_dt"]
+    emergency_pair = (
+        (current < reaction) | (future <= 0.0)
+    ) & active[:, None, None]
+    caution_pair = (
+        (closing > 1e-9)
+        & ~emergency_pair
+        & (risk <= warning)
+        & active[:, None, None]
+    )
+    strength = _risk_strength_numpy(
+        risk,
+        stopping,
+        warning,
+        params["soft_gain"],
+    ) * caution_pair.astype(np.float64)
+
+    direction = np.zeros((3, 2, 3), dtype=np.float64)
+    for axis in range(3):
+        direction[axis, 0, axis] = 1.0
+        direction[axis, 1, axis] = -1.0
+    soft = params["max_accel"] * np.sum(
+        strength[..., None] * direction[None, ...],
+        axis=(1, 2),
+    )
+    emergency_accel = params["max_accel"] * np.sum(
+        emergency_pair[..., None].astype(np.float64) * direction[None, ...],
+        axis=(1, 2),
+    )
+    emergency_accel = _normalize_numpy(
+        emergency_accel,
+        max_norm=params["max_accel"],
+    )
+    return {
+        "acceleration_mps2": soft,
+        "emergency_acceleration_mps2": emergency_accel,
+        "active": np.any(caution_pair | emergency_pair, axis=(1, 2)),
+        "emergency": np.any(emergency_pair, axis=(1, 2)),
+        "min_clearance_m": np.min(risk, axis=(1, 2)),
+    }
+
+
+def _boundary_repulsion_torch(
+    positions,
+    nominal_velocities,
+    active,
+    *,
+    lower,
+    upper,
+    params,
+):
+    """Torch equivalent of :func:`_boundary_repulsion_numpy`."""
+    lower = torch.as_tensor(lower, dtype=positions.dtype, device=positions.device).reshape(3)
+    upper = torch.as_tensor(upper, dtype=positions.dtype, device=positions.device).reshape(3)
+    if bool((upper <= lower).any()):
+        raise ValueError("boundary upper limits must exceed lower limits")
+
+    predicted = positions + nominal_velocities * params["lookahead_s"]
+    current = torch.stack((positions - lower, upper - positions), dim=-1)
+    future = torch.stack((predicted - lower, upper - predicted), dim=-1)
+    closing = torch.stack(
+        (
+            (-nominal_velocities).clamp_min(0.0),
+            nominal_velocities.clamp_min(0.0),
+        ),
+        dim=-1,
+    )
+    risk = torch.minimum(current, future)
+    stopping = closing.square() / max(2.0 * params["max_accel"], 1e-12)
+    warning = params["braking_margin"] * stopping
+    reaction = stopping + closing * params["control_dt"]
+    mask = active.unsqueeze(-1).unsqueeze(-1)
+    emergency_pair = ((current < reaction) | (future <= 0.0)) & mask
+    caution_pair = (
+        (closing > 1e-9)
+        & ~emergency_pair
+        & (risk <= warning)
+        & mask
+    )
+    strength = _risk_strength_torch(
+        risk,
+        stopping,
+        warning,
+        params["soft_gain"],
+    ) * caution_pair.to(positions.dtype)
+
+    direction = torch.zeros((3, 2, 3), dtype=positions.dtype, device=positions.device)
+    axes = torch.arange(3, device=positions.device)
+    direction[axes, 0, axes] = 1.0
+    direction[axes, 1, axes] = -1.0
+    soft = params["max_accel"] * (
+        strength.unsqueeze(-1) * direction.view(1, 1, 3, 2, 3)
+    ).sum(dim=(2, 3))
+    emergency_accel = params["max_accel"] * (
+        emergency_pair.to(positions.dtype).unsqueeze(-1)
+        * direction.view(1, 1, 3, 2, 3)
+    ).sum(dim=(2, 3))
+    emergency_accel = _normalize_torch(
+        emergency_accel,
+        max_norm=params["max_accel"],
+    )
+    return {
+        "acceleration_mps2": soft,
+        "emergency_acceleration_mps2": emergency_accel,
+        "active": (caution_pair | emergency_pair).any(dim=(2, 3)),
+        "emergency": emergency_pair.any(dim=(2, 3)),
+        "min_clearance_m": risk.amin(dim=(2, 3)),
+    }
+
+
 def apf_repulsion_numpy(
     positions,
     velocities,
@@ -488,6 +631,8 @@ def apf_repulsion_numpy(
     braking_margin,
     control_dt=1.0,
     enabled=True,
+    boundary_lower=None,
+    boundary_upper=None,
 ):
     """Risk-aware predictive APF using the nominal MARL motion."""
     params = _validate_parameters(
@@ -775,12 +920,32 @@ def apf_repulsion_numpy(
             axis=1,
         )
 
-    soft_accel = peer_accel + obstacle_accel
+    boundary_accel = np.zeros_like(positions)
+    boundary_emergency_accel = np.zeros_like(positions)
+    boundary_active = np.zeros(count, dtype=bool)
+    boundary_emergency = np.zeros(count, dtype=bool)
+    boundary_min_clearance = np.full(count, np.inf, dtype=np.float64)
+    if params["enabled"] and boundary_lower is not None and boundary_upper is not None:
+        boundary = _boundary_repulsion_numpy(
+            positions,
+            nominal_velocities,
+            active,
+            lower=boundary_lower,
+            upper=boundary_upper,
+            params=params,
+        )
+        boundary_accel = boundary["acceleration_mps2"]
+        boundary_emergency_accel = boundary["emergency_acceleration_mps2"]
+        boundary_active = boundary["active"]
+        boundary_emergency = boundary["emergency"]
+        boundary_min_clearance = boundary["min_clearance_m"]
+
+    soft_accel = peer_accel + obstacle_accel + boundary_accel
     emergency_accel = _normalize_numpy(
-        peer_emergency_accel + obstacle_emergency_accel,
+        peer_emergency_accel + obstacle_emergency_accel + boundary_emergency_accel,
         max_norm=params["max_accel"],
     )
-    emergency = peer_emergency | obstacle_emergency
+    emergency = peer_emergency | obstacle_emergency | boundary_emergency
 
     soft_accel[~active] = 0.0
     emergency_accel[~active] = 0.0
@@ -791,14 +956,18 @@ def apf_repulsion_numpy(
         "emergency_acceleration_mps2": emergency_accel,
         "peer_acceleration_mps2": peer_accel,
         "obstacle_acceleration_mps2": obstacle_accel,
-        "active": peer_active | obstacle_active,
+        "boundary_acceleration_mps2": boundary_accel,
+        "active": peer_active | obstacle_active | boundary_active,
         "peer_active": peer_active,
         "obstacle_active": obstacle_active,
+        "boundary_active": boundary_active,
         "emergency": emergency,
         "peer_emergency": peer_emergency,
         "obstacle_emergency": obstacle_emergency,
+        "boundary_emergency": boundary_emergency,
         "min_peer_clearance_m": peer_min_clearance,
         "min_obstacle_clearance_m": obstacle_min_clearance,
+        "min_boundary_clearance_m": boundary_min_clearance,
     }
 
 
@@ -819,6 +988,8 @@ def apf_repulsion_torch(
     braking_margin,
     control_dt=1.0,
     enabled=True,
+    boundary_lower=None,
+    boundary_upper=None,
 ):
     """Batched torch equivalent of apf_repulsion_numpy."""
     params = _validate_parameters(
@@ -1132,12 +1303,37 @@ def apf_repulsion_torch(
         ).any(dim=2)
         obstacle_emergency = emergency_pair.any(dim=2)
 
-    soft_accel = peer_accel + obstacle_accel
+    boundary_accel = torch.zeros_like(positions)
+    boundary_emergency_accel = torch.zeros_like(positions)
+    boundary_active = torch.zeros_like(active)
+    boundary_emergency = torch.zeros_like(active)
+    boundary_min_clearance = torch.full(
+        active.shape,
+        float("inf"),
+        dtype=positions.dtype,
+        device=positions.device,
+    )
+    if params["enabled"] and boundary_lower is not None and boundary_upper is not None:
+        boundary = _boundary_repulsion_torch(
+            positions,
+            nominal_velocities,
+            active,
+            lower=boundary_lower,
+            upper=boundary_upper,
+            params=params,
+        )
+        boundary_accel = boundary["acceleration_mps2"]
+        boundary_emergency_accel = boundary["emergency_acceleration_mps2"]
+        boundary_active = boundary["active"]
+        boundary_emergency = boundary["emergency"]
+        boundary_min_clearance = boundary["min_clearance_m"]
+
+    soft_accel = peer_accel + obstacle_accel + boundary_accel
     emergency_accel = _normalize_torch(
-        peer_emergency_accel + obstacle_emergency_accel,
+        peer_emergency_accel + obstacle_emergency_accel + boundary_emergency_accel,
         max_norm=params["max_accel"],
     )
-    emergency = peer_emergency | obstacle_emergency
+    emergency = peer_emergency | obstacle_emergency | boundary_emergency
 
     soft_accel = torch.where(
         active.unsqueeze(-1),
@@ -1156,12 +1352,16 @@ def apf_repulsion_torch(
         "emergency_acceleration_mps2": emergency_accel,
         "peer_acceleration_mps2": peer_accel,
         "obstacle_acceleration_mps2": obstacle_accel,
-        "active": peer_active | obstacle_active,
+        "boundary_acceleration_mps2": boundary_accel,
+        "active": peer_active | obstacle_active | boundary_active,
         "peer_active": peer_active,
         "obstacle_active": obstacle_active,
+        "boundary_active": boundary_active,
         "emergency": emergency,
         "peer_emergency": peer_emergency,
         "obstacle_emergency": obstacle_emergency,
+        "boundary_emergency": boundary_emergency,
         "min_peer_clearance_m": peer_min_clearance,
         "min_obstacle_clearance_m": obstacle_min_clearance,
+        "min_boundary_clearance_m": boundary_min_clearance,
     }

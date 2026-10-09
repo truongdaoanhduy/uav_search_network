@@ -216,6 +216,19 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
     if max_steps < 1:
         raise ValueError("task.scenario.max_steps must be >= 1")
 
+    investigation_threshold = float(
+        _get(plain, "reward.investigation_belief_threshold")
+    )
+    belief_prior = float(_get(plain, "task.sensing.belief_prior"))
+    confirmation_threshold = float(
+        _get(plain, "task.sensing.confirmation_threshold")
+    )
+    if not belief_prior < investigation_threshold < confirmation_threshold:
+        raise ValueError(
+            "reward.investigation_belief_threshold must lie between "
+            "task.sensing.belief_prior and task.sensing.confirmation_threshold"
+        )
+
     wandb_enabled = bool(_get(plain, "experiment.wandb.enabled"))
     wandb_mode = str(
         _get(plain, "experiment.wandb.mode")

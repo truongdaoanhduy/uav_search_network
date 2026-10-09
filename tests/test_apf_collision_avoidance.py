@@ -529,3 +529,95 @@ def test_tensor_obstacle_fallback_preserves_peer_separation(monkeypatch):
         assert not result["blocked"].any()
     finally:
         env.close()
+
+
+def test_cpu_apf_repels_from_map_boundary_before_clipping(monkeypatch):
+    _set_apf_config(monkeypatch)
+    uav = UAV(
+        id=0,
+        position=np.array([10.0, 1500.0, 50.0], dtype=np.float64),
+        velocity=np.array([-10.0, 0.0, 0.0], dtype=np.float64),
+        battery_j=float(CONFIG["battery_j"]),
+        active=True,
+    )
+
+    result = apply_swarm_motion(
+        [uav],
+        np.zeros((1, 3), dtype=np.float64),
+        [],
+        dt=1.0,
+    )
+
+    assert bool(result["apf_boundary_active"][0])
+    assert bool(result["apf_boundary_emergency"][0])
+    assert not bool(result["horizontal_boundary_clipped"][0])
+    assert uav.position[0] > 0.0
+    assert uav.velocity[0] > -10.0
+
+
+def test_tensor_apf_repels_from_map_boundary_before_clipping(monkeypatch):
+    _set_apf_config(monkeypatch)
+    env = FullGpuUAVBatchEnv(1, device="cpu", seed=44, strict_cuda=False)
+    try:
+        env.active.zero_()
+        env.active[0, 0] = True
+        env.positions[0, 0] = torch.tensor([10.0, 1500.0, 50.0])
+        env.velocities.zero_()
+        env.velocities[0, 0] = torch.tensor([-10.0, 0.0, 0.0])
+        env.obstacle_xy.fill_(2500.0)
+        env.obstacle_radius.fill_(10.0)
+        env.obstacle_height.fill_(10.0)
+
+        result = env._motion(torch.zeros((1, env.num_uavs, 3)))
+
+        assert bool(result["apf_boundary_active"][0, 0])
+        assert bool(result["apf_boundary_emergency"][0, 0])
+        assert not bool(result["horizontal_boundary"][0, 0])
+        assert float(env.positions[0, 0, 0]) > 0.0
+        assert float(env.velocities[0, 0, 0]) > -10.0
+    finally:
+        env.close()
+
+
+def test_cpu_apf_pushes_stationary_uav_off_ground_boundary(monkeypatch):
+    _set_apf_config(monkeypatch)
+    uav = UAV(
+        id=0,
+        position=np.array([1500.0, 1500.0, 0.0], dtype=np.float64),
+        velocity=np.zeros(3, dtype=np.float64),
+        battery_j=float(CONFIG["battery_j"]),
+        active=True,
+    )
+
+    result = apply_swarm_motion(
+        [uav],
+        np.zeros((1, 3), dtype=np.float64),
+        [],
+        dt=1.0,
+    )
+
+    assert bool(result["apf_boundary_active"][0])
+    assert uav.position[2] > 0.0
+
+
+def test_gpu_step_metrics_expose_boundary_apf_activity(monkeypatch):
+    _set_apf_config(monkeypatch)
+    env = FullGpuUAVBatchEnv(1, device="cpu", seed=44, strict_cuda=False)
+    try:
+        env.active.zero_()
+        env.active[0, 0] = True
+        env.positions[0, 0] = torch.tensor([10.0, 1500.0, 50.0])
+        env.velocities.zero_()
+        env.velocities[0, 0] = torch.tensor([-10.0, 0.0, 0.0])
+        env.obstacle_xy.fill_(2500.0)
+        env.obstacle_radius.fill_(10.0)
+        env.obstacle_height.fill_(10.0)
+        continuous = torch.zeros((1, env.num_uavs, env.continuous_dim))
+        destination = torch.zeros((1, env.num_uavs), dtype=torch.long)
+
+        *_, metrics = env.step(continuous, destination)
+
+        assert "apf_boundary_active" in metrics
+        assert float(metrics["apf_boundary_active"][0]) > 0.0
+    finally:
+        env.close()

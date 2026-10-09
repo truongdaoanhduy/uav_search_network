@@ -10,11 +10,16 @@ all_delivered_bonus: 500.0
 # Potential-based shaping, all using gamma*Phi(s') - Phi(s).
 info_gain: 10.0
 coverage_shaping: 5.0
+investigation_shaping: 10.0
+investigation_belief_threshold: 0.8
 communication_progress_shaping: 5.0
 shaping_gamma: 0.99
 
 # Normalized team costs.
 blocked: 0.2
+# Penalize raw policy commands that require the APF safety shield to intervene.
+# The legacy blocked flag is intentionally always false under APF.
+apf_intervention: 0.2
 boundary: 0.1
 normalize_safety_by_uavs: true
 energy_per_kj: 0.01

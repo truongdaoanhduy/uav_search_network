@@ -1,10 +1,13 @@
 name: paper_v1
 info_gain: 10.0
 shaping_gamma: 0.99
+investigation_shaping: 0.0
+investigation_belief_threshold: 0.8
 confirmation: 20.0
 delivery: 50.0
 false_confirmation: 5.0
 blocked: 1.0
+apf_intervention: 1.0
 boundary: 0.05
 expired_report: 10.0
 dropped_report: 10.0

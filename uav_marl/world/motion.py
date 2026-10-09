@@ -393,6 +393,12 @@ def apply_swarm_motion(
         ),
         control_dt=dt,
         enabled=bool(CONFIG.get("apf_enabled", True)),
+        boundary_lower=[0.0, 0.0, float(CONFIG["altitude_min"])],
+        boundary_upper=[
+            float(CONFIG["map_size"]),
+            float(CONFIG["map_size"]),
+            float(CONFIG["altitude_max"]),
+        ],
     )
 
     soft_desired_acceleration = (
@@ -484,6 +490,12 @@ def apply_swarm_motion(
                 braking_margin=float(CONFIG.get("apf_braking_margin", 1.5)),
                 control_dt=dt,
                 enabled=True,
+                boundary_lower=[0.0, 0.0, float(CONFIG["altitude_min"])],
+                boundary_upper=[
+                    float(CONFIG["map_size"]),
+                    float(CONFIG["map_size"]),
+                    float(CONFIG["altitude_max"]),
+                ],
             )
             refined_desired = np.where(
                 refined_apf["emergency"][:, None],
@@ -597,6 +609,10 @@ def apply_swarm_motion(
             apf["obstacle_active"],
             dtype=bool,
         ),
+        "apf_boundary_active": np.asarray(
+            apf["boundary_active"],
+            dtype=bool,
+        ),
         "apf_emergency": np.asarray(
             apf["emergency"],
             dtype=bool,
@@ -607,6 +623,10 @@ def apply_swarm_motion(
         ),
         "apf_obstacle_emergency": np.asarray(
             apf["obstacle_emergency"],
+            dtype=bool,
+        ),
+        "apf_boundary_emergency": np.asarray(
+            apf["boundary_emergency"],
             dtype=bool,
         ),
         "apf_acceleration_mps2": np.asarray(
@@ -621,12 +641,20 @@ def apply_swarm_motion(
             apf["obstacle_acceleration_mps2"],
             dtype=np.float64,
         ),
+        "apf_boundary_acceleration_mps2": np.asarray(
+            apf["boundary_acceleration_mps2"],
+            dtype=np.float64,
+        ),
         "apf_min_peer_clearance_m": np.asarray(
             apf["min_peer_clearance_m"],
             dtype=np.float64,
         ),
         "apf_min_obstacle_clearance_m": np.asarray(
             apf["min_obstacle_clearance_m"],
+            dtype=np.float64,
+        ),
+        "apf_min_boundary_clearance_m": np.asarray(
+            apf["min_boundary_clearance_m"],
             dtype=np.float64,
         ),
         "boundary_clipped": boundary_clipped,

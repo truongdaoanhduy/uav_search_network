@@ -3063,6 +3063,7 @@ def new_episode_diagnostics(env=None):
         "apf_interventions": 0,
         "apf_peer_interventions": 0,
         "apf_obstacle_interventions": 0,
+        "apf_boundary_interventions": 0,
         "boundary_clips": 0,
         "horizontal_boundary_clips": 0,
         "altitude_clips": 0,
@@ -3429,6 +3430,19 @@ def update_episode_diagnostics(
         np.count_nonzero(
             motion.get(
                 "apf_obstacle_active",
+                np.zeros_like(
+                    motion["blocked"],
+                    dtype=bool,
+                ),
+            )
+        )
+    )
+    diagnostics[
+        "apf_boundary_interventions"
+    ] += int(
+        np.count_nonzero(
+            motion.get(
+                "apf_boundary_active",
                 np.zeros_like(
                     motion["blocked"],
                     dtype=bool,
@@ -4025,6 +4039,10 @@ def finalize_episode_diagnostics(
             0.0,
         )
         + reward_components.get(
+            "investigation_shaping",
+            0.0,
+        )
+        + reward_components.get(
             "confirmation",
             0.0,
         )
@@ -4057,6 +4075,10 @@ def finalize_episode_diagnostics(
             0.0,
         )
         + reward_components.get(
+            "apf_intervention",
+            0.0,
+        )
+        + reward_components.get(
             "boundary",
             0.0,
         )
@@ -4068,6 +4090,10 @@ def finalize_episode_diagnostics(
     reward_mission = (
         reward_components.get(
             "step",
+            0.0,
+        )
+        + reward_components.get(
+            "inactive_horizon_makeup",
             0.0,
         )
         + reward_components.get(
@@ -4389,6 +4415,12 @@ def finalize_episode_diagnostics(
         "apf_obstacle_intervention_rate": float(
             diagnostics[
                 "apf_obstacle_interventions"
+            ]
+            / possible_agent_steps
+        ),
+        "apf_boundary_intervention_rate": float(
+            diagnostics[
+                "apf_boundary_interventions"
             ]
             / possible_agent_steps
         ),
@@ -5219,11 +5251,16 @@ def summarize_evaluation_results(
         "reward_energy",
         "reward_mission",
         "reward_component_information_gain",
+        "reward_component_coverage_shaping",
+        "reward_component_investigation_shaping",
+        "reward_component_communication_progress",
         "reward_component_confirmation",
         "reward_component_delivery",
         "reward_component_false_confirmation",
         "reward_component_blocked_motion",
+        "reward_component_apf_intervention",
         "reward_component_boundary",
+        "reward_component_inactive_horizon_makeup",
         "reward_component_expired_report",
         "reward_component_dropped_report",
         "reward_component_energy",
@@ -5260,6 +5297,7 @@ def summarize_evaluation_results(
         "apf_intervention_rate",
         "apf_peer_intervention_rate",
         "apf_obstacle_intervention_rate",
+        "apf_boundary_intervention_rate",
         "boundary_clip_rate",
         "horizontal_boundary_clip_rate",
         "altitude_clip_rate",

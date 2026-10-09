@@ -322,3 +322,13 @@ def test_wandb_identity_exposes_full_model_variant():
     assert identity["config"]["weight_init"] == "kaiming"
     assert identity["config"]["layer_norm"] is True
     assert identity["config"]["hidden_dims"] == [512, 256]
+
+
+def test_investigation_belief_threshold_is_between_prior_and_confirmation():
+    cfg = compose_cfg("reward.investigation_belief_threshold=0.4")
+    with pytest.raises(ValueError, match="investigation_belief_threshold"):
+        validate_config(cfg)
+
+    cfg = compose_cfg("reward.investigation_belief_threshold=0.995")
+    with pytest.raises(ValueError, match="investigation_belief_threshold"):
+        validate_config(cfg)
