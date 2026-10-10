@@ -280,6 +280,7 @@ def _gpu_script(
     seed: int,
     overrides: list[str],
     cpu_ref: str,
+    config_name: str = "config",
     wandb_credential_dataset: str | None = None,
 ) -> str:
     override_literals = json.dumps(list(overrides))
@@ -359,6 +360,8 @@ def _gpu_script(
         command = [
             sys.executable,
             str(REPO / "train.py"),
+            "--config-name",
+            {config_name!r},
             "algorithm={algorithm}",
             "runtime={runtime}",
             "experiment={experiment}",
@@ -550,6 +553,7 @@ def build_kernels(
     cpu_kernel_slug: str,
     machine_shape: str,
     overrides: list[str],
+    config_name: str = "config",
     gpu_dataset_sources: list[str] | None = None,
     cpu_log_wandb: bool = False,
     cpu_dataset_sources: list[str] | None = None,
@@ -580,6 +584,7 @@ def build_kernels(
             seed=seed,
             overrides=overrides,
             cpu_ref=cpu_ref,
+            config_name=config_name,
             wandb_credential_dataset=(
                 gpu_dataset_sources[0] if gpu_dataset_sources else None
             ),
@@ -718,6 +723,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--account", type=str, default=None)
     parser.add_argument("--username", type=str, default=None)
     parser.add_argument("--algorithm", choices=("masac", "matd3"), default="masac")
+    parser.add_argument("--config-name", default="config")
     parser.add_argument("--runtime", default="kaggle_2xt4")
     parser.add_argument("--experiment", default="paper_50k")
     parser.add_argument("--seed", type=int, default=44)
@@ -839,6 +845,7 @@ def main() -> int:
         cpu_kernel_slug=cpu_slug,
         machine_shape=args.machine_shape,
         overrides=list(args.overrides),
+        config_name=args.config_name,
         gpu_dataset_sources=(
             [str(args.gpu_credential_dataset)]
             if args.gpu_credential_dataset

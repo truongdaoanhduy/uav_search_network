@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import warnings
 from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any
@@ -256,6 +257,23 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError(
             "experiment.visualization.session must be separate_cpu or same_session"
         )
+
+    replay_span = float(_get(plain, "algorithm.replay_capacity")) / num_envs
+    warmup_span = float(_get(plain, "algorithm.learning_starts")) / num_envs
+    gamma = float(_get(plain, "algorithm.gamma"))
+    horizon = min(
+        float(_get(plain, "task.scenario.max_steps")),
+        1.0 / max(1e-6, 1.0 - gamma),
+    )
+    temporal_message = (
+        f"off-policy temporal coverage: replay retains {replay_span:.1f} vector steps; "
+        f"warmup is {warmup_span:.1f}; require at least {horizon:.1f} for both. "
+        "Reduce num_envs or increase replay/warmup; for MASAC use --config-name corner_recovery."
+    )
+    if replay_span < horizon or warmup_span < horizon:
+        if execution_mode == "gpu":
+            raise ValueError(temporal_message)
+        warnings.warn(temporal_message, RuntimeWarning, stacklevel=2)
 
     return plain
 

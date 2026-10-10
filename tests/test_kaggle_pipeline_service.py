@@ -196,3 +196,29 @@ def test_build_systemd_command_propagates_current_path(monkeypatch):
         pipeline_args=["--algorithm", "masac"],
     )
     assert "--setenv=PATH=/opt/custom/bin:/usr/bin" in command
+
+
+
+def test_gpu_kernel_can_select_corner_recovery_config():
+    from scripts.kaggle_pipeline import build_kernels
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        gpu_dir, _cpu_dir, _gpu_ref, _cpu_ref = build_kernels(
+            Path(tmp),
+            username="demo-user",
+            commit="f" * 40,
+            algorithm="masac",
+            runtime="kaggle_2xt4",
+            experiment="paper_20k",
+            seed=44,
+            gpu_kernel_slug="gpu-corner-recovery",
+            cpu_kernel_slug="cpu-corner-recovery",
+            machine_shape="NvidiaTeslaT4",
+            overrides=[],
+            config_name="corner_recovery",
+        )
+        gpu_script = next(gpu_dir.glob("*.py")).read_text()
+
+    assert '"--config-name",' in gpu_script
+    assert "corner_recovery" in gpu_script

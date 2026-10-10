@@ -4964,10 +4964,9 @@ def _ddp_update_masac(
     _allreduce_parameter_grad(trainer.log_alpha_continuous)
     trainer.alpha_continuous_optimizer.step()
 
-    trainer.alpha_discrete_optimizer.zero_grad(set_to_none=True)
-    alpha_discrete_loss.backward()
-    _allreduce_parameter_grad(trainer.log_alpha_discrete)
-    trainer.alpha_discrete_optimizer.step()
+    trainer._update_discrete_temperature(
+        alpha_discrete_loss, valid_counts, distributed=True,
+    )
 
     trainer._soft_update_targets()
     trainer.update_count += 1
@@ -4995,6 +4994,10 @@ def _ddp_update_masac(
         "discrete_entropy": float(
             discrete_entropy.mean().cpu()
         ),
+        "discrete_target_entropy": float(discrete_target.mean().detach().cpu()),
+        "discrete_entropy_error": float((discrete_entropy - discrete_target).mean().detach().cpu()),
+        "discrete_choice_fraction": float((valid_counts > 1).float().mean().detach().cpu()),
+        "discrete_entropy_bonus": float((trainer.alpha_discrete.detach() * discrete_entropy).mean().cpu()),
         "target_q_mean": float(
             critic_target.mean().detach().cpu()
         ),

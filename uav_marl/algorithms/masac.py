@@ -1694,6 +1694,22 @@ class HybridMASAC:
                         * source_parameter
                     )
 
+    def _update_discrete_temperature(self, loss, valid_counts, *, distributed=False):
+        """Do not advance Adam when the batch contains no communication choice."""
+        has_choice = (valid_counts > 1).any().to(torch.int32)
+        if distributed:
+            import torch.distributed as dist
+            # Every rank must take the same branch, including an all-silent rank.
+            dist.all_reduce(has_choice, op=dist.ReduceOp.MAX)
+        self.alpha_discrete_optimizer.zero_grad(set_to_none=True)
+        if not bool(has_choice.item()):
+            return
+        loss.backward()
+        if distributed:
+            dist.all_reduce(self.log_alpha_discrete.grad, op=dist.ReduceOp.SUM)
+            self.log_alpha_discrete.grad.div_(dist.get_world_size())
+        self.alpha_discrete_optimizer.step()
+
     def update(
         self,
         replay_buffer,
@@ -2014,11 +2030,7 @@ class HybridMASAC:
         alpha_continuous_loss.backward()
         self.alpha_continuous_optimizer.step()
 
-        self.alpha_discrete_optimizer.zero_grad(
-            set_to_none=True
-        )
-        alpha_discrete_loss.backward()
-        self.alpha_discrete_optimizer.step()
+        self._update_discrete_temperature(alpha_discrete_loss, valid_counts)
 
         self._soft_update_targets()
 
@@ -2064,6 +2076,10 @@ class HybridMASAC:
                 .mean()
                 .cpu()
             ),
+            "discrete_target_entropy": float(discrete_target.mean().detach().cpu()),
+            "discrete_entropy_error": float((discrete_entropy - discrete_target).mean().detach().cpu()),
+            "discrete_choice_fraction": float((valid_counts > 1).float().mean().detach().cpu()),
+            "discrete_entropy_bonus": float((self.alpha_discrete.detach() * discrete_entropy).mean().cpu()),
             "target_q_mean": float(
                 critic_target
                 .mean()
@@ -4587,6 +4603,10 @@ def filter_training_metrics_for_wandb(
             "alpha_discrete",
             "continuous_entropy",
             "discrete_entropy",
+            "discrete_target_entropy",
+            "discrete_entropy_error",
+            "discrete_choice_fraction",
+            "discrete_entropy_bonus",
         }
     elif normalized == "matd3":
         keep = {

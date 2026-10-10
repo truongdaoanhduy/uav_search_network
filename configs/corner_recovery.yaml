@@ -1,0 +1,18 @@
+# Recovery profile for the corner-collapse run 0b62f069.
+# Keep the physical task, reward, and architecture unchanged; only repair
+# off-policy temporal coverage while retaining enough GPU parallelism.
+# 327680 / 3072 = 106.7 vector steps of FIFO history.
+# 307200 / 3072 = 100 fully-random warmup vector steps.
+# Replay is sharded across two GPUs (~6.3 GiB per rank for the current schema),
+# so a short Kaggle GPU smoke must pass before launching the 20k run.
+defaults:
+  - config
+  - _self_
+
+runtime:
+  num_envs: 3072
+algorithm:
+  replay_capacity: 327680
+  learning_starts: 307200
+experiment:
+  name: corner_recovery_20k

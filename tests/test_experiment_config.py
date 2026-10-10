@@ -83,6 +83,9 @@ def test_legacy_bridge_maps_selected_profile():
         "runtime=vast_1gpu",
         "algorithm=matd3",
         "algorithm.actor_lr=0.0001",
+        "runtime.num_envs=2048",
+        "algorithm.replay_capacity=204800",
+        "algorithm.learning_starts=204800",
     )
     legacy = dict(BASE_CONFIG)
     apply_to_legacy_config(legacy, cfg)
@@ -110,6 +113,9 @@ def test_runner_hides_transition_ceiling_from_user_api(monkeypatch, tmp_path):
         "runtime=vast_1gpu",
         "algorithm=masac",
         "experiment.total_episodes=123",
+        "runtime.num_envs=2048",
+        "algorithm.replay_capacity=204800",
+        "algorithm.learning_starts=204800",
     )
     captured = {}
     checkpoint = tmp_path / "fake.pt"
@@ -209,7 +215,12 @@ def test_single_gpu_full_flow_rejects_unsupported_runtime_optimizer_switches():
 
 
 def test_risk_aware_apf_config_is_minimal_and_maps_to_legacy_bridge():
-    cfg = compose_cfg("algorithm=masac")
+    cfg = compose_cfg(
+        "algorithm=masac",
+        "runtime.num_envs=3072",
+        "algorithm.replay_capacity=327680",
+        "algorithm.learning_starts=307200",
+    )
 
     assert cfg.task.scenario.map_size == 3000
     assert cfg.task.scenario.num_targets == 50
@@ -252,7 +263,13 @@ def test_paper_20k_persists_periodic_checkpoints_for_cloud_recovery():
 
 
 def test_kaggle_profile_preserves_masac_entropy_stability_setting():
-    cfg = compose_cfg("runtime=kaggle_2xt4", "algorithm=masac")
+    cfg = compose_cfg(
+        "runtime=kaggle_2xt4",
+        "algorithm=masac",
+        "runtime.num_envs=3072",
+        "algorithm.replay_capacity=327680",
+        "algorithm.learning_starts=307200",
+    )
     legacy = dict(BASE_CONFIG)
     apply_to_legacy_config(legacy, cfg)
     assert legacy["masac_discrete_target_entropy_ratio"] == pytest.approx(
@@ -284,7 +301,13 @@ def test_ablation_architecture_variants_are_explicit_and_relu_free(
 
 
 def test_architecture_profile_maps_into_legacy_runtime_config():
-    cfg = compose_cfg("architecture=prelu_kaiming_ln", "algorithm=masac")
+    cfg = compose_cfg(
+        "architecture=prelu_kaiming_ln",
+        "algorithm=masac",
+        "runtime.num_envs=3072",
+        "algorithm.replay_capacity=327680",
+        "algorithm.learning_starts=307200",
+    )
     legacy = dict(BASE_CONFIG)
     apply_to_legacy_config(legacy, cfg)
     assert legacy["model_architecture_name"] == "prelu_kaiming_ln"
