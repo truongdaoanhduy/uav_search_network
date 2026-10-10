@@ -5808,6 +5808,17 @@ def plot_wandb_paper_metric(
     )
 
 
+def _prime_cuda_linear_algebra(device):
+    """Create the CUDA BLAS handle before replay storage consumes VRAM."""
+    device = torch.device(device)
+    if device.type != "cuda":
+        return
+    probe = torch.ones((1, 1), device=device, dtype=torch.float32)
+    result = torch.mm(probe, probe)
+    torch.cuda.synchronize(device)
+    del result, probe
+
+
 # --- frozen notebook cell 273 ---
 def _train_full_gpu_ddp_worker(
     repo,
@@ -5946,6 +5957,8 @@ def _train_full_gpu_ddp_worker(
     # Rank-specific data RNG after synchronized model initialization.
     random.seed(int(seed) + rank * 97_409)
     torch.cuda.manual_seed(int(seed) + rank * 97_409)
+
+    _prime_cuda_linear_algebra(device)
 
     global_capacity = min(
         max(int(CONFIG[f"{algorithm}_replay_capacity"]), 4096),

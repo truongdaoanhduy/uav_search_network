@@ -504,3 +504,10 @@ def test_cpu_watcher_fetches_gpu_output_without_kernel_source(tmp_path):
     pipeline_source = (ROOT / "scripts" / "kaggle_pipeline.py").read_text()
     assert "STEP 1B/4: launch detached CPU watcher kernel" in pipeline_source
     assert "reuse_existing=True" in pipeline_source
+
+
+def test_ddp_primes_cuda_linear_algebra_before_gpu_replay_allocation():
+    source = inspect.getsource(_train_full_gpu_ddp_worker)
+    prime = source.index("_prime_cuda_linear_algebra(device)")
+    replay = source.index("replay = make_project_gpu_replay_buffer(")
+    assert prime < replay
