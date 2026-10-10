@@ -11,6 +11,7 @@ compile_mode: null
 cuda_graph_policy_actions: false
 fused_adam: false
 offpolicy:
+  replay_storage_dtype: float32
   auto_scale_gradient_steps: true
   min_replay_sample_ratio: 1.0
 vector:

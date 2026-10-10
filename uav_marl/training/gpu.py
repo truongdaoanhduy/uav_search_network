@@ -176,6 +176,17 @@ def _trainer(
     return trainer
 
 
+def resolve_gpu_replay_storage_dtype(value):
+    key = str(value).strip().lower()
+    mapping = {
+        "float16": torch.float16,
+        "float32": torch.float32,
+    }
+    if key not in mapping:
+        raise ValueError("GPU replay storage dtype must be float16 or float32")
+    return mapping[key]
+
+
 # --- frozen notebook cell 230 ---
 def make_project_gpu_replay_buffer(
     trainer,
@@ -189,6 +200,7 @@ def make_project_gpu_replay_buffer(
     device,
     seed,
     strict_cuda=True,
+    storage_dtype=torch.float32,
 ):
     project_ns = getattr(
         trainer,
@@ -219,6 +231,7 @@ def make_project_gpu_replay_buffer(
         device=device,
         seed=seed,
         strict_cuda=strict_cuda,
+        storage_dtype=storage_dtype,
     )
 
 
@@ -1764,6 +1777,9 @@ def benchmark_uavnetsim_full_flow(
         device=device,
         seed=int(seed),
         strict_cuda=bool(strict_cuda),
+        storage_dtype=resolve_gpu_replay_storage_dtype(
+            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
+        ),
     )
     copy_cpu_reference_state_to_gpu(cpu_env, gpu_env)
     bridge = GpuUavNetSimBridge(
@@ -3722,6 +3738,9 @@ def train_full_gpu(
         device=device,
         seed=seed + 123,
         strict_cuda=bool(strict_cuda),
+        storage_dtype=resolve_gpu_replay_storage_dtype(
+            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
+        ),
     )
     batch_size = int(
         CONFIG[f"{algorithm}_batch_size"]
@@ -5979,6 +5998,9 @@ def _train_full_gpu_ddp_worker(
         device=str(device),
         seed=int(seed) + 123 + rank * 10_007,
         strict_cuda=True,
+        storage_dtype=resolve_gpu_replay_storage_dtype(
+            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
+        ),
     )
 
     global_batch_size = int(
@@ -6071,6 +6093,9 @@ def _train_full_gpu_ddp_worker(
                 "cuda_graph_policy_actions": bool(cuda_graph_enabled),
                 "global_batch_size": int(global_batch_size),
                 "replay_capacity": int(global_capacity),
+                "replay_storage_dtype": str(
+                    CONFIG.get("training_gpu_replay_storage_dtype", "float32")
+                ),
                 "replay_samples_per_new_transition": (
                     float(global_batch_size)
                     if int(gradient_steps) == -1
@@ -8950,6 +8975,9 @@ def train_full_gpu_sharded(
         device=str(primary),
         seed=int(seed) + 123,
         strict_cuda=True,
+        storage_dtype=resolve_gpu_replay_storage_dtype(
+            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
+        ),
     )
     batch_size = int(CONFIG[f"{algorithm}_batch_size"])
     learning_starts = int(CONFIG[f"{algorithm}_learning_starts"])

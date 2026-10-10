@@ -121,3 +121,35 @@ def test_replay_oversized_batch_keeps_latest_rows_and_restores_sampling_rng():
     for _ in range(3):
         first, second = replay.sample(4, "cpu"), restored.sample(4, "cpu")
         assert all(torch.equal(first[name], second[name]) for name in first)
+
+
+def test_gpu_replay_can_store_float16_but_sample_float32():
+    replay = GpuReplayBuffer(
+        8, 2, 3, 5, 4, 3, "cpu", strict_cuda=False,
+        storage_dtype=torch.float16,
+    )
+    batch = 4
+    replay.add_batch(
+        observations=torch.rand(batch, 2, 3),
+        states=torch.rand(batch, 5),
+        continuous_actions=torch.rand(batch, 2, 4),
+        destination_indices=torch.zeros(batch, 2, dtype=torch.long),
+        destination_masks=torch.ones(batch, 2, 3),
+        rewards=torch.rand(batch, 1),
+        next_observations=torch.rand(batch, 2, 3),
+        next_states=torch.rand(batch, 5),
+        next_destination_masks=torch.ones(batch, 2, 3),
+        terminated=torch.zeros(batch, 1),
+        truncated=torch.zeros(batch, 1),
+    )
+    assert replay.observations.dtype == torch.float16
+    assert replay.states.dtype == torch.float16
+    assert replay.destination_masks.dtype == torch.float16
+    assert replay.destination_indices.dtype == torch.long
+
+    sampled = replay.sample(2, "cpu")
+    for name, value in sampled.items():
+        if name == "destination_indices":
+            assert value.dtype == torch.long
+        else:
+            assert value.dtype == torch.float32

@@ -318,3 +318,14 @@ def test_gpu_training_logs_inactive_horizon_makeup_reward_component():
 def test_evaluation_summary_exposes_inactive_horizon_makeup():
     source = (ROOT / "uav_marl" / "algorithms" / "masac.py").read_text()
     assert '"reward_component_inactive_horizon_makeup",' in source
+
+
+def test_gpu_replay_storage_dtype_resolver():
+    from uav_marl.training.gpu import resolve_gpu_replay_storage_dtype
+
+    import torch
+
+    assert resolve_gpu_replay_storage_dtype("float16") is torch.float16
+    assert resolve_gpu_replay_storage_dtype("float32") is torch.float32
+    with pytest.raises(ValueError, match="replay storage dtype"):
+        resolve_gpu_replay_storage_dtype("bfloat16")

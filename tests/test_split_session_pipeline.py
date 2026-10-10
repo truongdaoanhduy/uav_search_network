@@ -511,3 +511,10 @@ def test_ddp_primes_cuda_linear_algebra_before_gpu_replay_allocation():
     prime = source.index("_prime_cuda_linear_algebra(device)")
     replay = source.index("replay = make_project_gpu_replay_buffer(")
     assert prime < replay
+
+
+def test_ddp_gpu_replay_uses_configured_storage_dtype():
+    source = inspect.getsource(_train_full_gpu_ddp_worker)
+    replay_call = source[source.index("replay = make_project_gpu_replay_buffer("):source.index("global_batch_size = int(")]
+    assert "storage_dtype=resolve_gpu_replay_storage_dtype(" in replay_call
+    assert 'CONFIG.get("training_gpu_replay_storage_dtype", "float32")' in replay_call

@@ -196,6 +196,14 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
             "algorithm.gradient_steps must be -1 or a positive integer"
         )
 
+    replay_storage_dtype = str(
+        _get(plain, "runtime.offpolicy.replay_storage_dtype")
+    ).strip().lower()
+    if replay_storage_dtype not in {"float16", "float32"}:
+        raise ValueError(
+            "runtime.offpolicy.replay_storage_dtype must be float16 or float32"
+        )
+
     backend = str(
         _get(plain, "runtime.network_backend")
     ).strip().lower()
@@ -389,6 +397,9 @@ _RUNTIME_MAP = {
     ),
     "training_min_replay_sample_ratio": (
         "runtime.offpolicy.min_replay_sample_ratio"
+    ),
+    "training_gpu_replay_storage_dtype": (
+        "runtime.offpolicy.replay_storage_dtype"
     ),
     "training_num_envs": "runtime.num_envs",
     "training_vector_context": "runtime.vector.context",

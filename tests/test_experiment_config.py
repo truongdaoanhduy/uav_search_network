@@ -355,3 +355,16 @@ def test_investigation_belief_threshold_is_between_prior_and_confirmation():
     cfg = compose_cfg("reward.investigation_belief_threshold=0.995")
     with pytest.raises(ValueError, match="investigation_belief_threshold"):
         validate_config(cfg)
+
+
+def test_gpu_replay_storage_dtype_maps_to_legacy_config():
+    cfg = compose_cfg(
+        "runtime=kaggle_2xt4",
+        "algorithm=masac",
+        "runtime.offpolicy.replay_storage_dtype=float16",
+        "algorithm.replay_capacity=409600",
+        "algorithm.learning_starts=409600",
+    )
+    legacy = dict(BASE_CONFIG)
+    apply_to_legacy_config(legacy, cfg)
+    assert legacy["training_gpu_replay_storage_dtype"] == "float16"

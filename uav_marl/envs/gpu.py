@@ -3998,7 +3998,8 @@ class GpuReplayBuffer:
     )
 
     def __init__(self, capacity, num_agents, observation_dim, state_dim,
-                 continuous_dim, discrete_dim, device, seed=44, strict_cuda=True):
+                 continuous_dim, discrete_dim, device, seed=44, strict_cuda=True,
+                 storage_dtype=torch.float32):
         self.capacity = int(capacity)
         self.num_agents = int(num_agents)
         self.observation_dim = int(observation_dim)
@@ -4008,21 +4009,30 @@ class GpuReplayBuffer:
         if any(getattr(self, name) < 1 for name in self._dimension_fields):
             raise ValueError("replay dimensions and capacity must be >= 1")
         self.device = torch.device(device)
+        self.storage_dtype = storage_dtype
+        if self.storage_dtype not in (torch.float16, torch.float32):
+            raise ValueError("GPU replay storage_dtype must be float16 or float32")
         if strict_cuda:
             _require_cuda(self.device)
         C, U, O, S, A, D = (self.capacity, self.num_agents, self.observation_dim,
                             self.state_dim, self.continuous_dim, self.discrete_dim)
-        self.observations = torch.empty(C, U, O, device=self.device)
+        self.observations = torch.empty(
+            C, U, O, device=self.device, dtype=self.storage_dtype
+        )
         self.next_observations = torch.empty_like(self.observations)
-        self.states = torch.empty(C, S, device=self.device)
+        self.states = torch.empty(C, S, device=self.device, dtype=self.storage_dtype)
         self.next_states = torch.empty_like(self.states)
-        self.continuous_actions = torch.empty(C, U, A, device=self.device)
+        self.continuous_actions = torch.empty(
+            C, U, A, device=self.device, dtype=self.storage_dtype
+        )
         self.destination_indices = torch.empty(C, U, device=self.device, dtype=torch.long)
-        self.destination_masks = torch.empty(C, U, D, device=self.device)
+        self.destination_masks = torch.empty(
+            C, U, D, device=self.device, dtype=self.storage_dtype
+        )
         self.next_destination_masks = torch.empty_like(self.destination_masks)
-        self.rewards = torch.empty(C, 1, device=self.device)
-        self.terminated = torch.empty(C, 1, device=self.device)
-        self.truncated = torch.zeros(C, 1, device=self.device)
+        self.rewards = torch.empty(C, 1, device=self.device, dtype=torch.float32)
+        self.terminated = torch.empty(C, 1, device=self.device, dtype=torch.float32)
+        self.truncated = torch.zeros(C, 1, device=self.device, dtype=torch.float32)
         self.position = 0
         self.size = 0
         self.generator = torch.Generator(device=self.device)
@@ -4080,13 +4090,23 @@ class GpuReplayBuffer:
             raise ValueError("not enough replay samples")
         indices = torch.randint(0, self.size, (batch_size,),
                                 generator=self.generator, device=self.device)
-        return {name: getattr(self, name)[indices] for name in self._tensor_fields}
+        sampled = {name: getattr(self, name)[indices] for name in self._tensor_fields}
+        return {
+            name: value if name == "destination_indices" else value.float()
+            for name, value in sampled.items()
+        }
 
     def state_dict(self):
         state = {name: int(getattr(self, name)) for name in self._dimension_fields}
-        state.update(format_version=2, storage="torch", position=int(self.position),
-                     size=int(self.size), generator_device_type=self.device.type,
-                     generator_state=self.generator.get_state().cpu().clone())
+        state.update(
+            format_version=2,
+            storage="torch",
+            storage_dtype=str(self.storage_dtype).removeprefix("torch."),
+            position=int(self.position),
+            size=int(self.size),
+            generator_device_type=self.device.type,
+            generator_state=self.generator.get_state().cpu().clone(),
+        )
         for name in self._tensor_fields:
             state[name] = getattr(self, name)[:self.size].detach().cpu().clone()
         return state
@@ -4100,6 +4120,9 @@ class GpuReplayBuffer:
         for name in self._dimension_fields:
             if int(state[name]) != int(getattr(self, name)):
                 raise ValueError(f"replay {name} mismatch")
+        saved_dtype = state.get("storage_dtype")
+        if saved_dtype is not None and saved_dtype != str(self.storage_dtype).removeprefix("torch."):
+            raise ValueError("replay storage dtype mismatch")
         size, position = int(state["size"]), int(state["position"])
         if not 0 <= size <= self.capacity or not 0 <= position < self.capacity:
             raise ValueError("invalid replay size or position")
