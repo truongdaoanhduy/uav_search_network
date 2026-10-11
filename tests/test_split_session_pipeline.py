@@ -513,8 +513,35 @@ def test_ddp_primes_cuda_linear_algebra_before_gpu_replay_allocation():
     assert prime < replay
 
 
-def test_ddp_gpu_replay_uses_configured_storage_dtype():
+def test_ddp_releases_cached_cuda_memory_once_before_policy_phase():
     source = inspect.getsource(_train_full_gpu_ddp_worker)
-    replay_call = source[source.index("replay = make_project_gpu_replay_buffer("):source.index("global_batch_size = int(")]
-    assert "storage_dtype=resolve_gpu_replay_storage_dtype(" in replay_call
-    assert 'CONFIG.get("training_gpu_replay_storage_dtype", "float32")' in replay_call
+    prepared = source.index("policy_phase_prepared = False")
+    guard = source.index("if not all_warmup and not policy_phase_prepared:")
+    cleanup = source.index("torch.cuda.empty_cache()", guard)
+    prime = source.index("_prime_cuda_linear_algebra(device)", cleanup)
+    sample = source.index("sampled = trainer._sample_joint_policy(", guard)
+    mark = source.index("policy_phase_prepared = True", guard)
+    assert prepared < guard < cleanup < prime < mark < sample
+
+
+@pytest.mark.parametrize("capacity,warmup", [(50000, 2000), (409600, 409600)])
+def test_cpu_handoff_restores_historical_gpu_config_without_training_guards(monkeypatch, capacity, warmup):
+    # Old handoffs predate replay_storage_device, including the failed paper run.
+    from copy import deepcopy
+    import config
+    from uav_marl.handoff import restore_legacy_config_from_handoff
+    with initialize_config_dir(version_base="1.3", config_dir=CONFIG_DIR):
+        cfg = compose(config_name="config")
+    snapshot = OmegaConf.to_container(cfg, resolve=True)
+    snapshot["runtime"]["offpolicy"].pop("replay_storage_device")
+    snapshot["algorithm"]["replay_capacity"] = capacity
+    snapshot["algorithm"]["learning_starts"] = warmup
+    before = deepcopy(snapshot)
+    monkeypatch.setattr(config, "CONFIG", dict(config.CONFIG))
+    restored = restore_legacy_config_from_handoff({"resolved_config": snapshot})
+    assert restored == before
+    assert snapshot == before
+    assert config.CONFIG["masac_replay_capacity"] == capacity
+    assert config.CONFIG["masac_learning_starts"] == warmup
+    assert config.CONFIG["training_replay_storage_device"] == "cuda"
+    assert config.CONFIG["_resolved_run_config"] == before

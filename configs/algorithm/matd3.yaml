@@ -1,6 +1,7 @@
 name: matd3
 hidden_dims: [512, 256]
-replay_capacity: 50000
+# GPU profiles budget replay/warmup in transitions for their vector width.
+replay_capacity: ${oc.select:runtime.offpolicy.replay_capacity,50000}
 batch_size: 256
 gamma: 0.99
 tau: 0.005
@@ -14,7 +15,7 @@ discrete_epsilon_start: 1.0
 discrete_epsilon_end: 0.05
 discrete_epsilon_decay_steps: 100000
 gumbel_temperature: 1.0
-learning_starts: 2000
+learning_starts: ${oc.select:runtime.offpolicy.learning_starts,2000}
 train_freq: 1
 gradient_steps: 1
 gradient_clip_norm: 10.0

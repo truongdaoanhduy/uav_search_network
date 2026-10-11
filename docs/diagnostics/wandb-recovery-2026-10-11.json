@@ -1,0 +1,33 @@
+{
+  "destination": "truongdaoanhduy-uit/uav_search_target",
+  "runs": [
+    {
+      "id": "0b62f069",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/0b62f069",
+      "records": 1500,
+      "scope": "Sampled W&B history fetched before deletion; not all original records",
+      "checkpoint_sha256": "a6c84a96c831091a1aaa6ff378792582c77e4c6ce845c50b749c4ff44d2b7990"
+    },
+    {
+      "id": "806d03ea",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/806d03ea",
+      "records": 2167,
+      "scope": "Available Kaggle console metric records; original W&B history file unavailable",
+      "checkpoint_sha256": "be1164832d1aa55fe499f62bf6931b2580dee9258e99af8807ac71747fb75a10"
+    },
+    {
+      "id": "eee3a6ce",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/eee3a6ce",
+      "source_run_id": "806d03ea",
+      "scope": "Actual complete CPU evaluation/video recovered from Kaggle output; only final source linkage had failed",
+      "checkpoint_sha256": "be1164832d1aa55fe499f62bf6931b2580dee9258e99af8807ac71747fb75a10"
+    },
+    {
+      "id": "28a7d6b1",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/28a7d6b1",
+      "source_run_id": "0b62f069",
+      "scope": "Original completed CPU evaluation/video from Kaggle output; no new evaluation performed",
+      "checkpoint_sha256": "a6c84a96c831091a1aaa6ff378792582c77e4c6ce845c50b749c4ff44d2b7990"
+    }
+  ]
+}

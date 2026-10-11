@@ -11,7 +11,7 @@ from wandb_workspaces.workspaces import internal
 
 import wandb
 
-ENTITY = "uav_search_paper"
+ENTITY = "truongdaoanhduy-uit"
 PROJECT = "uav_search_target"
 DEFAULT_WORKSPACE = "Truongdaoanhduy's workspace"
 

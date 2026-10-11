@@ -26,6 +26,20 @@ def compose_cfg(*overrides):
         )
 
 
+def test_kaggle_runtime_offloads_replay_from_t4_vram():
+    cfg = compose_cfg(
+        "runtime=kaggle_2xt4",
+        "algorithm=masac",
+        "runtime.num_envs=4096",
+        "algorithm.replay_capacity=409600",
+        "algorithm.learning_starts=409600",
+    )
+    assert cfg.runtime.offpolicy.replay_storage_device == "cpu"
+    legacy = dict(BASE_CONFIG)
+    apply_to_legacy_config(legacy, cfg)
+    assert legacy["training_replay_storage_device"] == "cpu"
+
+
 def test_kaggle_budget_is_derived_from_episodes():
     cfg = compose_cfg(
         "runtime=kaggle_2xt4",
@@ -41,7 +55,7 @@ def test_kaggle_budget_is_derived_from_episodes():
     ) == 61_440_000
 
 
-def test_vast_profile_changes_runtime_not_task_or_algorithm():
+def test_vast_profile_changes_runtime_budget_not_algorithm_semantics():
     kaggle = compose_cfg(
         "runtime=kaggle_2xt4",
         "algorithm=masac",
@@ -52,7 +66,13 @@ def test_vast_profile_changes_runtime_not_task_or_algorithm():
     )
     assert kaggle.task == vast.task
     assert kaggle.reward == vast.reward
-    assert kaggle.algorithm == vast.algorithm
+    # Buffer/warmup scale with vector width; architecture and optimizer do not.
+    for key in kaggle.algorithm:
+        if key not in {"replay_capacity", "learning_starts"}:
+            assert kaggle.algorithm[key] == vast.algorithm[key]
+    for cfg in (kaggle, vast):
+        assert cfg.algorithm.replay_capacity / cfg.runtime.num_envs == 100
+        assert cfg.algorithm.learning_starts / cfg.runtime.num_envs == 100
     assert kaggle.runtime.provider == "kaggle"
     assert vast.runtime.provider == "vast"
     assert vast.runtime.max_gpus == 1
@@ -355,16 +375,3 @@ def test_investigation_belief_threshold_is_between_prior_and_confirmation():
     cfg = compose_cfg("reward.investigation_belief_threshold=0.995")
     with pytest.raises(ValueError, match="investigation_belief_threshold"):
         validate_config(cfg)
-
-
-def test_gpu_replay_storage_dtype_maps_to_legacy_config():
-    cfg = compose_cfg(
-        "runtime=kaggle_2xt4",
-        "algorithm=masac",
-        "runtime.offpolicy.replay_storage_dtype=float16",
-        "algorithm.replay_capacity=409600",
-        "algorithm.learning_starts=409600",
-    )
-    legacy = dict(BASE_CONFIG)
-    apply_to_legacy_config(legacy, cfg)
-    assert legacy["training_gpu_replay_storage_dtype"] == "float16"

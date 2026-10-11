@@ -323,7 +323,7 @@ CONFIG = {
     # Keep W&B focused on experiment metrics. Disable automatic CPU/RAM/GPU
     # telemetry panels (power, clocks, memory, ECC errors, etc.).
     "training_wandb_disable_system_stats": True,
-    "training_wandb_entity": "uav_search_paper",
+    "training_wandb_entity": "truongdaoanhduy-uit",
     "training_wandb_project": "uav_search_target",
     "training_wandb_mode": "online",
     # Full-flow training is always online in W&B. Debug/unit helpers may be used

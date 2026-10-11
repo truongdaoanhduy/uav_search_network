@@ -84,7 +84,9 @@ def _get(cfg: Mapping[str, Any], path: str) -> Any:
     return current
 
 
-def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
+def validate_config(
+    cfg: DictConfig | Mapping[str, Any], *, for_training: bool = True,
+) -> dict[str, Any]:
     plain = to_plain_dict(cfg)
     algorithm = str(_get(plain, "algorithm.name")).strip().lower()
     get_algorithm(algorithm)
@@ -196,12 +198,13 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
             "algorithm.gradient_steps must be -1 or a positive integer"
         )
 
-    replay_storage_dtype = str(
-        _get(plain, "runtime.offpolicy.replay_storage_dtype")
+    replay_storage_device = str(
+        _get(plain, "runtime.offpolicy").get("replay_storage_device", "cuda")
     ).strip().lower()
-    if replay_storage_dtype not in {"float16", "float32"}:
+    if replay_storage_device not in {"cpu", "cuda"}:
         raise ValueError(
-            "runtime.offpolicy.replay_storage_dtype must be float16 or float32"
+            "runtime.offpolicy.replay_storage_device must be cpu or cuda; "
+            "cuda uses the learner's device on each rank"
         )
 
     backend = str(
@@ -266,6 +269,8 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
             "experiment.visualization.session must be separate_cpu or same_session"
         )
 
+    # Engineering guard against almost memoryless replay at large vector widths.
+    # 1/(1-gamma) is a heuristic horizon, not a convergence guarantee.
     replay_span = float(_get(plain, "algorithm.replay_capacity")) / num_envs
     warmup_span = float(_get(plain, "algorithm.learning_starts")) / num_envs
     gamma = float(_get(plain, "algorithm.gamma"))
@@ -276,9 +281,9 @@ def validate_config(cfg: DictConfig | Mapping[str, Any]) -> dict[str, Any]:
     temporal_message = (
         f"off-policy temporal coverage: replay retains {replay_span:.1f} vector steps; "
         f"warmup is {warmup_span:.1f}; require at least {horizon:.1f} for both. "
-        "Reduce num_envs or increase replay/warmup; for MASAC use --config-name corner_recovery."
+        "Reduce num_envs or increase algorithm.replay_capacity and algorithm.learning_starts."
     )
-    if replay_span < horizon or warmup_span < horizon:
+    if for_training and (replay_span < horizon or warmup_span < horizon):
         if execution_mode == "gpu":
             raise ValueError(temporal_message)
         warnings.warn(temporal_message, RuntimeWarning, stacklevel=2)
@@ -398,9 +403,6 @@ _RUNTIME_MAP = {
     "training_min_replay_sample_ratio": (
         "runtime.offpolicy.min_replay_sample_ratio"
     ),
-    "training_gpu_replay_storage_dtype": (
-        "runtime.offpolicy.replay_storage_dtype"
-    ),
     "training_num_envs": "runtime.num_envs",
     "training_vector_context": "runtime.vector.context",
     "training_vector_shared_memory": "runtime.vector.shared_memory",
@@ -478,14 +480,21 @@ _EXPERIMENT_MAP = {
 def apply_to_legacy_config(
     legacy_config: dict[str, Any],
     cfg: DictConfig | Mapping[str, Any],
+    *,
+    for_training: bool = True,
 ) -> dict[str, Any]:
-    """Mutate and return the historical flat CONFIG used by the notebook."""
-    plain = validate_config(cfg)
+    """Apply CONFIG; evaluation may restore historically unsafe training budgets."""
+    plain = validate_config(cfg, for_training=for_training)
     algorithm = get_algorithm(_get(plain, "algorithm.name"))
 
     legacy_config["seed"] = int(_get(plain, "seed"))
     _assign(legacy_config, plain, _TASK_MAP)
     _assign(legacy_config, plain, _RUNTIME_MAP)
+    # Before this field existed, GPU replay used the learner device. Keep the
+    # saved config unchanged so historical handoff hashes remain meaningful.
+    legacy_config["training_replay_storage_device"] = str(
+        _get(plain, "runtime.offpolicy").get("replay_storage_device", "cuda")
+    ).strip().lower()
     _assign(legacy_config, plain, _EXPERIMENT_MAP)
 
     backend = str(_get(plain, "runtime.network_backend")).strip().lower()

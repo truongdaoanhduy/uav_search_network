@@ -123,33 +123,60 @@ def test_replay_oversized_batch_keeps_latest_rows_and_restores_sampling_rng():
         assert all(torch.equal(first[name], second[name]) for name in first)
 
 
-def test_gpu_replay_can_store_float16_but_sample_float32():
-    replay = GpuReplayBuffer(
-        8, 2, 3, 5, 4, 3, "cpu", strict_cuda=False,
-        storage_dtype=torch.float16,
-    )
-    batch = 4
+def test_cpu_replay_can_sample_directly_to_training_device():
+    replay = GpuReplayBuffer(4, 1, 1, 1, 1, 2, "cpu", strict_cuda=False)
+    value = torch.arange(4, dtype=torch.float32)
+    obs = value.view(4, 1, 1)
+    state = value.view(4, 1)
+    mask = torch.ones(4, 1, 2)
     replay.add_batch(
-        observations=torch.rand(batch, 2, 3),
-        states=torch.rand(batch, 5),
-        continuous_actions=torch.rand(batch, 2, 4),
-        destination_indices=torch.zeros(batch, 2, dtype=torch.long),
-        destination_masks=torch.ones(batch, 2, 3),
-        rewards=torch.rand(batch, 1),
-        next_observations=torch.rand(batch, 2, 3),
-        next_states=torch.rand(batch, 5),
-        next_destination_masks=torch.ones(batch, 2, 3),
-        terminated=torch.zeros(batch, 1),
-        truncated=torch.zeros(batch, 1),
+        obs, state, obs, torch.zeros(4, 1, dtype=torch.long), mask, value,
+        obs, state, mask, torch.zeros(4),
     )
-    assert replay.observations.dtype == torch.float16
-    assert replay.states.dtype == torch.float16
-    assert replay.destination_masks.dtype == torch.float16
-    assert replay.destination_indices.dtype == torch.long
+    batch = replay.sample(2, "meta")
+    assert batch["observations"].device.type == "meta"
+    assert batch["states"].device.type == "meta"
+    assert batch["destination_indices"].device.type == "meta"
 
-    sampled = replay.sample(2, "cpu")
-    for name, value in sampled.items():
-        if name == "destination_indices":
-            assert value.dtype == torch.long
-        else:
-            assert value.dtype == torch.float32
+
+def test_replay_smoke_preserves_float32_values():
+    from scripts.smoke_corner_recovery import _check_replay_roundtrip
+    _check_replay_roundtrip("cpu")
+
+
+def test_replay_smoke_rejects_float16_quantization(monkeypatch):
+    from scripts.smoke_corner_recovery import _check_replay_roundtrip
+    original_sample = GpuReplayBuffer.sample
+    def lossy_sample(self, batch_size, device):
+        return {
+            name: value.half().float() if value.is_floating_point() else value
+            for name, value in original_sample(self, batch_size, device).items()
+        }
+    monkeypatch.setattr(GpuReplayBuffer, "sample", lossy_sample)
+    with pytest.raises(AssertionError):
+        _check_replay_roundtrip("cpu")
+
+
+@pytest.mark.parametrize("remaining,active", [(0, True), (1, True), (1000000, True), (1, False)])
+def test_completed_report_destination_masks_match_cpu_contract(remaining, active):
+    from uav_marl.world.observations import build_destination_mask
+    gcs = np.asarray(CONFIG["gcs_position"], dtype=float)
+    count = int(CONFIG["num_uavs"])
+    uavs = [UAV(i, gcs.copy(), np.zeros(3), 277200.) for i in range(count)]
+    uavs[0].active = active
+    report = Report(0, 0, 0, 1000000, 300., delivered_bytes=1000000 - remaining)
+    cpu_mask = build_destination_mask(0, uavs, buffer=[report])
+    env = FullGpuUAVBatchEnv(1, device="cpu", seed=44, strict_cuda=False)
+    try:
+        env.positions[:] = torch.tensor(gcs, dtype=torch.float32)
+        env.active[:] = True
+        env.active[0, 0] = active
+        env.report_valid[:] = False
+        env.report_valid[0, 0, 0] = True
+        env.report_remaining[:] = 0
+        env.report_remaining[0, 0, 0] = remaining
+        gpu_mask = env._destination_mask()[0, 0].numpy()
+        assert np.array_equal(gpu_mask, cpu_mask)
+        assert bool(gpu_mask[1:].any()) == (remaining > 0 and active)
+    finally:
+        env.close()

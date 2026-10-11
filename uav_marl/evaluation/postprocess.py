@@ -526,6 +526,21 @@ def _final_training_summary(summary):
 
 
 # --- frozen notebook cell 297 ---
+def _update_source_run_summary(wandb_module, path, summary):
+    """A missing historical run must not discard successfully uploaded media."""
+    import warnings
+    try:
+        source_run = wandb_module.Api().run(path)
+        source_run.summary.update(summary)
+    except wandb_module.errors.CommError:
+        warnings.warn(
+            f"Source training run {path} unavailable; CPU visualization remains uploaded.",
+            RuntimeWarning,
+        )
+        return False
+    return True
+
+
 def postprocess_checkpoint_cpu(
     checkpoint_path=None,
     artifact_ref=None,
@@ -560,6 +575,9 @@ def postprocess_checkpoint_cpu(
 
     wandb_run = None
     wandb_module = None
+    source_run_linked = None
+    wandb_entity = os.environ.get("WANDB_ENTITY") or CONFIG["training_wandb_entity"]
+    wandb_project = os.environ.get("WANDB_PROJECT") or CONFIG["training_wandb_project"]
     if log_wandb:
         if (
             running_on_kaggle()
@@ -585,8 +603,8 @@ def postprocess_checkpoint_cpu(
             run_id=cpu_run_id,
         )
         wandb_run = wandb_module.init(
-            entity=CONFIG["training_wandb_entity"],
-            project=CONFIG["training_wandb_project"],
+            entity=wandb_entity,
+            project=wandb_project,
             id=cpu_run_id,
             job_type="cpu_visualization",
             name=run_identity["name"],
@@ -818,23 +836,22 @@ def postprocess_checkpoint_cpu(
                 hf_status.get("uploaded", False)
             )
             if source_run_id:
-                source_run = wandb_module.Api().run(
-                    f"{CONFIG['training_wandb_entity']}/"
-                    f"{CONFIG['training_wandb_project']}/"
-                    f"{source_run_id}"
-                )
-                source_run.summary.update(
+                source_run_linked = _update_source_run_summary(
+                    wandb_module,
+                    f"{CONFIG['training_wandb_entity']}/{CONFIG['training_wandb_project']}/{source_run_id}",
                     {
                         **final_summary,
                         "cpu_postprocess/status": "complete",
                         "cpu_postprocess/checkpoint_sha256": digest.hexdigest(),
                         "cpu_postprocess/run_id": wandb_run.id,
                         "cpu_postprocess/run_url": wandb_run.url,
-                    }
+                    },
                 )
+                wandb_run.summary["cpu_postprocess/source_run_linked"] = source_run_linked
 
         return {
             "device": "cpu",
+            "source_run_linked": source_run_linked,
             "evaluation_backend": str(eval_backend),
             "checkpoint_path": str(checkpoint_path),
             "image_path": str(image_path),

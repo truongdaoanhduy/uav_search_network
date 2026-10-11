@@ -1,0 +1,95 @@
+{
+  "destination": "truongdaoanhduy-uit/uav_search_target",
+  "runs": [
+    {
+      "id": "0b62f069",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/0b62f069",
+      "state": "finished",
+      "name": "MASAC-LeakyReLU-Kaiming-NoLN-H512x256-seed44-GPU-0b62f069",
+      "metrics": {
+        "recovery/history_partial": true,
+        "recovery/history_records": 1500,
+        "recovery/fresh_training": false,
+        "cpu_postprocess/run_url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/28a7d6b1",
+        "final_return": -376.29445085448367,
+        "final_coverage_percent": 2.388888888888889,
+        "final_target_search_rate_percent": 0,
+        "final_target_delivery_rate_percent": 0,
+        "train/alpha_discrete": 9178.7666015625,
+        "train/critic_loss": 6832522240.0,
+        "train/target_q_mean": 264928.28125
+      },
+      "checkpoint_uploaded_digest_matches": true,
+      "artifact": "masac-seed44-0b62f069-checkpoint:v0",
+      "sha256": "a6c84a96c831091a1aaa6ff378792582c77e4c6ce845c50b749c4ff44d2b7990"
+    },
+    {
+      "id": "806d03ea",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/806d03ea",
+      "state": "finished",
+      "name": "MASAC-LeakyReLU-Kaiming-NoLN-H512x256-seed44-GPU-806d03ea",
+      "metrics": {
+        "recovery/history_partial": true,
+        "recovery/history_records": 2167,
+        "recovery/fresh_training": false,
+        "cpu_postprocess/run_url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/eee3a6ce",
+        "final_return": -153.8647073128511,
+        "final_coverage_percent": 1.4027777777777777,
+        "final_target_search_rate_percent": 0,
+        "final_target_delivery_rate_percent": 0,
+        "train/alpha_discrete": 0.22701069712638855,
+        "train/critic_loss": 5.593706130981445,
+        "train/target_q_mean": 18.999507904052734
+      },
+      "checkpoint_uploaded_digest_matches": true,
+      "artifact": "masac-seed44-806d03ea-checkpoint:v0",
+      "sha256": "be1164832d1aa55fe499f62bf6931b2580dee9258e99af8807ac71747fb75a10"
+    },
+    {
+      "id": "eee3a6ce",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/eee3a6ce",
+      "state": "finished",
+      "name": "MASAC-LeakyReLU-Kaiming-NoLN-H512x256-seed44-CPU-VIZ-eee3a6ce",
+      "metrics": {
+        "cpu_postprocess/source_run_linked": true,
+        "final_return": -153.8647073128511,
+        "final_coverage_percent": 1.4027777777777777,
+        "final_target_search_rate_percent": 0,
+        "final_target_delivery_rate_percent": 0
+      },
+      "media": [
+        {
+          "name": "media/images/visualization/evaluation_2d_0_7d66b5c5af1f2b874733.png",
+          "bytes": 153819
+        },
+        {
+          "name": "media/videos/visualization/post_train_eval_video_0_d38580633cdd7f4c2028.mp4",
+          "bytes": 235086
+        }
+      ]
+    },
+    {
+      "id": "28a7d6b1",
+      "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/28a7d6b1",
+      "state": "finished",
+      "name": "MASAC-LeakyReLU-Kaiming-NoLN-H512x256-seed44-CPU-VIZ-28a7d6b1",
+      "metrics": {
+        "cpu_postprocess/source_run_linked": true,
+        "final_return": -376.29445085448367,
+        "final_coverage_percent": 2.388888888888889,
+        "final_target_search_rate_percent": 0,
+        "final_target_delivery_rate_percent": 0
+      },
+      "media": [
+        {
+          "name": "media/images/visualization/evaluation_2d_0_97881e7bba59cd7ebbdb.png",
+          "bytes": 132976
+        },
+        {
+          "name": "media/videos/visualization/post_train_eval_video_0_115db46f0d2aa205c6cd.mp4",
+          "bytes": 555939
+        }
+      ]
+    }
+  ]
+}

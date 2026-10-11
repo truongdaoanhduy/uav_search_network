@@ -176,17 +176,6 @@ def _trainer(
     return trainer
 
 
-def resolve_gpu_replay_storage_dtype(value):
-    key = str(value).strip().lower()
-    mapping = {
-        "float16": torch.float16,
-        "float32": torch.float32,
-    }
-    if key not in mapping:
-        raise ValueError("GPU replay storage dtype must be float16 or float32")
-    return mapping[key]
-
-
 # --- frozen notebook cell 230 ---
 def make_project_gpu_replay_buffer(
     trainer,
@@ -200,7 +189,6 @@ def make_project_gpu_replay_buffer(
     device,
     seed,
     strict_cuda=True,
-    storage_dtype=torch.float32,
 ):
     project_ns = getattr(
         trainer,
@@ -231,7 +219,6 @@ def make_project_gpu_replay_buffer(
         device=device,
         seed=seed,
         strict_cuda=strict_cuda,
-        storage_dtype=storage_dtype,
     )
 
 
@@ -1777,9 +1764,6 @@ def benchmark_uavnetsim_full_flow(
         device=device,
         seed=int(seed),
         strict_cuda=bool(strict_cuda),
-        storage_dtype=resolve_gpu_replay_storage_dtype(
-            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
-        ),
     )
     copy_cpu_reference_state_to_gpu(cpu_env, gpu_env)
     bridge = GpuUavNetSimBridge(
@@ -3727,6 +3711,10 @@ def train_full_gpu(
             4096,
         ),
     )
+    replay_storage_device = str(
+        CONFIG.get("training_replay_storage_device", "cuda")
+    ).strip().lower()
+    replay_device = device if replay_storage_device == "cuda" else torch.device(replay_storage_device)
     replay = make_project_gpu_replay_buffer(
         trainer,
         capacity=capacity,
@@ -3735,12 +3723,9 @@ def train_full_gpu(
         state_dim=env.state_dim,
         continuous_dim=env.continuous_dim,
         discrete_dim=env.discrete_dim,
-        device=device,
+        device=replay_device,
         seed=seed + 123,
-        strict_cuda=bool(strict_cuda),
-        storage_dtype=resolve_gpu_replay_storage_dtype(
-            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
-        ),
+        strict_cuda=bool(strict_cuda and replay_device.type == "cuda"),
     )
     batch_size = int(
         CONFIG[f"{algorithm}_batch_size"]
@@ -4816,6 +4801,34 @@ def _allreduce_parameter_grad(parameter):
 
 
 # --- frozen notebook cell 264 ---
+@torch.no_grad()
+def _ddp_discrete_entropy_metrics(entropy, target, valid_counts, alpha):
+    """Global diagnostics for the same masked entropy objective on every rank.
+
+    All ranks call this only when collect_metrics is true. Entropy/target are
+    per joint action; choice fraction counts individual agent decisions.
+    """
+    import torch.distributed as dist
+
+    totals = torch.stack((
+        entropy.sum(),
+        target.sum(),
+        (valid_counts > 1).sum().to(entropy.dtype),
+        entropy.new_tensor(entropy.numel()),
+        entropy.new_tensor(valid_counts.numel()),
+    ))
+    dist.all_reduce(totals, op=dist.ReduceOp.SUM)
+    mean_entropy = totals[0] / totals[3]
+    mean_target = totals[1] / totals[3]
+    return {
+        "discrete_entropy": float(mean_entropy.cpu()),
+        "discrete_target_entropy": float(mean_target.cpu()),
+        "discrete_entropy_error": float((mean_entropy - mean_target).cpu()),
+        "discrete_choice_fraction": float((totals[2] / totals[4]).cpu()),
+        "discrete_entropy_bonus": float((alpha.detach() * mean_entropy).cpu()),
+    }
+
+
 def _ddp_update_masac(
     trainer,
     replay,
@@ -5010,13 +5023,9 @@ def _ddp_update_masac(
         "continuous_entropy": float(
             continuous_entropy.mean().cpu()
         ),
-        "discrete_entropy": float(
-            discrete_entropy.mean().cpu()
+        **_ddp_discrete_entropy_metrics(
+            discrete_entropy, discrete_target, valid_counts, trainer.alpha_discrete,
         ),
-        "discrete_target_entropy": float(discrete_target.mean().detach().cpu()),
-        "discrete_entropy_error": float((discrete_entropy - discrete_target).mean().detach().cpu()),
-        "discrete_choice_fraction": float((valid_counts > 1).float().mean().detach().cpu()),
-        "discrete_entropy_bonus": float((trainer.alpha_discrete.detach() * discrete_entropy).mean().cpu()),
         "target_q_mean": float(
             critic_target.mean().detach().cpu()
         ),
@@ -5987,6 +5996,10 @@ def _train_full_gpu_ddp_worker(
         4096,
         int(math.ceil(global_capacity / world_size)),
     )
+    replay_storage_device = str(
+        CONFIG.get("training_replay_storage_device", "cuda")
+    ).strip().lower()
+    replay_device = device if replay_storage_device == "cuda" else torch.device(replay_storage_device)
     replay = make_project_gpu_replay_buffer(
         trainer,
         capacity=local_capacity,
@@ -5995,12 +6008,9 @@ def _train_full_gpu_ddp_worker(
         state_dim=env.state_dim,
         continuous_dim=env.continuous_dim,
         discrete_dim=env.discrete_dim,
-        device=str(device),
+        device=str(replay_device),
         seed=int(seed) + 123 + rank * 10_007,
-        strict_cuda=True,
-        storage_dtype=resolve_gpu_replay_storage_dtype(
-            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
-        ),
+        strict_cuda=(replay_device.type == "cuda"),
     )
 
     global_batch_size = int(
@@ -6093,9 +6103,6 @@ def _train_full_gpu_ddp_worker(
                 "cuda_graph_policy_actions": bool(cuda_graph_enabled),
                 "global_batch_size": int(global_batch_size),
                 "replay_capacity": int(global_capacity),
-                "replay_storage_dtype": str(
-                    CONFIG.get("training_gpu_replay_storage_dtype", "float32")
-                ),
                 "replay_samples_per_new_transition": (
                     float(global_batch_size)
                     if int(gradient_steps) == -1
@@ -6313,6 +6320,7 @@ def _train_full_gpu_ddp_worker(
     last_eval_step = 0
     latest_evaluation = None
     evaluation_backend = None
+    policy_phase_prepared = False
     enable_evaluation = bool(
         enable_wandb
         and CONFIG.get(
@@ -6357,6 +6365,25 @@ def _train_full_gpu_ddp_worker(
             batch_last = global_step + int(num_envs)
             all_warmup = batch_last <= learning_starts
             all_policy = batch_first > learning_starts
+
+            if not all_warmup and not policy_phase_prepared:
+                torch.cuda.synchronize(device)
+                allocated_before = torch.cuda.memory_allocated(device)
+                reserved_before = torch.cuda.memory_reserved(device)
+                free_before, total_memory = torch.cuda.mem_get_info(device)
+                torch.cuda.empty_cache()
+                _prime_cuda_linear_algebra(device)
+                free_after, _ = torch.cuda.mem_get_info(device)
+                policy_phase_prepared = True
+                print(
+                    "CUDA_POLICY_PHASE_MEMORY "
+                    f"rank={rank} "
+                    f"allocated_mb={allocated_before / 2**20:.1f} "
+                    f"reserved_mb={reserved_before / 2**20:.1f} "
+                    f"free_before_mb={free_before / 2**20:.1f} "
+                    f"free_after_mb={free_after / 2**20:.1f} "
+                    f"total_mb={total_memory / 2**20:.1f}"
+                )
 
             if all_warmup:
                 continuous, destination = (
@@ -8964,6 +8991,10 @@ def train_full_gpu_sharded(
         max(int(total_transitions), 4096),
     )
     reference_env = envs[0]
+    replay_storage_device = str(
+        CONFIG.get("training_replay_storage_device", "cuda")
+    ).strip().lower()
+    replay_device = primary if replay_storage_device == "cuda" else torch.device(replay_storage_device)
     replay = make_project_gpu_replay_buffer(
         trainer,
         capacity=capacity,
@@ -8972,12 +9003,9 @@ def train_full_gpu_sharded(
         state_dim=reference_env.state_dim,
         continuous_dim=reference_env.continuous_dim,
         discrete_dim=reference_env.discrete_dim,
-        device=str(primary),
+        device=str(replay_device),
         seed=int(seed) + 123,
-        strict_cuda=True,
-        storage_dtype=resolve_gpu_replay_storage_dtype(
-            CONFIG.get("training_gpu_replay_storage_dtype", "float32")
-        ),
+        strict_cuda=(replay_device.type == "cuda"),
     )
     batch_size = int(CONFIG[f"{algorithm}_batch_size"])
     learning_starts = int(CONFIG[f"{algorithm}_learning_starts"])

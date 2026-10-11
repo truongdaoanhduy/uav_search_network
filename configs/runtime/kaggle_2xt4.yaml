@@ -10,9 +10,15 @@ compile_mode: null
 cuda_graph_policy_actions: false
 fused_adam: false
 offpolicy:
-  replay_storage_dtype: float32
+  # 100 vector steps at the default num_envs; validate overrides before launch.
+  # Replay is sharded under DDP. GPU memory still needs a runtime smoke.
+  replay_capacity: 409600
+  learning_starts: 409600
   auto_scale_gradient_steps: true
   min_replay_sample_ratio: 1.0
+  # 409600 joint transitions are ~15.7 GiB globally for this task. Keep the
+  # sharded replay in host RAM so 2048 envs/rank leave CUDA headroom for cuBLAS.
+  replay_storage_device: cpu
 vector:
   context: fork
   shared_memory: true

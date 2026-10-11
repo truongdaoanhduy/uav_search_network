@@ -226,7 +226,9 @@ def restore_legacy_config_from_handoff(
     from .configuration import apply_to_legacy_config
 
     resolved_config = deepcopy(dict(payload["resolved_config"]))
-    apply_to_legacy_config(LEGACY_CONFIG, resolved_config)
+    # CPU evaluation needs the original task/config, even when its training
+    # replay budget would now be rejected for a new GPU run.
+    apply_to_legacy_config(LEGACY_CONFIG, resolved_config, for_training=False)
     return resolved_config
 
 

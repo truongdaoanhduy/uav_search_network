@@ -70,3 +70,55 @@ def test_two_ranks_update_together_when_only_one_rank_has_choices(tmp_path):
     assert rows[0]['first'].item() > 0.
     assert torch.equal(rows[0]['first'], rows[1]['first'])
     assert all(torch.equal(row['first'], row['second']) for row in rows)
+
+
+def _distributed_entropy_metrics_worker(rank, init_file, output_dir):
+    from torch.nn.parallel import DistributedDataParallel as DDP
+    torch.set_num_threads(1)
+    dist.init_process_group("gloo", init_method=Path(init_file).as_uri(), rank=rank, world_size=2)
+    try:
+        CONFIG["masac_hidden_dims"] = (16, 16)
+        CONFIG["masac_replay_capacity"] = 16
+        trainer = _trainer(Path.cwd(), "masac", "cpu", 44)
+        replay = trainer.make_replay_buffer(seed=44)
+        obs = np.full((trainer.num_agents, trainer.observation_dim), 0.1, np.float32)
+        state = np.full(trainer.state_dim, 0.1, np.float32)
+        action = np.zeros((trainer.num_agents, 4), np.float32)
+        dest = np.zeros(trainer.num_agents, np.int64)
+        mask = np.zeros((trainer.num_agents, trainer.discrete_dim), np.float32)
+        mask[:, :1 + rank] = 1
+        for _ in range(4):
+            replay.add(obs, state, action, dest, mask, 0., obs, state, mask, True, False)
+        actor = DDP(_MASACDDPActorForward(trainer.actor, trainer._project_namespace))
+        critic_1, critic_2 = DDP(trainer.critic_1), DDP(trainer.critic_2)
+        metrics = _ddp_update_masac(trainer, replay, 4, actor, critic_1, critic_2)
+        torch.save({"metrics": metrics, "agents": trainer.num_agents,
+                    "ratio": trainer.discrete_target_entropy_ratio},
+                   Path(output_dir) / f"metrics-{rank}.pt")
+    finally:
+        dist.destroy_process_group()
+
+
+def test_ddp_logged_entropy_describes_both_ranks(tmp_path):
+    torch.multiprocessing.spawn(
+        _distributed_entropy_metrics_worker,
+        args=(str(tmp_path / "metrics-rendezvous"), str(tmp_path)),
+        nprocs=2, join=True,
+    )
+    rows = [torch.load(tmp_path / f"metrics-{rank}.pt", weights_only=True) for rank in range(2)]
+    keys = ["discrete_entropy", "discrete_target_entropy", "discrete_entropy_error",
+            "discrete_choice_fraction", "discrete_entropy_bonus"]
+    metrics = rows[0]["metrics"]
+    for key in keys:
+        assert metrics[key] == pytest.approx(rows[1]["metrics"][key])
+    assert metrics["discrete_choice_fraction"] == pytest.approx(0.5)
+    assert metrics["discrete_target_entropy"] == pytest.approx(
+        0.5 * rows[0]["agents"] * rows[0]["ratio"] * np.log(2)
+    )
+    assert metrics["discrete_entropy"] > 0
+    assert metrics["discrete_entropy_error"] == pytest.approx(
+        metrics["discrete_entropy"] - metrics["discrete_target_entropy"], abs=1e-6
+    )
+    assert metrics["discrete_entropy_bonus"] == pytest.approx(
+        metrics["alpha_discrete"] * metrics["discrete_entropy"]
+    )

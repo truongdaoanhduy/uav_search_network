@@ -32,7 +32,7 @@ checkpoint:
   final_artifact_alias: final
 wandb:
   enabled: true
-  entity: uav_search_paper
+  entity: truongdaoanhduy-uit
   project: uav_search_target
   mode: online
   required: true

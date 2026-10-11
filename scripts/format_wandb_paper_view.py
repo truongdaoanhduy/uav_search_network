@@ -9,7 +9,7 @@ from wandb_workspaces import workspaces as ws
 from wandb_workspaces.reports import v2 as wr
 
 DEFAULT_VIEW = (
-    "https://wandb.ai/uav_search_paper/uav_search_target"
+    "https://wandb.ai/truongdaoanhduy-uit/uav_search_target"
     "?nw=wpu3r5w2yti"
 )
 
