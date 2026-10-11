@@ -1,0 +1,547 @@
+{
+  "recorded_at_utc": "2026-10-11T19:11:19.950465+00:00",
+  "purpose": "Fresh actor encoder v2 architecture ablation, not an additional member of the original B512 intensity sweep",
+  "source_commit": "3ce4f13365a313d9eea11460160a1a0405b08c4d",
+  "control_run_id": "03db0105",
+  "control_source_commit": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+  "candidate_wandb_run_id": "a9542e80",
+  "candidate_wandb_url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/a9542e80",
+  "gpu_kernel": "bduy2378/uav-masac-actor-v2-20k-seed44-20261012",
+  "cpu_kernel": "bduy2378/uav-masac-actor-v2-20k-seed44-20261012-cpu",
+  "gpu_status": "running",
+  "cpu_status": "running",
+  "cpu_status_meaning": "Detached watcher waits for GPU; no CPU evaluation completed yet",
+  "architecture_version": 2,
+  "config_differences_vs_control": [
+    [
+      "experiment.name",
+      "paper_20k",
+      "actor_encoder_v2_20k"
+    ]
+  ],
+  "resolved_config": {
+    "task": {
+      "name": "uav_search",
+      "scenario": {
+        "map_size": 3000,
+        "num_uavs": 6,
+        "num_targets": 50,
+        "num_obstacles": 30,
+        "altitude_min": 0,
+        "altitude_max": 150,
+        "max_speed": 20,
+        "max_accel": 2.0,
+        "dt": 1,
+        "max_steps": 3000,
+        "gcs_position": [
+          1500,
+          0,
+          0.0
+        ],
+        "gcs_exclusion_radius_m": 150,
+        "target_exclusion_radius_m": 250,
+        "battery_j": 277200,
+        "grid_cell_m": 25,
+        "obstacle_radius_min_m": 50.0,
+        "obstacle_radius_max_m": 130.0,
+        "obstacle_height_min_m": 30.0,
+        "obstacle_height_max_m": 120.0
+      },
+      "safety": {
+        "peer_distance_m": 30.0,
+        "obstacle_clearance_m": 30.0
+      },
+      "spawn": {
+        "launch_radius_m": 300.0,
+        "launch_min_spacing_m": 60.0
+      },
+      "apf": {
+        "enabled": true,
+        "soft_gain": 1.5,
+        "lookahead_s": 3.0,
+        "braking_margin": 1.5
+      },
+      "sensing": {
+        "pd": [
+          0.99,
+          0.9,
+          0.8,
+          0.7
+        ],
+        "pf": [
+          0.01,
+          0.1,
+          0.2,
+          0.3
+        ],
+        "altitude_anchors": [
+          0.0,
+          50.0,
+          100.0,
+          150.0
+        ],
+        "belief_prior": 0.5,
+        "confirmation_threshold": 0.99,
+        "fine_altitude": 50.0,
+        "verified_empty_belief": 0.01,
+        "camera_full_fov_deg": 90,
+        "obstacle_occlusion": true
+      },
+      "communication": {
+        "report_bytes": 1000000,
+        "buffer_bytes": 3000000,
+        "pending_buffer_bytes": 3000000,
+        "report_ttl": 300.0,
+        "peer_contact_range_m": 500,
+        "gcs_contact_range_m": 500,
+        "tx_power_min_w": 0.1,
+        "tx_power_max_w": 0.4,
+        "bandwidth_hz": 10000000.0,
+        "max_link_rate_bps": 2000000.0,
+        "snr_threshold_db": 6.0,
+        "noise_power_dbm": -110.0,
+        "reference_gain_db": -70.0,
+        "reference_distance_m": 1.0,
+        "path_loss_exponent": 2.0,
+        "nlos_additional_loss_db": 19.0,
+        "uavnetsim": {
+          "path": null,
+          "mac_protocol": "CSMA_CA",
+          "channel_mode": "a2a",
+          "los_model": "free_space",
+          "nlos_model": "urban",
+          "payload_bytes": 1024,
+          "packet_lifetime_s": 10.0,
+          "max_queue_size": 200,
+          "obstacle_polygon_sides": 16,
+          "carrier_frequency_hz": 2400000000.0,
+          "bandwidth_hz": 22000000.0,
+          "bit_rate_bps": 2000000.0,
+          "sinr_threshold_db": 6.0,
+          "cca_threshold_dbm": -82.0,
+          "thermal_noise_density_dbm_hz": -174.0,
+          "receiver_noise_figure_db": 7.0,
+          "max_retransmission_attempt": 5
+        },
+        "gpu_surrogate": {
+          "packet_ack_bits": 240,
+          "packet_sifs_us": 10.0,
+          "packet_slot_us": 20.0,
+          "packet_cw_min": 31,
+          "packet_difs_us": 50.0,
+          "packet_contention_decay": 0.8,
+          "network_interference": true,
+          "expected_backoff": true
+        }
+      },
+      "observation": {
+        "belief_patch_cells": 13,
+        "belief_coarse_cells": 10,
+        "nearest_obstacles": 3,
+        "critic_belief_grid_cells": 10
+      },
+      "energy": {
+        "idle_power_w": 20.0,
+        "hover_power_w": 120.0,
+        "speed_sq_coeff": 0.5,
+        "accel_sq_coeff": 2.0
+      }
+    },
+    "reward": {
+      "name": "paper_v2",
+      "confirmation": 30.0,
+      "delivery": 50.0,
+      "false_confirmation": 5.0,
+      "expired_report": 10.0,
+      "dropped_report": 10.0,
+      "all_delivered_bonus": 500.0,
+      "info_gain": 10.0,
+      "coverage_shaping": 5.0,
+      "investigation_shaping": 10.0,
+      "investigation_belief_threshold": 0.8,
+      "communication_progress_shaping": 5.0,
+      "shaping_gamma": 0.99,
+      "blocked": 0.2,
+      "apf_intervention": 0.2,
+      "boundary": 0.1,
+      "normalize_safety_by_uavs": true,
+      "energy_per_kj": 0.01,
+      "step_penalty": 0.01
+    },
+    "architecture": {
+      "name": "leaky_kaiming",
+      "activation": "leaky_relu",
+      "weight_init": "kaiming",
+      "layer_norm": false,
+      "leaky_relu_negative_slope": 0.01,
+      "prelu_init": 0.25
+    },
+    "algorithm": {
+      "name": "masac",
+      "hidden_dims": [
+        512,
+        256
+      ],
+      "replay_capacity": 409600,
+      "batch_size": 256,
+      "gamma": 0.99,
+      "tau": 0.005,
+      "actor_lr": 0.0003,
+      "critic_lr": 0.0003,
+      "alpha_lr": 0.0003,
+      "log_std_min": -5.0,
+      "log_std_max": 2.0,
+      "gumbel_temperature": 1.0,
+      "continuous_target_entropy_scale": 1.0,
+      "discrete_target_entropy_ratio": 0.89,
+      "initial_alpha_continuous": 0.2,
+      "initial_alpha_discrete": 0.2,
+      "learning_starts": 409600,
+      "train_freq": 1,
+      "gradient_steps": 1,
+      "gradient_clip_norm": 10.0
+    },
+    "runtime": {
+      "provider": "kaggle",
+      "execution_mode": "gpu",
+      "device": "cuda:0",
+      "num_envs": 4096,
+      "network_backend": "uavnetsim_gpu",
+      "auto_multi_gpu": true,
+      "max_gpus": 2,
+      "multi_gpu_strategy": "ddp",
+      "compile_mode": null,
+      "cuda_graph_policy_actions": false,
+      "fused_adam": false,
+      "offpolicy": {
+        "replay_capacity": 409600,
+        "learning_starts": 409600,
+        "auto_scale_gradient_steps": true,
+        "min_replay_sample_ratio": 1.0,
+        "replay_storage_device": "cpu"
+      },
+      "vector": {
+        "context": "fork",
+        "shared_memory": true,
+        "overlap_env_and_updates": true,
+        "backend": "auto",
+        "cuda_num_envs": 4
+      },
+      "torch_sensing": {
+        "enabled": false,
+        "device": "auto",
+        "dtype": "float64",
+        "batch_timeout_s": 0.002,
+        "overlap_env_and_updates": false
+      },
+      "amp": {
+        "enabled": false,
+        "dtype": "float16"
+      },
+      "gpu": {
+        "benchmark_env_counts": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64,
+          128,
+          256,
+          512,
+          1024,
+          2048
+        ],
+        "benchmark_vector_steps": 200,
+        "world_candidates": 256,
+        "world_sampling_rounds": 4
+      }
+    },
+    "experiment": {
+      "name": "actor_encoder_v2_20k",
+      "total_episodes": 20000,
+      "logging": {
+        "log_interval_steps": 100,
+        "reward_curve_bin_episodes": 1,
+        "paper_curve_bin_episodes": 256,
+        "paper_curve_ema_beta": 0.85
+      },
+      "evaluation": {
+        "interval_steps": 5000,
+        "interval_episodes": 5000,
+        "episodes": 1,
+        "seed_offset": 10000,
+        "inline": false
+      },
+      "visualization": {
+        "inline": false,
+        "enabled": true,
+        "session": "separate_cpu",
+        "render_2d": true,
+        "interval_episodes": 10000,
+        "required": true,
+        "render_video": true,
+        "upload_media_to_wandb": true,
+        "output_dir": "post_train_visualization",
+        "trajectory_stride": 10,
+        "max_link_edges": 64
+      },
+      "checkpoint": {
+        "interval_steps": 50000,
+        "interval_episodes": 5000,
+        "include_replay": false,
+        "upload_periodic_to_wandb": true,
+        "publish_final_wandb_artifact": true,
+        "final_artifact_alias": "final"
+      },
+      "wandb": {
+        "enabled": true,
+        "entity": "truongdaoanhduy-uit",
+        "project": "uav_search_target",
+        "mode": "online",
+        "required": true,
+        "require_online_gpu": true,
+        "disable_system_stats": true,
+        "require_kaggle_account_name": true,
+        "name_format": "{group}-{stage}-{id}"
+      },
+      "postprocess": {
+        "eval_episodes": 1,
+        "video_fps": 8,
+        "upload_huggingface": false,
+        "hf_private_repo": true
+      },
+      "paper_plot": {
+        "ema_beta": 0.95,
+        "raw_alpha": 0.12,
+        "raw_linewidth": 0.9,
+        "main_linewidth": 2.6,
+        "band_alpha": 0.16
+      },
+      "secrets": {
+        "kaggle_wandb_names": [
+          "WANDB_API_KEY",
+          "wandb_key",
+          "WANDB_KEY"
+        ],
+        "kaggle_hf_token_names": [
+          "HF_TOKEN",
+          "HUGGINGFACE_TOKEN",
+          "HUGGING_FACE_HUB_TOKEN"
+        ],
+        "kaggle_hf_repo_names": [
+          "HF_REPO_ID",
+          "HUGGINGFACE_REPO_ID"
+        ]
+      },
+      "outputs": {
+        "csv": true,
+        "tensorboard": true
+      }
+    },
+    "seed": 44,
+    "dry_run": false
+  },
+  "resolved_config_sha256_wandb": "3278ecb6706e73e3aa61ac8e65eac11c8f6333f3f5a4fa6264a7bc7c233f4563",
+  "quota_checked_before_launch": true,
+  "account": "account_07",
+  "initial_gpu_quota_remaining_hours": 30.0,
+  "required_gpu_hours": 10.0,
+  "sources": {
+    "gpu": {
+      "kernel_metadata": {
+        "id": "bduy2378/uav-masac-actor-v2-20k-seed44-20261012",
+        "id_no": 138214273,
+        "title": "Uav Masac Actor V2 20K Seed44 20261012",
+        "code_file": "uav-masac-actor-v2-20k-seed44-20261012.py",
+        "language": "python",
+        "kernel_type": "script",
+        "is_private": true,
+        "enable_gpu": true,
+        "enable_tpu": false,
+        "enable_internet": true,
+        "keywords": [],
+        "dataset_sources": [
+          "bduy2378/uav-wandb-credential-arch-ablation"
+        ],
+        "kernel_sources": [],
+        "competition_sources": [],
+        "model_sources": [],
+        "docker_image": "gcr.io/kaggle-private-byod/python@sha256:2757e0c7d1e0a9cb43da657b97e223c321a98f5014bdf64f44f2f6b083ad2b2f",
+        "machine_shape": "NvidiaTeslaT4"
+      },
+      "source_sha256": "ce9c4a168b771826096139afecb93710423b511276726b218eef6a29455d2b93",
+      "pinned_commit_verified": true
+    },
+    "cpu": {
+      "kernel_metadata": {
+        "id": "bduy2378/uav-masac-actor-v2-20k-seed44-20261012-cpu",
+        "id_no": 138214286,
+        "title": "Uav Masac Actor V2 20K Seed44 20261012 Cpu",
+        "code_file": "uav-masac-actor-v2-20k-seed44-20261012-cpu.py",
+        "language": "python",
+        "kernel_type": "script",
+        "is_private": true,
+        "enable_gpu": false,
+        "enable_tpu": false,
+        "enable_internet": true,
+        "keywords": [],
+        "dataset_sources": [
+          "bduy2378/uav-wandb-credential-arch-ablation"
+        ],
+        "kernel_sources": [],
+        "competition_sources": [],
+        "model_sources": [],
+        "docker_image": "gcr.io/kaggle-images/python@sha256:81b1e7c4b4f0f2a7e0a33943c95754b1b7af6b30d65221633a284b6b601cd84a",
+        "machine_shape": "None"
+      },
+      "source_sha256": "8cf56a5086d30c0dc5b0bdc90d8af6241a532a3640fa8d130a3d7c18570990e5",
+      "pinned_commit_verified": true
+    }
+  },
+  "initial_learning_progress": {
+    "queried_at_utc": "2026-10-11T19:09:26.126096+00:00",
+    "run_id": "a9542e80",
+    "state": "running",
+    "url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/a9542e80",
+    "summary": {
+      "_runtime": 358.265511427,
+      "_step": 153,
+      "_timestamp": 1791745755.0562315,
+      "_wandb.runtime": 358,
+      "episodes_completed": 0,
+      "execution_platform": "kaggle",
+      "global_step": 630784,
+      "kaggle_account": "bduy2378"
+    },
+    "gpu_count_config": 2,
+    "resolved_config_sha256": "3278ecb6706e73e3aa61ac8e65eac11c8f6333f3f5a4fa6264a7bc7c233f4563",
+    "architecture_version_label": 2,
+    "control_run_id": "03db0105",
+    "tags": [
+      "actor-encoder-v2",
+      "architecture-ablation",
+      "gpu-training",
+      "leaky_kaiming"
+    ],
+    "latest_update": {
+      "train/critic_loss": 16.35938835144043,
+      "train/alpha_discrete": 0.1579100638628006,
+      "train/continuous_entropy": 12.402554512023926,
+      "train/reward_energy_mean": -0.011573276482522488,
+      "train/action_accel_z_mean": -0.013051830232143402,
+      "train/update_count": 864,
+      "train/actor_grad_norm": 0.33853721618652344,
+      "train/reward_mission_mean": -0.009999999776482582,
+      "train/action_motion_saturation_rate": 0.11018880208333333,
+      "train/reward_communication_progress_mean": -9.640493226470426e-05,
+      "train/reward_communication_mean": 0.0609387531876564,
+      "train/critic_grad_norm": 57.620609283447266,
+      "train/reward_mean": 0.17410333454608917,
+      "train/action_tx_power_std": 0.5878010479881247,
+      "train/action_destination_gcs_rate": 0.0013834635416666667,
+      "train/action_destination_silent_rate": 0.9701334635416666,
+      "train/alpha_continuous": 0.15414060652256012,
+      "train/reward_std": 3.2641112685357947,
+      "train/reward_max": 50.334693908691406,
+      "train/actor_loss": -12.704996109008789,
+      "train/updates_per_second": 2.4300344377934615,
+      "train/optimizer_updates_per_1000_transitions": 3.90625,
+      "train/action_accel_z_std": 0.45270865572866015,
+      "train/alpha_discrete_loss": -0.019080445170402527,
+      "train/alpha_continuous_loss": -68.05783081054688,
+      "train/discrete_entropy": 0.2124883234500885,
+      "train/vector_steps": 154,
+      "train/reward_apf_intervention_mean": -0.03026530146598816,
+      "train/discrete_choice_fraction": 0.0364583320915699,
+      "train/reward_inactive_horizon_makeup_mean": 0,
+      "train/target_q_mean": 11.501679420471191,
+      "train/action_tx_power_mean": 0.007757213587562243,
+      "train/discrete_entropy_error": 0.005972087383270264,
+      "train/reward_investigation_shaping_mean": -0.04353005439043045,
+      "train/optimizer_updates": 864,
+      "train/discrete_target_entropy": 0.20651623606681824,
+      "train/action_accel_x_mean": 0.003744990254441897,
+      "train/action_accel_x_std": 0.45742159747178385,
+      "train/reward_min": -6.837307453155518,
+      "train/transitions_per_second": 1774.1051421401746,
+      "train/reward_search_mean": 0.16501128673553467,
+      "train/action_altitude_saturation_rate": 0.002685546875,
+      "train/replay_samples_per_new_transition_effective": 1,
+      "train/action_destination_peer_rate": 0.028483072916666668,
+      "_timestamp": 1791745755.0562317,
+      "train/action_accel_y_std": 0.45560546075630953,
+      "train/action_accel_y_mean": 0.007612764835357666,
+      "train/reward_safety_mean": -0.0302734412252903,
+      "global_step": 630784,
+      "train/reward_coverage_shaping_mean": -0.0009596688323654234,
+      "train/discrete_entropy_bonus": 0.033554043620824814
+    }
+  },
+  "original_jobs_snapshot": {
+    "queried_at_utc": "2026-10-11T19:08:31.403124+00:00",
+    "rows": [
+      {
+        "run_id": "03db0105",
+        "gpu_kernel": "vuliu123456/uav-masac-paper20k-fixed-20261011",
+        "gpu_status": "running",
+        "cpu_kernel": "vuliu123456/uav-masac-paper20k-fixed-20261011-cpu",
+        "cpu_status": "running"
+      },
+      {
+        "run_id": "0b67697e",
+        "gpu_kernel": "duytrngoanh/uav-masac20k-b512-u16-20261012",
+        "gpu_status": "running",
+        "cpu_kernel": "duytrngoanh/uav-masac20k-b512-u16-20261012-cpu",
+        "cpu_status": "running"
+      },
+      {
+        "run_id": "1e9c0833",
+        "gpu_kernel": "riujick/uav-masac20k-b512-u32-20261011",
+        "gpu_status": "running",
+        "cpu_kernel": "riujick/uav-masac20k-b512-u32-20261011-cpu",
+        "cpu_status": "running"
+      },
+      {
+        "run_id": "f1fa4c42",
+        "gpu_kernel": "libiu123/uav-masac20k-b512-u64-20261011",
+        "gpu_status": "running",
+        "cpu_kernel": "libiu123/uav-masac20k-b512-u64-20261011-cpu",
+        "cpu_status": "running"
+      },
+      {
+        "run_id": "8e541a5e",
+        "gpu_kernel": "saoling1234/uav-masac20k-b512-u128-20261011",
+        "gpu_status": "running",
+        "cpu_kernel": "saoling1234/uav-masac20k-b512-u128-20261011-cpu",
+        "cpu_status": "running"
+      }
+    ]
+  },
+  "completed_validation_of_real_legacy_checkpoints": [
+    {
+      "training_episode": 10098,
+      "checkpoint_sha256": "0f05a3f0fc1cda76ec5012ae95b5ec7f6f0d9e423079e89b35d690a72d90c737",
+      "loaded_encoder_version": 1,
+      "actor_weights_bitwise_identical": true,
+      "max_action_error_vs_pre_fix_probe": 0.0,
+      "evaluation_seed": 10044
+    },
+    {
+      "training_episode": 15106,
+      "checkpoint_sha256": "5b3b5a8ba0c2cf252653395019bacbe2e1832486d63b7c86cad5dd4d188f8766",
+      "loaded_encoder_version": 1,
+      "actor_weights_bitwise_identical": true,
+      "max_action_error_vs_pre_fix_probe": 0.0,
+      "evaluation_seed": 10044
+    }
+  ],
+  "behavioral_validation_status": "Pending full training and authoritative CPU evaluation/video; finite updates are not mission success",
+  "next_checks": [
+    "After first checkpoint, verify trainer_state.actor_encoder_version == 2 and checkpoint digest.",
+    "After 20k, verify final handoff exact source run/hash and CPU-only seed10044 evaluation, completion manifest and fresh video/PNG.",
+    "Compare mission results with baseline final CPU; do not rank from unequal progress or one-seed training reward."
+  ],
+  "one_seed_limitation": "Architecture activation/gain change also alters initialization RNG sequence; a successful single-seed result is not statistical causal proof."
+}

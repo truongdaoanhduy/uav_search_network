@@ -99,3 +99,13 @@ Chuẩn bị một fresh run riêng với actor v2, cùng baseline B256/effectiv
 Đối chứng này là một seed và thay activation cùng gain khởi tạo; việc dựng mạng mới cũng thay chuỗi số ngẫu nhiên khởi tạo. Không gọi chênh lệch kết quả một seed là bằng chứng nhân quả thống kê. Năm production runs trước đó vẫn giữ source `7e9b202` và cấu hình ban đầu; không restart chúng.
 
 Tình trạng launch và ID job/run cụ thể sẽ được ghi trong `actor-encoder-v2-ablation-2026-10-12.json`. Nếu chưa có manifest submitted/running, không tính run mới là đã chạy. Kết quả chất lượng của bản sửa vẫn chưa có.
+
+## Launch đã xác minh
+
+Đối chứng v2 đã submit version1 và cả GPU/CPU watcher RUNNING. W&B: https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/a9542e80 . GPU: https://www.kaggle.com/code/bduy2378/uav-masac-actor-v2-20k-seed44-20261012 ; CPU watcher cùng ref thêm -cpu. Đã pull lại source từ Kaggle, kiểm tra đúng commit3ce4f13, GPU enabled, CPU GPU disabled, onlineW&B và timeout43200. So sánh toàn bộ resolved_config với baseline chỉ khác experiment.name.
+
+Snapshot2026-10-11T19:09:26UTC: 630784 transitions, 864 optimizer updates, critic loss16.3594, actor loss-12.7050, alpha_c0.15414, alpha_d0.15791, 0 completed episodes. Đây là bằng chứng đi qua warmup và cập nhật learner trên runtime mới, chưa chứng minh hành vi mission tốt. Năm GPU/CPU production pairs ban đầu vẫn RUNNING ở snapshot cuối, không bị sửa/relaunch.
+
+Đã nạp lại hai checkpoint thật10098 và15106 trên CPU bằng source mới: encoder_version1, weights bitwise identical, actions đầu seed10044 khớp probe trước sửa với max error0.0 cho cả hai.
+
+Automation UAV20kWatch đã bổ sung theo dõi đối chứng mới và CPU/video sau train, giữ thông báo baseline ban đầu. B51220kWatch vẫn theo dõi bốn run cũ. Không thông báo healthy progress hoặc gọi tests/runtime success là behavioral fix.

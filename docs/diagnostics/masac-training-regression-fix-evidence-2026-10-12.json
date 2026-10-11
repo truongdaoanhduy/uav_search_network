@@ -310,11 +310,39 @@
       "duration_seconds": 416.5
     },
     "review": "Independent encoder_review: no Critical/Important findings; 13 tests independently passed.",
-    "scope": "Functional architecture/checkpoint and mission simulator compatibility, not successful policy convergence."
+    "scope": "Functional architecture/checkpoint and mission simulator compatibility, not successful policy convergence.",
+    "real_production_legacy_checkpoint_validation": [
+      {
+        "training_episode": 10098,
+        "checkpoint_sha256": "0f05a3f0fc1cda76ec5012ae95b5ec7f6f0d9e423079e89b35d690a72d90c737",
+        "loaded_encoder_version": 1,
+        "actor_weights_bitwise_identical": true,
+        "max_action_error_vs_pre_fix_probe": 0.0,
+        "evaluation_seed": 10044
+      },
+      {
+        "training_episode": 15106,
+        "checkpoint_sha256": "5b3b5a8ba0c2cf252653395019bacbe2e1832486d63b7c86cad5dd4d188f8766",
+        "loaded_encoder_version": 1,
+        "actor_weights_bitwise_identical": true,
+        "max_action_error_vs_pre_fix_probe": 0.0,
+        "evaluation_seed": 10044
+      }
+    ],
+    "diagnostic_harness_corrections": [
+      "Missing repository import path on initial config comparison was corrected; initial error was not counted as validation.",
+      "A manual audit torch.load required map_location=cpu; corrected before the successful weights/action checks. Production loaders already map to CPU."
+    ]
   },
   "future_evaluation": {
-    "candidate": "Fresh architecture v2 20k ablation, same baseline scenario/reward/APF/seed and B256 effective U16; source pinned after verified commit.",
-    "status": "Preparing launch; do not count as trained success."
+    "status": "running",
+    "source_commit": "3ce4f13365a313d9eea11460160a1a0405b08c4d",
+    "run_id": "a9542e80",
+    "run_url": "https://wandb.ai/truongdaoanhduy-uit/uav_search_target/runs/a9542e80",
+    "manifest": "actor-encoder-v2-ablation-2026-10-12.json",
+    "global_step_snapshot": 630784,
+    "optimizer_updates_snapshot": 864,
+    "mission_success_verified": false
   },
   "latest_wandb_tail": {
     "queried_at_utc": "2026-10-11T18:49:44.010309+00:00",
