@@ -15,6 +15,8 @@ class HybridMATD3Actor(nn.Module):
         continuous_dim,
         discrete_dim,
         hidden_dims,
+        *,
+        encoder_version=2,
     ):
         super().__init__()
 
@@ -39,9 +41,11 @@ class HybridMATD3Actor(nn.Module):
             discrete_dim
         )
 
+        self.encoder_version = int(encoder_version)
         self.encoder = build_actor_encoder(
             self.observation_dim,
             hidden_dims,
+            version=self.encoder_version,
         )
 
         feature_dim = hidden_dims[-1]
@@ -151,6 +155,8 @@ class HybridMATD3:
         env,
         device=None,
         seed=None,
+        *,
+        actor_encoder_version=2,
     ):
         if not isinstance(
             env,
@@ -245,6 +251,7 @@ class HybridMATD3:
             self.continuous_dim,
             self.discrete_dim,
             hidden_dims,
+            encoder_version=actor_encoder_version,
         ).to(
             self.device
         )
@@ -1127,6 +1134,7 @@ class HybridMATD3:
 
     def state_dict(self):
         return {
+            "actor_encoder_version": self.actor.encoder_version,
             "actor": (
                 self.actor.state_dict()
             ),
@@ -1173,6 +1181,11 @@ class HybridMATD3:
         self,
         state,
     ):
+        if int(state.get("actor_encoder_version", 1)) != self.actor.encoder_version:
+            raise ValueError(
+                "actor encoder version mismatch: use load_matd3_checkpoint "
+                "to construct the checkpoint architecture"
+            )
         self.actor.load_state_dict(
             state["actor"]
         )
@@ -1687,6 +1700,7 @@ def load_matd3_checkpoint(
     trainer = HybridMATD3(
         env,
         device=device,
+        actor_encoder_version=int(payload["trainer_state"].get("actor_encoder_version", 1)),
         seed=int(
             payload.get(
                 "training_state",

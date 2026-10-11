@@ -171,12 +171,23 @@ def build_configured_mlp(
 def build_actor_encoder(
     observation_dim,
     hidden_dims,
+    *,
+    version=2,
 ):
-    return build_configured_mlp(
+    """All encoder layers are hidden; version 1 preserves historical checkpoints."""
+    if version not in (1, 2):
+        raise ValueError("unsupported actor encoder version")
+    encoder = build_configured_mlp(
         observation_dim,
         hidden_dims[:-1],
         hidden_dims[-1],
     )
+    if version == 2:
+        initialize_configured_linear(encoder[-1], followed_by_activation=True)
+        if bool(CONFIG.get("model_layer_norm", False)):
+            encoder.append(nn.LayerNorm(int(hidden_dims[-1])))
+        encoder.append(_configured_activation())
+    return encoder
 
 
 def clip_grad_norm_finite(
@@ -207,6 +218,8 @@ class HybridMASACActor(nn.Module):
         continuous_dim,
         discrete_dim,
         hidden_dims,
+        *,
+        encoder_version=2,
     ):
         super().__init__()
 
@@ -231,9 +244,11 @@ class HybridMASACActor(nn.Module):
             discrete_dim
         )
 
+        self.encoder_version = int(encoder_version)
         self.encoder = build_actor_encoder(
             self.observation_dim,
             hidden_dims,
+            version=self.encoder_version,
         )
 
         feature_dim = (
@@ -1106,6 +1121,8 @@ class HybridMASAC:
         self,
         env,
         device=None,
+        *,
+        actor_encoder_version=2,
     ):
         if not isinstance(
             env,
@@ -1190,6 +1207,7 @@ class HybridMASAC:
                 self.continuous_dim,
                 self.discrete_dim,
                 hidden_dims,
+                encoder_version=actor_encoder_version,
             ).to(
                 self.device
             )
@@ -2137,6 +2155,7 @@ class HybridMASAC:
 
     def state_dict(self):
         return {
+            "actor_encoder_version": self.actor.encoder_version,
             "actor": (
                 self.actor.state_dict()
             ),
@@ -2189,6 +2208,11 @@ class HybridMASAC:
         self,
         state,
     ):
+        if int(state.get("actor_encoder_version", 1)) != self.actor.encoder_version:
+            raise ValueError(
+                "actor encoder version mismatch: use load_masac_checkpoint "
+                "to construct the checkpoint architecture"
+            )
         self.actor.load_state_dict(
             state["actor"]
         )
@@ -2859,6 +2883,7 @@ def load_masac_checkpoint(
     trainer = HybridMASAC(
         env,
         device=device,
+        actor_encoder_version=int(payload["trainer_state"].get("actor_encoder_version", 1)),
     )
     trainer.load_state_dict(
         payload[

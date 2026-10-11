@@ -120,6 +120,12 @@ def test_actor_encoder_uses_leaky_relu_matched_kaiming_initialization():
     )
     actual_variance = float(first.weight.detach().var(unbiased=False))
     assert actual_variance == pytest.approx(expected_variance, rel=0.08)
+    # The final encoder layer is hidden too, so it needs the activation's gain.
+    final = [layer for layer in encoder if isinstance(layer, torch.nn.Linear)][-1]
+    expected_final_variance = 2.0 / (1.0 + 0.01**2) / 1024.0
+    assert float(final.weight.detach().var(unbiased=False)) == pytest.approx(
+        expected_final_variance, rel=0.08,
+    )
 
 
 @pytest.mark.parametrize(

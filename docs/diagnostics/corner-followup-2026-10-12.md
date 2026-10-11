@@ -148,3 +148,7 @@ Lịch sử `0b62f069`, `806d03ea` và CPU media của chúng đã khôi phục 
 5. Chỉ công bố hết mắc góc khi rollout mới có hành vi và mission metrics chứng minh; pass tests, finite loss hoặc trạng thái complete của job không đủ.
 
 Hai lịch theo dõi hiện có đã bổ sung các yêu cầu này. Bản bằng chứng máy đọc được: [corner-followup-evidence-2026-10-12.json](corner-followup-evidence-2026-10-12.json).
+
+## Bổ sung 12-10: lỗi actor encoder và đánh giá CPU đủ episode
+
+Đọc `masac-training-regression-fix-2026-10-12.md` và JSON evidence đi kèm trước khi tiếp tục. CPU periodic checkpoint10098 đã COMPLETE: W&B audit c4e9e572, coverage0.8403%, search/delivery0%, APF73.21%, saturation99.10%, cả6 UAV cạnpin1919 steps. Source evaluation7e9b202, SHA checkpoint được xác minh. Bản sửa actor v2 thêm activation/gain tầng hidden cuối và versioning để checkpoint thiếu marker vẫn nạp v1. Full suite264passed có integration. Đây chưa phải xác nhận training quality đã sửa; xem manifest actor-encoder-v2-ablation-2026-10-12.json để theo dõi đối chứng mới, không restart5 production runs.
