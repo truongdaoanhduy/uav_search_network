@@ -1,0 +1,5636 @@
+{
+  "audit_role": "interim evidence; not a final 20k behavioral success report",
+  "source_git_commit": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+  "live_status": {
+    "checked_at_utc": "2026-10-11T18:22:33.539309+00:00",
+    "runs": [
+      {
+        "label": "A",
+        "run_id": "03db0105",
+        "gpu_ref": "vuliu123456/uav-masac-paper20k-fixed-20261011",
+        "gpu_status": "running",
+        "cpu_status": "running",
+        "wandb_state": "running",
+        "summary": {
+          "global_step": 25231360,
+          "episodes_completed": 16218,
+          "final_return": null,
+          "final_coverage_percent": null,
+          "final_target_search_rate_percent": null,
+          "final_target_delivery_rate_percent": null,
+          "final_success_rate": null,
+          "cpu_postprocess/status": null
+        }
+      },
+      {
+        "label": "B",
+        "run_id": "0b67697e",
+        "gpu_ref": "duytrngoanh/uav-masac20k-b512-u16-20261012",
+        "gpu_status": "running",
+        "cpu_status": "running",
+        "wandb_state": "running",
+        "summary": {
+          "global_step": 5656576,
+          "episodes_completed": 702,
+          "final_return": null,
+          "final_coverage_percent": null,
+          "final_target_search_rate_percent": null,
+          "final_target_delivery_rate_percent": null,
+          "final_success_rate": null,
+          "cpu_postprocess/status": null
+        }
+      },
+      {
+        "label": "C",
+        "run_id": "1e9c0833",
+        "gpu_ref": "riujick/uav-masac20k-b512-u32-20261011",
+        "gpu_status": "running",
+        "cpu_status": "running",
+        "wandb_state": "running",
+        "summary": {
+          "global_step": 5320704,
+          "episodes_completed": 678,
+          "final_return": null,
+          "final_coverage_percent": null,
+          "final_target_search_rate_percent": null,
+          "final_target_delivery_rate_percent": null,
+          "final_success_rate": null,
+          "cpu_postprocess/status": null
+        }
+      },
+      {
+        "label": "D",
+        "run_id": "f1fa4c42",
+        "gpu_ref": "libiu123/uav-masac20k-b512-u64-20261011",
+        "gpu_status": "running",
+        "cpu_status": "running",
+        "wandb_state": "running",
+        "summary": {
+          "global_step": 4419584,
+          "episodes_completed": 0,
+          "final_return": null,
+          "final_coverage_percent": null,
+          "final_target_search_rate_percent": null,
+          "final_target_delivery_rate_percent": null,
+          "final_success_rate": null,
+          "cpu_postprocess/status": null
+        }
+      },
+      {
+        "label": "E",
+        "run_id": "8e541a5e",
+        "gpu_ref": "saoling1234/uav-masac20k-b512-u128-20261011",
+        "gpu_status": "running",
+        "cpu_status": "running",
+        "wandb_state": "running",
+        "summary": {
+          "global_step": 3145728,
+          "episodes_completed": 0,
+          "final_return": null,
+          "final_coverage_percent": null,
+          "final_target_search_rate_percent": null,
+          "final_target_delivery_rate_percent": null,
+          "final_success_rate": null,
+          "cpu_postprocess/status": null
+        }
+      }
+    ],
+    "periodic_cpu_status": "running"
+  },
+  "configuration_verification": {
+    "rows": [
+      {
+        "id": "03db0105",
+        "batch": 256,
+        "configured_gradient_steps": 1,
+        "effective_updates": 16,
+        "num_envs": 4096,
+        "max_gpus": 2,
+        "replay": 409600,
+        "warmup": 409600,
+        "storage": "cpu",
+        "max_steps": 3000,
+        "target_episodes": 20000,
+        "wandb_entity": "truongdaoanhduy-uit",
+        "wandb_project": "uav_search_target",
+        "periodic_upload": true,
+        "scenario": {
+          "dt": 1,
+          "map_size": 3000,
+          "num_uavs": 6,
+          "battery_j": 277200,
+          "max_accel": 2,
+          "max_speed": 20,
+          "max_steps": 3000,
+          "grid_cell_m": 25,
+          "num_targets": 50,
+          "altitude_max": 150,
+          "altitude_min": 0,
+          "gcs_position": [
+            1500,
+            0,
+            0
+          ],
+          "num_obstacles": 30,
+          "obstacle_height_max_m": 120,
+          "obstacle_height_min_m": 30,
+          "obstacle_radius_max_m": 130,
+          "obstacle_radius_min_m": 50,
+          "gcs_exclusion_radius_m": 150,
+          "target_exclusion_radius_m": 250
+        },
+        "map_size": 3000
+      },
+      {
+        "id": "0b67697e",
+        "batch": 512,
+        "configured_gradient_steps": 16,
+        "effective_updates": 16,
+        "num_envs": 4096,
+        "max_gpus": 2,
+        "replay": 409600,
+        "warmup": 409600,
+        "storage": "cpu",
+        "max_steps": 3000,
+        "target_episodes": 20000,
+        "wandb_entity": "truongdaoanhduy-uit",
+        "wandb_project": "uav_search_target",
+        "periodic_upload": true,
+        "scenario": {
+          "dt": 1,
+          "map_size": 3000,
+          "num_uavs": 6,
+          "battery_j": 277200,
+          "max_accel": 2,
+          "max_speed": 20,
+          "max_steps": 3000,
+          "grid_cell_m": 25,
+          "num_targets": 50,
+          "altitude_max": 150,
+          "altitude_min": 0,
+          "gcs_position": [
+            1500,
+            0,
+            0
+          ],
+          "num_obstacles": 30,
+          "obstacle_height_max_m": 120,
+          "obstacle_height_min_m": 30,
+          "obstacle_radius_max_m": 130,
+          "obstacle_radius_min_m": 50,
+          "gcs_exclusion_radius_m": 150,
+          "target_exclusion_radius_m": 250
+        },
+        "map_size": 3000
+      },
+      {
+        "id": "1e9c0833",
+        "batch": 512,
+        "configured_gradient_steps": 32,
+        "effective_updates": 32,
+        "num_envs": 4096,
+        "max_gpus": 2,
+        "replay": 409600,
+        "warmup": 409600,
+        "storage": "cpu",
+        "max_steps": 3000,
+        "target_episodes": 20000,
+        "wandb_entity": "truongdaoanhduy-uit",
+        "wandb_project": "uav_search_target",
+        "periodic_upload": true,
+        "scenario": {
+          "dt": 1,
+          "map_size": 3000,
+          "num_uavs": 6,
+          "battery_j": 277200,
+          "max_accel": 2,
+          "max_speed": 20,
+          "max_steps": 3000,
+          "grid_cell_m": 25,
+          "num_targets": 50,
+          "altitude_max": 150,
+          "altitude_min": 0,
+          "gcs_position": [
+            1500,
+            0,
+            0
+          ],
+          "num_obstacles": 30,
+          "obstacle_height_max_m": 120,
+          "obstacle_height_min_m": 30,
+          "obstacle_radius_max_m": 130,
+          "obstacle_radius_min_m": 50,
+          "gcs_exclusion_radius_m": 150,
+          "target_exclusion_radius_m": 250
+        },
+        "map_size": 3000
+      },
+      {
+        "id": "f1fa4c42",
+        "batch": 512,
+        "configured_gradient_steps": 64,
+        "effective_updates": 64,
+        "num_envs": 4096,
+        "max_gpus": 2,
+        "replay": 409600,
+        "warmup": 409600,
+        "storage": "cpu",
+        "max_steps": 3000,
+        "target_episodes": 20000,
+        "wandb_entity": "truongdaoanhduy-uit",
+        "wandb_project": "uav_search_target",
+        "periodic_upload": true,
+        "scenario": {
+          "dt": 1,
+          "map_size": 3000,
+          "num_uavs": 6,
+          "battery_j": 277200,
+          "max_accel": 2,
+          "max_speed": 20,
+          "max_steps": 3000,
+          "grid_cell_m": 25,
+          "num_targets": 50,
+          "altitude_max": 150,
+          "altitude_min": 0,
+          "gcs_position": [
+            1500,
+            0,
+            0
+          ],
+          "num_obstacles": 30,
+          "obstacle_height_max_m": 120,
+          "obstacle_height_min_m": 30,
+          "obstacle_radius_max_m": 130,
+          "obstacle_radius_min_m": 50,
+          "gcs_exclusion_radius_m": 150,
+          "target_exclusion_radius_m": 250
+        },
+        "map_size": 3000
+      },
+      {
+        "id": "8e541a5e",
+        "batch": 512,
+        "configured_gradient_steps": 128,
+        "effective_updates": 128,
+        "num_envs": 4096,
+        "max_gpus": 2,
+        "replay": 409600,
+        "warmup": 409600,
+        "storage": "cpu",
+        "max_steps": 3000,
+        "target_episodes": 20000,
+        "wandb_entity": "truongdaoanhduy-uit",
+        "wandb_project": "uav_search_target",
+        "periodic_upload": true,
+        "scenario": {
+          "dt": 1,
+          "map_size": 3000,
+          "num_uavs": 6,
+          "battery_j": 277200,
+          "max_accel": 2,
+          "max_speed": 20,
+          "max_steps": 3000,
+          "grid_cell_m": 25,
+          "num_targets": 50,
+          "altitude_max": 150,
+          "altitude_min": 0,
+          "gcs_position": [
+            1500,
+            0,
+            0
+          ],
+          "num_obstacles": 30,
+          "obstacle_height_max_m": 120,
+          "obstacle_height_min_m": 30,
+          "obstacle_radius_max_m": 130,
+          "obstacle_radius_min_m": 50,
+          "gcs_exclusion_radius_m": 150,
+          "target_exclusion_radius_m": 250
+        },
+        "map_size": 3000
+      }
+    ],
+    "common_configs_identical_except_batch_and_configured_gradient_steps": true,
+    "cpu_watchers": [
+      {
+        "run_id": "03db0105",
+        "download_exit": 0,
+        "enable_gpu": false,
+        "script_configuration": {
+          "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+          "LOG_WANDB": true,
+          "SOURCE_GPU_REF": "vuliu123456/uav-masac-paper20k-fixed-20261011",
+          "WATCH_TIMEOUT_SECONDS": 43200
+        },
+        "source_matches": true,
+        "commit_matches": true
+      },
+      {
+        "run_id": "0b67697e",
+        "download_exit": 0,
+        "enable_gpu": false,
+        "script_configuration": {
+          "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+          "LOG_WANDB": true,
+          "SOURCE_GPU_REF": "duytrngoanh/uav-masac20k-b512-u16-20261012",
+          "WATCH_TIMEOUT_SECONDS": 43200
+        },
+        "source_matches": true,
+        "commit_matches": true
+      },
+      {
+        "run_id": "1e9c0833",
+        "download_exit": 0,
+        "enable_gpu": false,
+        "script_configuration": {
+          "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+          "LOG_WANDB": true,
+          "SOURCE_GPU_REF": "riujick/uav-masac20k-b512-u32-20261011",
+          "WATCH_TIMEOUT_SECONDS": 43200
+        },
+        "source_matches": true,
+        "commit_matches": true
+      },
+      {
+        "run_id": "f1fa4c42",
+        "download_exit": 0,
+        "enable_gpu": false,
+        "script_configuration": {
+          "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+          "LOG_WANDB": true,
+          "SOURCE_GPU_REF": "libiu123/uav-masac20k-b512-u64-20261011",
+          "WATCH_TIMEOUT_SECONDS": 43200
+        },
+        "source_matches": true,
+        "commit_matches": true
+      },
+      {
+        "run_id": "8e541a5e",
+        "download_exit": 0,
+        "enable_gpu": false,
+        "script_configuration": {
+          "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+          "LOG_WANDB": true,
+          "SOURCE_GPU_REF": "saoling1234/uav-masac20k-b512-u128-20261011",
+          "WATCH_TIMEOUT_SECONDS": 43200
+        },
+        "source_matches": true,
+        "commit_matches": true
+      }
+    ]
+  },
+  "cpu_watchers": [
+    {
+      "run_id": "03db0105",
+      "download_exit": 0,
+      "enable_gpu": false,
+      "script_configuration": {
+        "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+        "LOG_WANDB": true,
+        "SOURCE_GPU_REF": "vuliu123456/uav-masac-paper20k-fixed-20261011",
+        "WATCH_TIMEOUT_SECONDS": 43200
+      },
+      "source_matches": true,
+      "commit_matches": true
+    },
+    {
+      "run_id": "0b67697e",
+      "download_exit": 0,
+      "enable_gpu": false,
+      "script_configuration": {
+        "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+        "LOG_WANDB": true,
+        "SOURCE_GPU_REF": "duytrngoanh/uav-masac20k-b512-u16-20261012",
+        "WATCH_TIMEOUT_SECONDS": 43200
+      },
+      "source_matches": true,
+      "commit_matches": true
+    },
+    {
+      "run_id": "1e9c0833",
+      "download_exit": 0,
+      "enable_gpu": false,
+      "script_configuration": {
+        "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+        "LOG_WANDB": true,
+        "SOURCE_GPU_REF": "riujick/uav-masac20k-b512-u32-20261011",
+        "WATCH_TIMEOUT_SECONDS": 43200
+      },
+      "source_matches": true,
+      "commit_matches": true
+    },
+    {
+      "run_id": "f1fa4c42",
+      "download_exit": 0,
+      "enable_gpu": false,
+      "script_configuration": {
+        "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+        "LOG_WANDB": true,
+        "SOURCE_GPU_REF": "libiu123/uav-masac20k-b512-u64-20261011",
+        "WATCH_TIMEOUT_SECONDS": 43200
+      },
+      "source_matches": true,
+      "commit_matches": true
+    },
+    {
+      "run_id": "8e541a5e",
+      "download_exit": 0,
+      "enable_gpu": false,
+      "script_configuration": {
+        "COMMIT": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+        "LOG_WANDB": true,
+        "SOURCE_GPU_REF": "saoling1234/uav-masac20k-b512-u128-20261011",
+        "WATCH_TIMEOUT_SECONDS": 43200
+      },
+      "source_matches": true,
+      "commit_matches": true
+    }
+  ],
+  "baseline_episode_audit": {
+    "checked_at_utc": "2026-10-11T17:41:03.091496+00:00",
+    "run_id": "03db0105",
+    "episode_rows": 12288,
+    "history_scope": "all episode records present at audit scan start; running training continues",
+    "comparison_scope": "within baseline run; not matched-progress comparison across configurations",
+    "windows": {
+      "first256": {
+        "count": 256,
+        "first_step": 1249,
+        "last_step": 1566,
+        "metrics": {
+          "episode/return": -58.780907429754734,
+          "episode/coverage_percent": 52.57560355961323,
+          "episode/target_search_rate_percent": 10.25,
+          "episode/target_delivery_rate_percent": 1.3046875,
+          "episode/target_encounter_rate_percent": 49.6484365016222,
+          "episode/apf_intervention_rate": 0.2896597703140334,
+          "episode/apf_boundary_intervention_rate": 0.22927685480679377,
+          "episode/coverage_redundancy_percent": 96.46238104238128,
+          "episode/end_step": 1300.20703125,
+          "episode/battery_remaining_mean_percent": 0.0,
+          "episode/information_gain_bits": 9864.278907775879,
+          "episode/confirmed_targets": 5.125,
+          "episode/delivered_targets": 0.65234375,
+          "episode/reports_created": 5.5234375,
+          "episode/reward_investigation_shaping": -23.812110222876072,
+          "episode/reward_apf_intervention": -75.32763251662254
+        }
+      },
+      "last256": {
+        "count": 256,
+        "first_step": 16373,
+        "last_step": 17281,
+        "metrics": {
+          "episode/return": -274.6928686797619,
+          "episode/coverage_percent": 21.24490073695779,
+          "episode/target_search_rate_percent": 0.765625,
+          "episode/target_delivery_rate_percent": 0.25,
+          "episode/target_encounter_rate_percent": 20.210937038064003,
+          "episode/apf_intervention_rate": 0.6448767026863782,
+          "episode/apf_boundary_intervention_rate": 0.5206005645056423,
+          "episode/coverage_redundancy_percent": 98.79987210785765,
+          "episode/end_step": 1533.59375,
+          "episode/battery_remaining_mean_percent": 0.0,
+          "episode/information_gain_bits": 6228.771389961243,
+          "episode/confirmed_targets": 0.3828125,
+          "episode/delivered_targets": 0.125,
+          "episode/reports_created": 0.796875,
+          "episode/reward_investigation_shaping": -22.094293730333447,
+          "episode/reward_apf_intervention": -198.1982154250145
+        }
+      }
+    }
+  },
+  "periodic_actor_probe": {
+    "source_run_id": "03db0105",
+    "source_checkpoint": "masac_episode_00010098.pt",
+    "checkpoint_sha256": "0f05a3f0fc1cda76ec5012ae95b5ec7f6f0d9e423079e89b35d690a72d90c737",
+    "training_state": {
+      "global_step": 17047552,
+      "episode_index": 10098,
+      "latest_evaluation": null,
+      "resume_safe": false,
+      "checkpoint_kind": "ddp_model_optimizer"
+    },
+    "evaluation_seed": 10044,
+    "scope": "Initial state only, before any APF/environment step; critic estimates are not actual returns",
+    "deterministic_continuous_actions": [
+      [
+        0.5773663520812988,
+        0.6664338111877441,
+        -0.4382830560207367,
+        -0.969309389591217
+      ],
+      [
+        0.5848267078399658,
+        0.6512675285339355,
+        -0.44965246319770813,
+        -0.9698748588562012
+      ],
+      [
+        0.5670315027236938,
+        0.6648183465003967,
+        -0.4527365267276764,
+        -0.9708024263381958
+      ],
+      [
+        0.5736631155014038,
+        0.6652066111564636,
+        -0.44580644369125366,
+        -0.9723199009895325
+      ],
+      [
+        0.5733150839805603,
+        0.6654170155525208,
+        -0.4468272030353546,
+        -0.9669826626777649
+      ],
+      [
+        0.5739696025848389,
+        0.6652164459228516,
+        -0.4458982050418854,
+        -0.9674580097198486
+      ]
+    ],
+    "motion_norms": [
+      0.9846714735031128,
+      0.9840523600578308,
+      0.9841130971908569,
+      0.985054612159729,
+      0.9854565262794495,
+      0.9852812886238098
+    ],
+    "pre_squash_means": [
+      [
+        1.4258666038513184,
+        1.6458280086517334,
+        -1.0823858976364136,
+        -2.080740451812744
+      ],
+      [
+        1.4333394765853882,
+        1.5961779356002808,
+        -1.1020437479019165,
+        -2.0901830196380615
+      ],
+      [
+        1.3907467126846313,
+        1.6305865049362183,
+        -1.1104177236557007,
+        -2.1060547828674316
+      ],
+      [
+        1.423595666885376,
+        1.6507689952850342,
+        -1.106308102607727,
+        -2.1331257820129395
+      ],
+      [
+        1.4301397800445557,
+        1.6598888635635376,
+        -1.1146146059036255,
+        -2.043611526489258
+      ],
+      [
+        1.428512692451477,
+        1.6556105613708496,
+        -1.109764814376831,
+        -2.05098295211792
+      ]
+    ],
+    "pre_squash_log_stds": [
+      [
+        -0.9890259504318237,
+        -0.8902310132980347,
+        -1.0464078187942505,
+        -0.6673033237457275
+      ],
+      [
+        -0.9954520463943481,
+        -0.9053012728691101,
+        -1.0474984645843506,
+        -0.6782389879226685
+      ],
+      [
+        -1.0060315132141113,
+        -0.9040443897247314,
+        -1.0443544387817383,
+        -0.6804397106170654
+      ],
+      [
+        -0.997675359249115,
+        -0.8965420126914978,
+        -1.0433924198150635,
+        -0.6757138967514038
+      ],
+      [
+        -0.9966245889663696,
+        -0.8974902629852295,
+        -1.0517410039901733,
+        -0.6876078844070435
+      ],
+      [
+        -0.9967215657234192,
+        -0.8947139382362366,
+        -1.0481619834899902,
+        -0.6856483221054077
+      ]
+    ],
+    "discrete_masks": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "critic_to_continuous_gradient_connected": true,
+    "critic_to_continuous_gradient": [
+      [
+        0.02151287905871868,
+        0.011993799358606339,
+        -0.010698636993765831,
+        0.0031949691474437714
+      ],
+      [
+        0.016778934746980667,
+        0.006368993315845728,
+        0.003280114848166704,
+        0.0018768695881590247
+      ],
+      [
+        0.020994508638978004,
+        0.004667412489652634,
+        -0.004699377343058586,
+        -0.013882184401154518
+      ],
+      [
+        0.00842204038053751,
+        0.012097558937966824,
+        0.00976516492664814,
+        -0.014192601665854454
+      ],
+      [
+        0.022952958941459656,
+        0.019705424085259438,
+        0.0037753598298877478,
+        -0.018552705645561218
+      ],
+      [
+        0.0067731887102127075,
+        0.016055680811405182,
+        -0.00432994868606329,
+        -0.0036548362113535404
+      ]
+    ],
+    "critic_q_for_actor_action": -19.325578689575195,
+    "critic_counterfactual_estimates": {
+      "hover": -19.419239044189453,
+      "positive_x": -19.38119125366211,
+      "negative_x": -19.451961517333984,
+      "positive_y": -19.391170501708984,
+      "negative_y": -19.446775436401367,
+      "up": -19.419963836669922,
+      "down": -19.418231964111328
+    },
+    "alpha_continuous": 0.00040844062459655106,
+    "alpha_discrete": 0.01553787849843502
+  },
+  "periodic_cpu_job": {
+    "source_git_commit": "7e9b2020a86aaa2e500838c2ce8a8038c9e9685d",
+    "cpu_kernel_ref": "bduy2378/uav-masac-baseline-10098-cpu-audit-20261012",
+    "script_sha256": "43c3a1dc1e13c54b4517241ecee8f2aa87c928e57d9b887591dfbae5ea3e72ec",
+    "source_checkpoint": {
+      "source_run_id": "03db0105",
+      "name": "masac_episode_00010098.pt",
+      "bytes": 59422939,
+      "md5": "c4j2ePqGNo2zvV8panCfHw==",
+      "scope": "periodic checkpoint, not final 20k"
+    },
+    "execution_device": "cpu",
+    "checkpoint_scope": "periodic, not final 20k",
+    "does_not_update_source_gpu_final_summary": true,
+    "status_at_audit": "running",
+    "evaluation_result_available": false,
+    "status_checked_at_utc": "2026-10-11T18:22:33.539309+00:00"
+  },
+  "learner_history": {
+    "checked_at_utc": "2026-10-11T17:38:15.531982+00:00",
+    "scope": "recent learner records at unequal progress, not an outcome ranking",
+    "rows": [
+      {
+        "label": "A",
+        "run_id": "03db0105",
+        "latest": {
+          "global_step": 22323200,
+          "train/critic_loss": 0.02158528007566929,
+          "train/actor_loss": 20.1058406829834,
+          "train/target_q_mean": -20.07575798034668,
+          "train/alpha_continuous": 0.0006798958056606352,
+          "train/alpha_discrete": 0.06498575210571289,
+          "train/continuous_entropy": -25.003398895263672,
+          "train/discrete_entropy": 0.15131507813930511,
+          "train/discrete_target_entropy": 0.1658371090888977,
+          "train/discrete_entropy_error": -0.01452203094959259,
+          "train/discrete_choice_fraction": 0.025390625,
+          "train/critic_grad_norm": 5.467573642730713,
+          "train/actor_grad_norm": 0.008761556819081306,
+          "train/optimizer_updates": 85600,
+          "train/vector_steps": 5450,
+          "train/replay_samples_per_new_transition_effective": 1,
+          "train/transitions_per_second": 1373.134313924584,
+          "train/updates_per_second": 5.26538745663455,
+          "train/action_accel_x_mean": -0.829009215037028,
+          "train/action_accel_y_mean": 0.21973812580108643,
+          "train/action_accel_z_mean": -0.29165105024973553,
+          "train/action_motion_saturation_rate": 0.7318522135416666,
+          "train/reward_apf_intervention_mean": -0.13744303584098816
+        },
+        "window": {
+          "records": 251,
+          "first_global_step": 21299200,
+          "last_global_step": 22323200,
+          "critic_loss_max": 1.4281580448150635
+        }
+      },
+      {
+        "label": "B",
+        "run_id": "0b67697e",
+        "latest": {
+          "global_step": 1826816,
+          "train/critic_loss": 12.828781127929688,
+          "train/actor_loss": -28.717212677001953,
+          "train/target_q_mean": 28.61026382446289,
+          "train/alpha_continuous": 0.03801548108458519,
+          "train/alpha_discrete": 0.13331136107444763,
+          "train/continuous_entropy": 11.920366287231445,
+          "train/discrete_entropy": 0.5421223640441895,
+          "train/discrete_target_entropy": 0.5673961043357849,
+          "train/discrete_entropy_error": -0.02527374029159546,
+          "train/discrete_choice_fraction": 0.1334635466337204,
+          "train/critic_grad_norm": 119.25225830078125,
+          "train/actor_grad_norm": 0.08523637801408768,
+          "train/optimizer_updates": 5536,
+          "train/vector_steps": 446,
+          "train/replay_samples_per_new_transition_effective": 2,
+          "train/transitions_per_second": 1608.919026839911,
+          "train/updates_per_second": 4.8756830094469,
+          "train/action_accel_x_mean": 0.04836987952391306,
+          "train/action_accel_y_mean": -0.03689603010813395,
+          "train/action_accel_z_mean": -0.09205803275108337,
+          "train/action_motion_saturation_rate": 0.1136474609375,
+          "train/reward_apf_intervention_mean": -0.0393880233168602
+        },
+        "window": {
+          "records": 245,
+          "first_global_step": 827392,
+          "last_global_step": 1826816,
+          "critic_loss_max": 70.56195068359375
+        }
+      },
+      {
+        "label": "C",
+        "run_id": "1e9c0833",
+        "latest": {
+          "global_step": 2002944,
+          "train/critic_loss": 83.14967346191406,
+          "train/actor_loss": -35.46738052368164,
+          "train/target_q_mean": 36.414146423339844,
+          "train/alpha_continuous": 0.005099270027130842,
+          "train/alpha_discrete": 0.1197347566485405,
+          "train/continuous_entropy": 2.079779624938965,
+          "train/discrete_entropy": 1.4471385478973389,
+          "train/discrete_target_entropy": 1.393519639968872,
+          "train/discrete_entropy_error": 0.0536189079284668,
+          "train/discrete_choice_fraction": 0.2444661408662796,
+          "train/critic_grad_norm": 226.9757080078125,
+          "train/actor_grad_norm": 0.10790150612592697,
+          "train/optimizer_updates": 12448,
+          "train/vector_steps": 489,
+          "train/replay_samples_per_new_transition_effective": 4,
+          "train/transitions_per_second": 1422.741303728533,
+          "train/updates_per_second": 8.842126264544978,
+          "train/action_accel_x_mean": -0.45716917514801025,
+          "train/action_accel_y_mean": -0.1389820178349813,
+          "train/action_accel_z_mean": -0.437766154607137,
+          "train/action_motion_saturation_rate": 0.317626953125,
+          "train/reward_apf_intervention_mean": -0.1013590544462204
+        },
+        "window": {
+          "records": 251,
+          "first_global_step": 978944,
+          "last_global_step": 2002944,
+          "critic_loss_max": 94.75548553466797
+        }
+      },
+      {
+        "label": "D",
+        "run_id": "f1fa4c42",
+        "latest": {
+          "global_step": 1650688,
+          "train/critic_loss": 43.46083068847656,
+          "train/actor_loss": -59.502811431884766,
+          "train/target_q_mean": 61.419517517089844,
+          "train/alpha_continuous": 0.0016535536851733923,
+          "train/alpha_discrete": 0.16760742664337158,
+          "train/continuous_entropy": -23.085229873657227,
+          "train/discrete_entropy": 1.38755202293396,
+          "train/discrete_target_entropy": 1.3802436590194702,
+          "train/discrete_entropy_error": 0.007308363914489746,
+          "train/discrete_choice_fraction": 0.232421875,
+          "train/critic_grad_norm": 731.7463989257812,
+          "train/actor_grad_norm": 0.12183676660060883,
+          "train/optimizer_updates": 19392,
+          "train/vector_steps": 403,
+          "train/replay_samples_per_new_transition_effective": 8,
+          "train/transitions_per_second": 1174.7475633347124,
+          "train/updates_per_second": 13.800733238617317,
+          "train/action_accel_x_mean": -0.047535846630732216,
+          "train/action_accel_y_mean": -0.4334392150243123,
+          "train/action_accel_z_mean": -0.8323293526967367,
+          "train/action_motion_saturation_rate": 0.9211832682291666,
+          "train/reward_apf_intervention_mean": -0.13698731362819672
+        },
+        "window": {
+          "records": 251,
+          "first_global_step": 626688,
+          "last_global_step": 1650688,
+          "critic_loss_max": 190.21896362304688
+        }
+      },
+      {
+        "label": "E",
+        "run_id": "8e541a5e",
+        "latest": {
+          "global_step": 1245184,
+          "train/critic_loss": 162.7117919921875,
+          "train/actor_loss": -57.4030876159668,
+          "train/target_q_mean": 60.25621032714844,
+          "train/alpha_continuous": 0.0020204742904752493,
+          "train/alpha_discrete": 0.3213135898113251,
+          "train/continuous_entropy": -24.006351470947266,
+          "train/discrete_entropy": 0.6250665783882141,
+          "train/discrete_target_entropy": 0.6450833678245544,
+          "train/discrete_entropy_error": -0.020016789436340332,
+          "train/discrete_choice_fraction": 0.1354166716337204,
+          "train/critic_grad_norm": 335.1545715332031,
+          "train/actor_grad_norm": 0.2669827938079834,
+          "train/optimizer_updates": 26112,
+          "train/vector_steps": 304,
+          "train/replay_samples_per_new_transition_effective": 16,
+          "train/transitions_per_second": 894.3825942314071,
+          "train/updates_per_second": 18.755556046793487,
+          "train/action_accel_x_mean": 0.8577847480773926,
+          "train/action_accel_y_mean": -0.3117324709892273,
+          "train/action_accel_z_mean": 0.145073135693868,
+          "train/action_motion_saturation_rate": 0.9601236979166666,
+          "train/reward_apf_intervention_mean": -0.10415853559970856
+        },
+        "window": {
+          "records": 204,
+          "first_global_step": 413696,
+          "last_global_step": 1245184,
+          "critic_loss_max": 365.4853820800781
+        }
+      }
+    ]
+  },
+  "verification_boundaries": {
+    "production_code_changed_this_followup": false,
+    "previous_complete_suite_passed": 252,
+    "fresh_final_20k_cpu_results_verified": false,
+    "loss_finite_is_behavioral_success": false,
+    "periodic_audit_updates_source_final_summary": false,
+    "all_five_configs_are_intensity_only_comparison": false,
+    "b512_subgroup_is_fixed_batch_comparison": true,
+    "automatic_completion_watches": "Both existing watches include checkpoint provenance, actual mission behavior and media verification."
+  },
+  "periodic_cpu_prefix_probes": {
+    "source_checkpoint_sha256": "0f05a3f0fc1cda76ec5012ae95b5ec7f6f0d9e423079e89b35d690a72d90c737",
+    "training_episodes": 10098,
+    "seed": 10044,
+    "max_prefix_steps": 24,
+    "scope": "Short prefix diagnostics in real CPU UavNetSim; modified controls are probes, not learned-policy fixes or full mission evaluations",
+    "cases": {
+      "actor": {
+        "summary": {
+          "return": -3.008115225383612,
+          "reward_total": -3.008115225383612,
+          "reward_search": -0.15748466080035411,
+          "reward_communication": 0.0,
+          "reward_safety": -2.266666666666667,
+          "reward_energy": -0.343963897916591,
+          "reward_mission": -0.24000000000000007,
+          "reward_component_information_gain": 0.00014446821084608262,
+          "reward_component_coverage_shaping": 0.036777777777777784,
+          "reward_component_communication_progress": 0.0,
+          "reward_component_confirmation": 0.0,
+          "reward_component_delivery": 0.0,
+          "reward_component_false_confirmation": 0.0,
+          "reward_component_blocked_motion": 0.0,
+          "reward_component_boundary": 0.0,
+          "reward_component_expired_report": 0.0,
+          "reward_component_dropped_report": 0.0,
+          "reward_component_energy": -0.343963897916591,
+          "reward_component_step": -0.24000000000000007,
+          "reward_component_success_bonus": 0.0,
+          "reward_component_investigation_shaping": -0.19440690678897798,
+          "reward_component_apf_intervention": -2.266666666666667,
+          "reward_component_inactive_horizon_makeup": 0.0,
+          "coverage_percent": 0.1111111111111111,
+          "coverage_redundancy_percent": 54.23076923076924,
+          "gcs_contact_graph_reachability_percent": 100.0,
+          "length": 24,
+          "episode_end_step": 24,
+          "success": 0.0,
+          "targets_spawned": 50,
+          "obstacles_spawned": 30,
+          "confirmed_targets": 0,
+          "delivered_targets": 0,
+          "target_search_rate_percent": 0.0,
+          "target_delivery_rate_percent": 0.0,
+          "targets_ever_in_fov_count": 0,
+          "target_encounter_rate": 0.0,
+          "sensing_records": 260,
+          "positive_observations": 1,
+          "target_positive_observations": 0,
+          "delivery_rate": 0.0,
+          "confirmation_rate": 0.0,
+          "report_delivery_given_confirmation_rate_percent": 0.0,
+          "distance_total_m": 1947.2359293437664,
+          "first_confirmation_observed": 0.0,
+          "all_targets_confirmed": 0.0,
+          "first_delivery_observed": 0.0,
+          "target_confirmation_to_delivery_latency_count": 0,
+          "false_confirmations": 0,
+          "expired_reports": 0,
+          "dropped_reports": 0,
+          "blocked_motion_rate": 0.0,
+          "obstacle_block_rate": 0.0,
+          "peer_safety_block_rate": 0.0,
+          "apf_intervention_rate": 0.4722222222222222,
+          "apf_peer_intervention_rate": 0.0,
+          "apf_obstacle_intervention_rate": 0.2152777777777778,
+          "apf_boundary_intervention_rate": 0.3125,
+          "boundary_clip_rate": 0.0,
+          "horizontal_boundary_clip_rate": 0.0,
+          "altitude_clip_rate": 0.0,
+          "total_energy_j": 34396.3897916591,
+          "communication_energy_j": 0.0,
+          "battery_remaining_mean_j": 271467.2683680568,
+          "battery_remaining_mean_percent": 97.93191499569149,
+          "depleted_uav_count": 0,
+          "collision_violation_count": 0,
+          "collision_step_count": 0,
+          "information_gain_bits": 1.5025132143932747,
+          "action_motion_mean_x": 0.5569104188018374,
+          "action_motion_mean_y": 0.6690395598610243,
+          "action_motion_mean_z": -0.4563873731013801,
+          "action_motion_std_x": 0.0175887888323998,
+          "action_motion_std_y": 0.007455738077931177,
+          "action_motion_std_z": 0.01281425886202276,
+          "action_motion_norm_mean": 0.9831472027907263,
+          "action_motion_saturation_rate": 1.0,
+          "action_destination_silent_rate": 1.0,
+          "action_destination_peer_rate": 0.0,
+          "action_destination_gcs_rate": 0.0,
+          "action_power_mean": -0.9646726854973369,
+          "action_power_std": 0.0039572046744408024,
+          "action_tx_power_w_mean": 0.10529909717539948,
+          "network_pdr_percent": 0.0,
+          "network_e2e_delay_ms": 0.0,
+          "network_throughput_kbps": 0.0,
+          "network_average_hops": 0.0,
+          "network_phy_success_percent": 0.0,
+          "network_collisions": 0.0,
+          "network_requests": 0.0,
+          "network_packets_injected": 0.0,
+          "network_packets_delivered": 0.0,
+          "network_packets_failed": 0.0,
+          "network_payload_bytes_injected": 0.0,
+          "network_payload_bytes_delivered": 0.0,
+          "network_payload_bytes_deferred": 0.0,
+          "network_payload_delivery_ratio": 0.0,
+          "network_traffic_active": 0.0
+        },
+        "prefix": [
+          {
+            "step": 1,
+            "reward": -0.21470620508357036,
+            "positions": [
+              [
+                1565.3723758836807,
+                109.7920013141096,
+                2.0
+              ],
+              [
+                1389.8641525193948,
+                51.86196736991985,
+                2.0
+              ],
+              [
+                1401.6605750381582,
+                211.6288357077966,
+                2.0
+              ],
+              [
+                1339.4729609279198,
+                135.79530401292442,
+                2.0
+              ],
+              [
+                1629.6868793953117,
+                75.33592313203673,
+                2.0
+              ],
+              [
+                1722.6900776150742,
+                132.23643960057916,
+                2.0
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 4.491642967563436e-08,
+              "coverage_shaping": 0.00309375,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.0078,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 2,
+            "reward": -0.017482353356325135,
+            "positions": [
+              [
+                1566.5238674064697,
+                111.12725491041545,
+                3.122513771057129
+              ],
+              [
+                1391.0345019981164,
+                53.16779677570446,
+                3.1057092547416687
+              ],
+              [
+                1402.7959719955556,
+                212.96181824792723,
+                3.100736975669861
+              ],
+              [
+                1340.6269235400719,
+                137.12563533845542,
+                3.117429792881012
+              ],
+              [
+                1630.829969405001,
+                76.67110067281584,
+                3.106443703174591
+              ],
+              [
+                1723.8342352631607,
+                133.57212962209405,
+                3.1086995601654053
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 4.73379352683434e-07,
+              "coverage_shaping": 0.0003125000000000003,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.007795326735677818,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 3,
+            "reward": -0.018070575067112928,
+            "positions": [
+              [
+                1568.8250227352203,
+                113.79290015215281,
+                3.3613656759262085
+              ],
+              [
+                1393.3759760543603,
+                55.77699391544445,
+                3.316023826599121
+              ],
+              [
+                1405.0668600856893,
+                215.62545719732145,
+                3.3000558018684387
+              ],
+              [
+                1342.931769230799,
+                139.78602047029136,
+                3.348387598991394
+              ],
+              [
+                1633.120669602221,
+                79.33822840127806,
+                3.3233603835105896
+              ],
+              [
+                1726.127487373642,
+                136.24021567403497,
+                3.330603301525116
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.1789230496273007e-06,
+              "coverage_shaping": -3.472222222222201e-05,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.008037031767940333,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 4,
+            "reward": 1.5358566314304676,
+            "positions": [
+              [
+                1572.2812351366103,
+                117.78289837355021,
+                2.718628168106079
+              ],
+              [
+                1396.8858409806985,
+                59.68919579685314,
+                2.6279308199882507
+              ],
+              [
+                1408.4691739141576,
+                219.61959007371763,
+                2.593100368976593
+              ],
+              [
+                1346.3818055181068,
+                143.77758617463707,
+                2.6874645352363586
+              ],
+              [
+                1636.5603810537514,
+                83.3360796538339,
+                2.6533244848251343
+              ],
+              [
+                1729.5661972287216,
+                140.24113418161096,
+                2.663245141506195
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.00010112299319507967,
+              "coverage_shaping": -3.472222222222201e-05,
+              "communication_progress": 0.0,
+              "investigation_shaping": 1.5543011819984411,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.008510951338946362,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 5,
+            "reward": -0.25445076340934564,
+            "positions": [
+              [
+                1575.7374475380004,
+                121.77289659494761,
+                4.07589066028595
+              ],
+              [
+                1400.3957059070367,
+                63.60139767826183,
+                3.9398378133773804
+              ],
+              [
+                1411.871487742626,
+                223.6137229501138,
+                3.8861449360847473
+              ],
+              [
+                1349.8318418054146,
+                147.76915187898277,
+                4.026541471481323
+              ],
+              [
+                1640.0000925052818,
+                87.33393090638975,
+                3.983288586139679
+              ],
+              [
+                1733.0049070838013,
+                144.24205268918695,
+                3.995886981487274
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 6.290446294188131e-07,
+              "coverage_shaping": 0.0027152777777777783,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.03860130150825758,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.008565368723495214,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 6,
+            "reward": -0.05831036987301966,
+            "positions": [
+              [
+                1580.3431278844894,
+                127.09085494989756,
+                4.552327990531921
+              ],
+              [
+                1405.031012623002,
+                68.84416417778118,
+                4.32935905456543
+              ],
+              [
+                1416.4022462427251,
+                228.94138434518675,
+                4.2743218541145325
+              ],
+              [
+                1354.3686065463585,
+                153.1236712462008,
+                4.4407960176467896
+              ],
+              [
+                1644.5853753078636,
+                92.66660123739103,
+                4.4286850690841675
+              ],
+              [
+                1737.5859615328827,
+                149.58014406263055,
+                4.442088603973389
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.6454678668065277e-06,
+              "coverage_shaping": 0.00028125000000000047,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.039444540914602144,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.00914872442628432,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 7,
+            "reward": -0.06362247302167953,
+            "positions": [
+              [
+                1586.0973980804504,
+                133.73661810869578,
+                4.148216545581818
+              ],
+              [
+                1410.8001271173257,
+                75.4101105183421,
+                3.7999168038368225
+              ],
+              [
+                1422.0381454288595,
+                235.6037168799768,
+                3.731106698513031
+              ],
+              [
+                1360.0392641810936,
+                159.79492623868583,
+                3.927378833293915
+              ],
+              [
+                1650.313531278437,
+                99.33436089429716,
+                3.98766028881073
+              ],
+              [
+                1743.2997232201615,
+                156.25853015481653,
+                3.992826521396637
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.0985767231352944e-06,
+              "coverage_shaping": 0.0016527777777777775,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.04529945387295703,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.009976895503223417,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 8,
+            "reward": -0.2649701582885127,
+            "positions": [
+              [
+                1592.7148142304059,
+                141.37955264854855,
+                5.247643693055883
+              ],
+              [
+                1416.5692416116494,
+                81.97605685890301,
+                5.270474553108215
+              ],
+              [
+                1427.6740446149938,
+                242.26604941476683,
+                5.1878915429115295
+              ],
+              [
+                1365.7099218158287,
+                166.46618123117088,
+                5.41396164894104
+              ],
+              [
+                1656.0416872490105,
+                106.00212055120329,
+                5.5466355085372925
+              ],
+              [
+                1749.0134849074402,
+                162.9369162470025,
+                5.543564438819885
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 4.613426652699818e-06,
+              "coverage_shaping": 0.0002604166666666651,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.04506284668430366,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.010172341697528405,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 9,
+            "reward": -0.06892342490901272,
+            "positions": [
+              [
+                1600.4815028222254,
+                150.35041442018996,
+                5.470451561145335
+              ],
+              [
+                1423.473041383912,
+                89.86783377826794,
+                5.829133749008179
+              ],
+              [
+                1434.4074416219823,
+                250.26847603906492,
+                5.71367073059082
+              ],
+              [
+                1372.524097540812,
+                174.45198030534385,
+                5.984850823879242
+              ],
+              [
+                1662.9017592657265,
+                114.01259892854551,
+                6.21758508682251
+              ],
+              [
+                1755.852621269516,
+                170.95981039106073,
+                6.1968923807144165
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 6.100115853613367e-06,
+              "coverage_shaping": 0.0030069444444444458,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.05079933806341724,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.011137131405893536,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 10,
+            "reward": -0.07755847310280299,
+            "positions": [
+              [
+                1609.380478201078,
+                160.65556967651918,
+                4.80512030054979
+              ],
+              [
+                1431.5195382520455,
+                99.07821659744366,
+                5.479373097419739
+              ],
+              [
+                1442.2397797166936,
+                259.60443261255125,
+                5.302266955375671
+              ],
+              [
+                1380.485808232264,
+                183.75075609746574,
+                5.644964277744293
+              ],
+              [
+                1670.8923183668312,
+                123.36458843622069,
+                5.996814608573914
+              ],
+              [
+                1763.8010482314148,
+                180.33295501767816,
+                5.940257489681244
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 4.444831759953241e-06,
+              "coverage_shaping": 0.0012569444444444455,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.05647249545266797,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.012347366926339419,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 11,
+            "reward": -0.11829078609586202,
+            "positions": [
+              [
+                1619.1299808621397,
+                171.96527032115685,
+                5.645608386704094
+              ],
+              [
+                1440.7015025302667,
+                109.60395161808117,
+                4.211255609989166
+              ],
+              [
+                1451.1692032873266,
+                270.27212992299894,
+                3.950097918510437
+              ],
+              [
+                1389.6341283111137,
+                194.35141725602745,
+                4.428855538368225
+              ],
+              [
+                1680.0086948860344,
+                134.05861323747496,
+                4.879144310951233
+              ],
+              [
+                1772.8485859158554,
+                191.05562604963006,
+                4.7600350975990295
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 3.0538942707991623e-06,
+              "coverage_shaping": 0.0008993055555555555,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.06214164418278434,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.03333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.013718168029570708,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 12,
+            "reward": -0.24969696400895355,
+            "positions": [
+              [
+                1630.001378598046,
+                184.61575754206558,
+                5.595353276847808
+              ],
+              [
+                1449.8834668084878,
+                120.12968663871868,
+                4.943138122558594
+              ],
+              [
+                1460.0986268579595,
+                280.93982723344664,
+                4.597928881645203
+              ],
+              [
+                1398.7824483899635,
+                204.95207841458915,
+                5.212746798992157
+              ],
+              [
+                1689.1250714052376,
+                144.75263803872923,
+                5.761474013328552
+              ],
+              [
+                1781.896123600296,
+                201.77829708158197,
+                5.579812705516815
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 2.1612633270717822e-06,
+              "coverage_shaping": 0.002607638888888887,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.061661857789392094,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.16666666666666666,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.013978239705110768,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 13,
+            "reward": -0.1256179281101745,
+            "positions": [
+              [
+                1642.18909911948,
+                198.37030794617237,
+                4.6402789764893555
+              ],
+              [
+                1460.1928596183557,
+                131.9792764633952,
+                4.758551061153412
+              ],
+              [
+                1470.1420704185598,
+                292.9533112346063,
+                4.348406255245209
+              ],
+              [
+                1409.0634934691948,
+                216.90155155721305,
+                5.104349911212921
+              ],
+              [
+                1699.3410234440025,
+                156.80123895082335,
+                5.735515892505646
+              ],
+              [
+                1792.025919151596,
+                213.85649754106225,
+                5.4679776430130005
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 2.4696021601378125e-06,
+              "coverage_shaping": 0.0005173611111111112,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.06725585311899387,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.03333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.015548572371118553,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 14,
+            "reward": -0.16456798712688248,
+            "positions": [
+              [
+                1654.3768196409142,
+                212.12485835027917,
+                5.685204676130903
+              ],
+              [
+                1471.6174959823388,
+                145.15004210174664,
+                3.642313778400421
+              ],
+              [
+                1481.1564638804475,
+                306.36436658943904,
+                3.200546145439148
+              ],
+              [
+                1420.4268823651832,
+                230.23866422238945,
+                4.0932042598724365
+              ],
+              [
+                1710.6765136707481,
+                170.18315142068724,
+                4.801505625247955
+              ],
+              [
+                1803.2330659153977,
+                227.28889216481866,
+                4.417190790176392
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 5.468638757721774e-07,
+              "coverage_shaping": 0.0018854166666666694,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.07277245105949404,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.017014832931264202,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 15,
+            "reward": -0.29817393439973067,
+            "positions": [
+              [
+                1668.3304156186364,
+                225.3986799374132,
+                5.923542700803801
+              ],
+              [
+                1483.042132346322,
+                158.32080774009808,
+                4.52607649564743
+              ],
+              [
+                1492.1708573423352,
+                319.7754219442718,
+                4.052686035633087
+              ],
+              [
+                1431.7902712611717,
+                243.57577688756584,
+                5.082058608531952
+              ],
+              [
+                1722.0120038974937,
+                183.56506389055113,
+                5.867495357990265
+              ],
+              [
+                1814.4402126791992,
+                240.72128678857507,
+                5.366403937339783
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.810038298166726e-06,
+              "coverage_shaping": 0.0011770833333333338,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.07216660549726625,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.017186222274095882,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 16,
+            "reward": -0.17031927593499635,
+            "positions": [
+              [
+                1683.7348202007622,
+                238.14146320593076,
+                5.352758992407594
+              ],
+              [
+                1495.596010415246,
+                172.82534067333324,
+                4.5103684067726135
+              ],
+              [
+                1502.0193196648106,
+                334.6639729698109,
+                4.228356324741666
+              ],
+              [
+                1444.2466507939857,
+                258.2633618837893,
+                5.141041815280914
+              ],
+              [
+                1734.4465948332008,
+                198.28544717702727,
+                6.012082159519196
+              ],
+              [
+                1826.70122320681,
+                255.51320697366418,
+                5.361163854598999
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 8.936714675389361e-07,
+              "coverage_shaping": 0.002538194444444441,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.07755144074550926,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.018640256638732387,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 17,
+            "reward": -0.27300525971049333,
+            "positions": [
+              [
+                1699.4099589420111,
+                250.50156401057214,
+                4.1207145363501745
+              ],
+              [
+                1508.707274972527,
+                187.90426336612805,
+                3.6613500714575404
+              ],
+              [
+                1510.7841938724414,
+                351.07495326915836,
+                3.6912532251640013
+              ],
+              [
+                1456.9881905711716,
+                273.65981784386116,
+                4.364956783883891
+              ],
+              [
+                1747.300903436982,
+                213.58859091563966,
+                5.250149069199399
+              ],
+              [
+                1839.2951943762027,
+                271.02230159879184,
+                4.433869891854253
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 2.2380460686920685e-07,
+              "coverage_shaping": 0.002166666666666671,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.07937160249381375,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.16666666666666666,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019133881021286468,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 18,
+            "reward": -0.3061841305138029,
+            "positions": [
+              [
+                1715.08509768326,
+                262.86166481521354,
+                4.888670080292755
+              ],
+              [
+                1521.8086529208808,
+                202.9718157283908,
+                4.811463833160905
+              ],
+              [
+                1519.5490680800722,
+                367.4859335685058,
+                5.1541501255863365
+              ],
+              [
+                1469.7154891526307,
+                289.0390652132399,
+                5.58750378496288
+              ],
+              [
+                1760.135582179044,
+                228.91073440791905,
+                5.95933197230802
+              ],
+              [
+                1851.884589751918,
+                286.5257612723878,
+                5.506186180599113
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.5007794670562915e-06,
+              "coverage_shaping": 0.001798611111111111,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.07860436233437143,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019379880070009597,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 19,
+            "reward": -1.0621613078635574,
+            "positions": [
+              [
+                1730.5723779613388,
+                275.5157549680198,
+                4.753940748349747
+              ],
+              [
+                1536.2538393603893,
+                216.7994476106228,
+                5.1764093870772045
+              ],
+              [
+                1527.5562943205116,
+                385.57729919208117,
+                5.840983420413066
+              ],
+              [
+                1481.0000236289193,
+                305.5420965870234,
+                6.143594721205501
+              ],
+              [
+                1772.954302683544,
+                244.26116647409543,
+                5.748050148169742
+              ],
+              [
+                1864.387373751373,
+                302.13569478042234,
+                5.608010233310645
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 2.095367327237237e-06,
+              "coverage_shaping": 0.002121527777777777,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.9015022950695882,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.13333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019449302605740855,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 20,
+            "reward": -0.12767615539765423,
+            "positions": [
+              [
+                1745.8377606944834,
+                288.4007876342006,
+                3.782332184131346
+              ],
+              [
+                1551.918579293747,
+                229.22996334083018,
+                4.863038199285421
+              ],
+              [
+                1534.6523648218665,
+                404.27568173205964,
+                5.713414504022525
+              ],
+              [
+                1490.8031826083434,
+                322.97442611265836,
+                6.034226838298041
+              ],
+              [
+                1785.736095869017,
+                259.60723074694954,
+                4.687826446665628
+              ],
+              [
+                1876.8665424109986,
+                317.74538847603367,
+                4.828387059072292
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.6667559516348002e-06,
+              "coverage_shaping": 0.0017534722222222214,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.10000000000000002,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019431294375828075,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 21,
+            "reward": -0.19448892975953128,
+            "positions": [
+              [
+                1761.1009768582896,
+                301.2839915668875,
+                4.810577663444527
+              ],
+              [
+                1568.6158386856257,
+                240.19882205523533,
+                3.9219392120739354
+              ],
+              [
+                1542.1897493870415,
+                422.77472009807,
+                4.726797329260251
+              ],
+              [
+                1499.1425519789382,
+                341.1363157646373,
+                5.259189568145021
+              ],
+              [
+                1798.5178890544898,
+                274.95329501980365,
+                5.627602745161514
+              ],
+              [
+                1889.3207016796694,
+                333.37906410426086,
+                5.52272362152509
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.0990609940475448e-06,
+              "coverage_shaping": 0.0017326388888888903,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.16666666666666666,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019556001042747552,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 22,
+            "reward": -0.12741905925096014,
+            "positions": [
+              [
+                1776.1874606521446,
+                314.41368570301074,
+                4.906173843291872
+              ],
+              [
+                1585.3081828213049,
+                251.16445181155024,
+                4.980528510847251
+              ],
+              [
+                1549.726629645332,
+                441.27252074132315,
+                5.740112351677109
+              ],
+              [
+                1506.3987722542852,
+                359.76655590410667,
+                5.770481716869846
+              ],
+              [
+                1811.2914902650803,
+                290.34274300245875,
+                5.625899231486806
+              ],
+              [
+                1901.757501967115,
+                349.04003393568735,
+                5.277728622924844
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 9.707128789116084e-07,
+              "coverage_shaping": 0.002055555555555552,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.10000000000000002,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019475585519394586,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 23,
+            "reward": -0.09434989601453582,
+            "positions": [
+              [
+                1791.0859979140077,
+                327.734644798886,
+                4.140905117355104
+              ],
+              [
+                1601.0054284409462,
+                260.39521011920414,
+                6.039117809620567
+              ],
+              [
+                1557.6682046172468,
+                459.6281168890138,
+                5.799078683929334
+              ],
+              [
+                1513.3786239494148,
+                378.50673207045173,
+                5.474732552290912
+              ],
+              [
+                1824.018716944147,
+                305.7453774482937,
+                4.744676678647424
+              ],
+              [
+                1914.1374203161881,
+                364.7073787486179,
+                4.149930687556232
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 7.968548598524927e-07,
+              "coverage_shaping": 0.0013437500000000038,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019027776202729007,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 24,
+            "reward": -0.19392544651556298,
+            "positions": [
+              [
+                1805.9670801360292,
+                341.0399971363486,
+                5.374189787419319
+              ],
+              [
+                1615.8009513153042,
+                267.8407804561841,
+                7.097707108393883
+              ],
+              [
+                1565.955407854431,
+                477.8114045647891,
+                4.968228633918283
+              ],
+              [
+                1520.8057443760858,
+                397.0411303628711,
+                4.328450690929428
+              ],
+              [
+                1836.7383918124622,
+                321.1388726068872,
+                5.862790289469859
+              ],
+              [
+                1926.5173386652611,
+                380.3747235615484,
+                5.02213275218762
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 3.827865848293761e-06,
+              "coverage_shaping": 0.0016701388888888842,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.16666666666666666,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.018932746603633505,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          }
+        ],
+        "episode_completed": false,
+        "wall_seconds": 62.1654580430004,
+        "prefix_discounted_return_gamma_0_99": -2.466705846189757,
+        "final_altitude_m": [
+          5.374189787419319,
+          7.097707108393883,
+          4.968228633918283,
+          4.328450690929428,
+          5.862790289469859,
+          5.02213275218762
+        ]
+      },
+      "mirror_up": {
+        "summary": {
+          "return": 0.37338124360415703,
+          "reward_total": 0.37338124360415703,
+          "reward_search": 2.938765979710773,
+          "reward_communication": 0.0,
+          "reward_safety": -1.9333333333333333,
+          "reward_energy": -0.39205140277328254,
+          "reward_mission": -0.24000000000000007,
+          "reward_component_information_gain": 0.056404417482800236,
+          "reward_component_coverage_shaping": 0.14647222222222223,
+          "reward_component_communication_progress": 0.0,
+          "reward_component_confirmation": 0.0,
+          "reward_component_delivery": 0.0,
+          "reward_component_false_confirmation": 0.0,
+          "reward_component_blocked_motion": 0.0,
+          "reward_component_boundary": 0.0,
+          "reward_component_expired_report": 0.0,
+          "reward_component_dropped_report": 0.0,
+          "reward_component_energy": -0.39205140277328254,
+          "reward_component_step": -0.24000000000000007,
+          "reward_component_success_bonus": 0.0,
+          "reward_component_investigation_shaping": 2.7358893400057505,
+          "reward_component_apf_intervention": -1.9333333333333333,
+          "reward_component_inactive_horizon_makeup": 0.0,
+          "coverage_percent": 3.138888888888889,
+          "coverage_redundancy_percent": 92.85930408472012,
+          "gcs_contact_graph_reachability_percent": 100.0,
+          "length": 24,
+          "episode_end_step": 24,
+          "success": 0.0,
+          "targets_spawned": 50,
+          "obstacles_spawned": 30,
+          "confirmed_targets": 0,
+          "delivered_targets": 0,
+          "target_search_rate_percent": 0.0,
+          "target_delivery_rate_percent": 0.0,
+          "targets_ever_in_fov_count": 2,
+          "target_encounter_rate": 0.04,
+          "sensing_records": 6610,
+          "positive_observations": 1204,
+          "target_positive_observations": 34,
+          "delivery_rate": 0.0,
+          "confirmation_rate": 0.0,
+          "report_delivery_given_confirmation_rate_percent": 0.0,
+          "distance_total_m": 2329.8576869629483,
+          "first_confirmation_observed": 0.0,
+          "all_targets_confirmed": 0.0,
+          "first_delivery_observed": 0.0,
+          "target_confirmation_to_delivery_latency_count": 0,
+          "false_confirmations": 0,
+          "expired_reports": 0,
+          "dropped_reports": 0,
+          "blocked_motion_rate": 0.0,
+          "obstacle_block_rate": 0.0,
+          "peer_safety_block_rate": 0.0,
+          "apf_intervention_rate": 0.4027777777777778,
+          "apf_peer_intervention_rate": 0.0,
+          "apf_obstacle_intervention_rate": 0.0625,
+          "apf_boundary_intervention_rate": 0.3402777777777778,
+          "boundary_clip_rate": 0.0,
+          "horizontal_boundary_clip_rate": 0.0,
+          "altitude_clip_rate": 0.0,
+          "total_energy_j": 39205.140277328246,
+          "communication_energy_j": 0.0,
+          "battery_remaining_mean_j": 270665.80995377863,
+          "battery_remaining_mean_percent": 97.64278858361423,
+          "depleted_uav_count": 0,
+          "collision_violation_count": 0,
+          "collision_step_count": 0,
+          "information_gain_bits": 530.9628767760995,
+          "action_motion_mean_x": 0.5601490866392851,
+          "action_motion_mean_y": 0.646983564313915,
+          "action_motion_mean_z": 0.48490735660824513,
+          "action_motion_std_x": 0.037688159250500154,
+          "action_motion_std_y": 0.04922835517323854,
+          "action_motion_std_z": 0.046322429094532644,
+          "action_motion_norm_mean": 0.9866396661790707,
+          "action_motion_saturation_rate": 1.0,
+          "action_destination_silent_rate": 1.0,
+          "action_destination_peer_rate": 0.0,
+          "action_destination_gcs_rate": 0.0,
+          "action_power_mean": -0.9584001215795676,
+          "action_power_std": 0.013953764962375085,
+          "action_tx_power_w_mean": 0.10623998176306487,
+          "network_pdr_percent": 0.0,
+          "network_e2e_delay_ms": 0.0,
+          "network_throughput_kbps": 0.0,
+          "network_average_hops": 0.0,
+          "network_phy_success_percent": 0.0,
+          "network_collisions": 0.0,
+          "network_requests": 0.0,
+          "network_packets_injected": 0.0,
+          "network_packets_delivered": 0.0,
+          "network_packets_failed": 0.0,
+          "network_payload_bytes_injected": 0.0,
+          "network_payload_bytes_delivered": 0.0,
+          "network_payload_bytes_deferred": 0.0,
+          "network_payload_delivery_ratio": 0.0,
+          "network_traffic_active": 0.0
+        },
+        "prefix": [
+          {
+            "step": 1,
+            "reward": -0.015719363230611988,
+            "positions": [
+              [
+                1566.5271085878433,
+                111.12486893648509,
+                0.8765661120414734
+              ],
+              [
+                1391.0338059350747,
+                53.164502426987724,
+                0.8993049263954163
+              ],
+              [
+                1402.7946380436056,
+                212.9584724007974,
+                0.9054730534553528
+              ],
+              [
+                1340.6202871589226,
+                137.12571723523735,
+                0.8916128873825073
+              ],
+              [
+                1630.8335095632729,
+                76.66675716314177,
+                0.8936544060707092
+              ],
+              [
+                1723.8380168202439,
+                133.56687249242486,
+                0.8917964100837708
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.9555634112045085e-09,
+              "coverage_shaping": 0.0020625,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.007781865186175398,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 2,
+            "reward": -0.017807547793526408,
+            "positions": [
+              [
+                1568.8298942228378,
+                113.79320628160838,
+                2.633325517177582
+              ],
+              [
+                1393.370581357171,
+                55.772290512925224,
+                2.696423053741455
+              ],
+              [
+                1405.0602459966772,
+                215.62039747823576,
+                2.7149046659469604
+              ],
+              [
+                1342.9148887185615,
+                139.78767271104454,
+                2.6720338463783264
+              ],
+              [
+                1633.1237399566826,
+                79.33150702390532,
+                2.678829550743103
+              ],
+              [
+                1726.1310487511673,
+                136.23135174810113,
+                2.672756850719452
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.8335368686672735e-07,
+              "coverage_shaping": 0.00032291666666666634,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.00813064781387994,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 3,
+            "reward": -0.017357328896030144,
+            "positions": [
+              [
+                1572.2779502054275,
+                117.79510576242808,
+                5.27357691526413
+              ],
+              [
+                1396.8734020873803,
+                59.68714515865429,
+                5.38927036523819
+              ],
+              [
+                1408.4561965524786,
+                219.61650601018766,
+                5.426276326179504
+              ],
+              [
+                1346.3575837401909,
+                143.78177995744346,
+                5.338220179080963
+              ],
+              [
+                1636.556537627047,
+                83.33253925714354,
+                5.352215766906738
+              ],
+              [
+                1729.5681737187424,
+                140.23231984674158,
+                5.339383482933044
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 3.763333275819125e-06,
+              "coverage_shaping": 0.001350694444444445,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.008711786673750407,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 4,
+            "reward": 1.4085390483051634,
+            "positions": [
+              [
+                1576.8744445224822,
+                123.1280083131254,
+                8.793519675731659
+              ],
+              [
+                1401.5017348214883,
+                64.9372112006007,
+                9.000215649604797
+              ],
+              [
+                1412.982704287731,
+                224.94808366884092,
+                9.0370192527771
+              ],
+              [
+                1350.9504490880531,
+                149.10808975759147,
+                8.886703670024872
+              ],
+              [
+                1641.1334867466148,
+                88.6711216536508,
+                8.909285366535187
+              ],
+              [
+                1734.151526403717,
+                145.5707111507577,
+                8.88681960105896
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.00011416588214040458,
+              "coverage_shaping": 0.0020243055555555557,
+              "communication_progress": 0.0,
+              "investigation_shaping": 1.4259266973075388,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.009526120440071369,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 5,
+            "reward": 1.2943643712765553,
+            "positions": [
+              [
+                1582.623568691832,
+                129.7894012402952,
+                13.187655508518219
+              ],
+              [
+                1407.2877578422326,
+                71.5109883993922,
+                13.50357836484909
+              ],
+              [
+                1418.6453095733755,
+                231.61318507779936,
+                13.542374074459076
+              ],
+              [
+                1356.692683914141,
+                155.76703841748832,
+                13.31593543291092
+              ],
+              [
+                1646.8536874044594,
+                95.35143226060728,
+                13.346592783927917
+              ],
+              [
+                1739.8806116107025,
+                152.24776710569085,
+                13.31506496667862
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0001948756515111838,
+              "coverage_shaping": 0.0026909722222222213,
+              "communication_progress": 0.0,
+              "investigation_shaping": 1.3120509446842445,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.010572421281422675,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 6,
+            "reward": -0.6014977283358625,
+            "positions": [
+              [
+                1589.534937419516,
+                137.78023142332438,
+                18.442276298999786
+              ],
+              [
+                1414.2459368392724,
+                79.40449707210644,
+                18.88542014360428
+              ],
+              [
+                1425.3973925172918,
+                239.63204362977842,
+                18.976754009723663
+              ],
+              [
+                1363.5820526866478,
+                163.76471288266777,
+                18.623247802257538
+              ],
+              [
+                1653.7200822818932,
+                103.37585049543242,
+                18.657859325408936
+              ],
+              [
+                1746.7519856217423,
+                160.26409007608117,
+                18.628139793872833
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0003901780831951585,
+              "coverage_shaping": 0.005069444444444446,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.5851049196149327,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.011852431248569311,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 7,
+            "reward": 0.15773349284667848,
+            "positions": [
+              [
+                1597.6113260170043,
+                147.11011797899607,
+                24.54714548587799
+              ],
+              [
+                1422.3575210258264,
+                88.61949674785717,
+                25.170317113399506
+              ],
+              [
+                1433.2096502840154,
+                249.00263860811094,
+                25.359853327274323
+              ],
+              [
+                1371.6104490546745,
+                173.11261208119987,
+                24.811038494110107
+              ],
+              [
+                1661.7170418489632,
+                112.75579982671599,
+                24.84567952156067
+              ],
+              [
+                1754.7760029557267,
+                169.63000728189172,
+                24.801506280899048
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0005527820632532653,
+              "coverage_shaping": 0.00432986111111111,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.17621612144093857,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.013365271768624471,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 8,
+            "reward": -1.1816603316883545,
+            "positions": [
+              [
+                1606.8830430885375,
+                157.77230209822062,
+                31.466519713401794
+              ],
+              [
+                1431.6670843049783,
+                99.14471988380535,
+                32.31045627593994
+              ],
+              [
+                1442.130270606243,
+                259.7248422204385,
+                32.63529682159424
+              ],
+              [
+                1380.7470714835686,
+                183.82268245282768,
+                31.89925241470337
+              ],
+              [
+                1670.8367124784645,
+                123.50494986448149,
+                31.907869279384613
+              ],
+              [
+                1763.9337330582657,
+                180.34740306436242,
+                31.85867089033127
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.001099062782757676,
+              "coverage_shaping": 0.007722222222222226,
+              "communication_progress": 0.0,
+              "investigation_shaping": -1.1653709670050603,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.015110649688274188,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 9,
+            "reward": 2.9284742825367824,
+            "positions": [
+              [
+                1617.2774846931518,
+                169.80259592050913,
+                39.24837225675583
+              ],
+              [
+                1442.0795488044519,
+                111.07590632141216,
+                40.314555048942566
+              ],
+              [
+                1452.1336990654104,
+                271.8274156152139,
+                40.81754755973816
+              ],
+              [
+                1390.91117570682,
+                195.93166835370658,
+                39.93761098384857
+              ],
+              [
+                1681.0882617223915,
+                135.63143533143858,
+                39.82002544403076
+              ],
+              [
+                1774.2552177432099,
+                192.41164495050134,
+                39.765721797943115
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.001470275782147745,
+              "coverage_shaping": 0.008673611111111108,
+              "communication_progress": 0.0,
+              "investigation_shaping": 2.9454266384265027,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.017096242782979065,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 10,
+            "reward": -0.8291122850312544,
+            "positions": [
+              [
+                1628.755782165152,
+                183.13421041483286,
+                47.99783420562744
+              ],
+              [
+                1453.7168022081155,
+                124.33074168861492,
+                49.12553209066391
+              ],
+              [
+                1463.1851402580373,
+                285.31004908670286,
+                49.938414573669434
+              ],
+              [
+                1402.046243348555,
+                209.48484940591453,
+                48.929205894470215
+              ],
+              [
+                1692.3927960384544,
+                149.15017836961607,
+                48.663071632385254
+              ],
+              [
+                1785.725265455536,
+                205.83645261823358,
+                48.52346271276474
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0022594273073736626,
+              "coverage_shaping": 0.008927083333333335,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.8109938023639884,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019304993307972987,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 11,
+            "reward": 0.04955153877901254,
+            "positions": [
+              [
+                1640.3420577622799,
+                196.7548063896435,
+                56.95537756741865
+              ],
+              [
+                1465.4555933878673,
+                137.82688388837127,
+                58.072874006682156
+              ],
+              [
+                1474.385408037295,
+                299.0670859457441,
+                59.17410288217701
+              ],
+              [
+                1413.2368785064991,
+                223.27450066423575,
+                58.12785812920896
+              ],
+              [
+                1703.7572952156982,
+                162.93161453671118,
+                57.65863585163859
+              ],
+              [
+                1797.31411807562,
+                219.48717418934942,
+                57.43167777179
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0024011038942650773,
+              "coverage_shaping": 0.010208333333333337,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.13282120362321959,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01921243540513879,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 12,
+            "reward": -0.03029936670588464,
+            "positions": [
+              [
+                1652.1964388702756,
+                210.09949727435512,
+                65.97717748416952
+              ],
+              [
+                1477.1494695981496,
+                151.39693730768712,
+                66.9670805129146
+              ],
+              [
+                1485.0580867268432,
+                313.16735874684895,
+                68.51627803168515
+              ],
+              [
+                1424.291772919976,
+                237.10679237020412,
+                67.42608460891343
+              ],
+              [
+                1715.0373449144056,
+                176.74271045677798,
+                66.7147999557945
+              ],
+              [
+                1808.7827581307179,
+                233.21005619909153,
+                66.38448764541627
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0031723560296018517,
+              "coverage_shaping": 0.009069444444444446,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.053338168021262455,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019212668534526727,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 13,
+            "reward": -0.5347344009739746,
+            "positions": [
+              [
+                1664.3901789508125,
+                222.9814233729529,
+                75.2166949411893
+              ],
+              [
+                1488.7438337060187,
+                164.9932675371093,
+                75.9509841870786
+              ],
+              [
+                1494.9357537507553,
+                327.6739367516742,
+                78.10746611005354
+              ],
+              [
+                1435.284878153925,
+                250.93655061692277,
+                76.80102056350191
+              ],
+              [
+                1726.2378480500845,
+                190.57309667447538,
+                75.839992916876
+              ],
+              [
+                1820.1589260915057,
+                246.9369911533151,
+                75.44837529313462
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0032617609766553025,
+              "coverage_shaping": 0.008284722222222218,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.450388286115998,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01922593139018741,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 14,
+            "reward": 0.2689808511967055,
+            "positions": [
+              [
+                1676.5237200007293,
+                235.85163282744819,
+                84.55130206668757
+              ],
+              [
+                1500.1666332209002,
+                178.65460354729635,
+                85.05524416027734
+              ],
+              [
+                1504.5972610891802,
+                342.2357041871016,
+                87.83424384505345
+              ],
+              [
+                1446.2540989605518,
+                264.75327315530996,
+                86.22303591016164
+              ],
+              [
+                1737.397379468816,
+                204.3635174376093,
+                85.07520562098127
+              ],
+              [
+                1831.4243329514677,
+                260.6840923145063,
+                84.61940674785642
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.004027932374599586,
+              "coverage_shaping": 0.010944444444444439,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.34987857296645275,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01920343192212462,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 15,
+            "reward": 0.5121934929830654,
+            "positions": [
+              [
+                1688.5060442255249,
+                248.77158436820494,
+                94.0116804077675
+              ],
+              [
+                1511.5084280480335,
+                192.29928477978814,
+                94.28489009947235
+              ],
+              [
+                1514.3166569892828,
+                356.81151574083935,
+                97.48199285127212
+              ],
+              [
+                1457.13793303514,
+                278.6199197048553,
+                95.6706953719976
+              ],
+              [
+                1748.6057241407234,
+                218.10199835315044,
+                94.32869965561702
+              ],
+              [
+                1842.6886908878848,
+                274.3930444356148,
+                93.84864680440673
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.004211346239987668,
+              "coverage_shaping": 0.00910763888888888,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.5614097254704664,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.03333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01920188428294428,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 16,
+            "reward": -1.6684191827537662,
+            "positions": [
+              [
+                1700.6704263218564,
+                262.0461687055706,
+                102.71875907311882
+              ],
+              [
+                1522.9616024407671,
+                206.0979632548667,
+                103.14046849227267
+              ],
+              [
+                1524.625555636438,
+                372.00192079351217,
+                105.41787358490296
+              ],
+              [
+                1468.4339786473615,
+                292.8899567336834,
+                103.96318575320905
+              ],
+              [
+                1760.0531079430252,
+                231.9205201067122,
+                103.16079230850175
+              ],
+              [
+                1854.077629172287,
+                288.1809020268868,
+                102.80337001603536
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.004583892085838902,
+              "coverage_shaping": 0.007288194444444451,
+              "communication_progress": 0.0,
+              "investigation_shaping": -1.4509600005309597,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019331268753089884,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 17,
+            "reward": 0.2511594217792183,
+            "positions": [
+              [
+                1713.2360289727553,
+                275.88095103328646,
+                109.83946324928311
+              ],
+              [
+                1534.8216199670856,
+                220.53739281436856,
+                110.27088631113882
+              ],
+              [
+                1535.2535037783375,
+                387.31818496000346,
+                112.66071627788973
+              ],
+              [
+                1480.0518900173222,
+                307.49660685257686,
+                111.15136408321524
+              ],
+              [
+                1771.9952232383218,
+                246.30499858990962,
+                110.26520368737572
+              ],
+              [
+                1866.0023728251517,
+                302.5161855783927,
+                110.03525319480637
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0042044237625358345,
+              "coverage_shaping": 0.005486111111111126,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.47098254452778265,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019513657622211304,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 18,
+            "reward": -0.15435016726183284,
+            "positions": [
+              [
+                1725.9651039953926,
+                289.57170294265387,
+                116.94818755285714
+              ],
+              [
+                1546.7840119588107,
+                235.12117881308868,
+                116.92027453712238
+              ],
+              [
+                1546.2786174006515,
+                403.0113740015168,
+                118.33263723312089
+              ],
+              [
+                1492.122645936742,
+                322.20128150208615,
+                117.32140419539199
+              ],
+              [
+                1784.0240349297123,
+                260.74732409002706,
+                117.1009131195946
+              ],
+              [
+                1878.1244626127398,
+                316.93300575628103,
+                116.75910886994434
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0035636782482388,
+              "coverage_shaping": 0.005763888888888884,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.06561658479163901,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019294319190599495,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 19,
+            "reward": -0.025341723468456312,
+            "positions": [
+              [
+                1739.113669954797,
+                303.6467444816999,
+                122.3341339771472
+              ],
+              [
+                1559.101433334682,
+                250.0849310005287,
+                121.85659412990738
+              ],
+              [
+                1557.4613018475848,
+                418.45422071921826,
+                124.37135016005261
+              ],
+              [
+                1504.603909509459,
+                336.9531831907845,
+                122.47887025881315
+              ],
+              [
+                1796.47889530836,
+                275.5348596098576,
+                122.22001911558074
+              ],
+              [
+                1890.660434249915,
+                331.68989848115547,
+                121.76745512579461
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0039348807509320335,
+              "coverage_shaping": 0.007069444444444441,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.1931417926023976,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019487841266230356,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 20,
+            "reward": -0.36301398913787014,
+            "positions": [
+              [
+                1752.4214619957095,
+                317.8745387468115,
+                126.85879322901167
+              ],
+              [
+                1571.3883004046284,
+                264.87946514822573,
+                127.3479197401852
+              ],
+              [
+                1569.043233428733,
+                434.17249836987526,
+                128.7066250701891
+              ],
+              [
+                1517.128657909376,
+                351.66900041763813,
+                127.63400370661218
+              ],
+              [
+                1808.9831917896174,
+                290.17250993162395,
+                127.64051379471373
+              ],
+              [
+                1903.2016740368229,
+                346.23549714184935,
+                127.34803432595821
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.003771320936443133,
+              "coverage_shaping": 0.005267361111111115,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.14275754858442014,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019295122601004227,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 21,
+            "reward": -0.2840875003248889,
+            "positions": [
+              [
+                1765.7610970139754,
+                332.00953159510783,
+                131.5764319135723
+              ],
+              [
+                1583.9966150788987,
+                279.93265551840295,
+                131.1468486357796
+              ],
+              [
+                1580.9126283509422,
+                450.04371529389556,
+                131.3939913517603
+              ],
+              [
+                1529.9702400658373,
+                366.6022546600425,
+                131.11131379496572
+              ],
+              [
+                1821.8293853551347,
+                305.04023313096394,
+                131.37228518978466
+              ],
+              [
+                1916.1188450741827,
+                361.0020285288216,
+                131.23342274787373
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0028473022402789473,
+              "coverage_shaping": 0.006232638888888885,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.06366841928685141,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019499022167205286,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 22,
+            "reward": -0.11974698504261812,
+            "positions": [
+              [
+                1779.363017992328,
+                346.3522296505455,
+                134.62188068004255
+              ],
+              [
+                1596.7976612234975,
+                294.95347664459206,
+                134.3884763594526
+              ],
+              [
+                1592.8759697864746,
+                465.69472370199543,
+                134.84716344513492
+              ],
+              [
+                1542.7582301513303,
+                381.40919181578926,
+                135.2612441123442
+              ],
+              [
+                1834.9879166772948,
+                319.911003442325,
+                133.76252446451716
+              ],
+              [
+                1929.2969210424915,
+                375.87706848022685,
+                133.48542190808269
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0036004225053420675,
+              "coverage_shaping": 0.006843749999999992,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.06585584978296533,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.16666666666666666,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01938034066425885,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 23,
+            "reward": -0.38203318061411384,
+            "positions": [
+              [
+                1793.1293137820815,
+                360.6619226003522,
+                137.01390658108627
+              ],
+              [
+                1609.7967197310022,
+                310.0648384803021,
+                136.02286351943533
+              ],
+              [
+                1605.0904681323648,
+                481.4251526865191,
+                136.6800939187494
+              ],
+              [
+                1555.790253970983,
+                396.3730235851883,
+                137.7612629004987
+              ],
+              [
+                1848.309721880688,
+                334.50003517533406,
+                136.8753462095106
+              ],
+              [
+                1942.476349049281,
+                390.6186618879348,
+                136.48343812146
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.003757094694273608,
+              "coverage_shaping": 0.005385416666666663,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.22844657550107172,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.13333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01939578314064905,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 24,
+            "reward": -0.2724341748399791,
+            "positions": [
+              [
+                1806.8771501116407,
+                374.84888007531436,
+                140.1327579496625
+              ],
+              [
+                1622.9134222548566,
+                324.9655380154033,
+                138.45622914452113
+              ],
+              [
+                1617.4147636162054,
+                496.9629940684544,
+                139.2660610524933
+              ],
+              [
+                1568.9220436458536,
+                411.1708939046236,
+                140.6902787666454
+              ],
+              [
+                1861.7814285152708,
+                349.2046919888221,
+                138.38736087520456
+              ],
+              [
+                1955.84357038246,
+                405.4291786750259,
+                137.88557446614882
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.002982186548902239,
+              "coverage_shaping": 0.006347222222222223,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.11908498463637784,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.13333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.019345265641392412,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          }
+        ],
+        "episode_completed": false,
+        "wall_seconds": 59.038859912999214,
+        "prefix_discounted_return_gamma_0_99": 0.68030720501331,
+        "final_altitude_m": [
+          140.1327579496625,
+          138.45622914452113,
+          139.2660610524933,
+          140.6902787666454,
+          138.38736087520456,
+          137.88557446614882
+        ]
+      }
+    },
+    "script_sha256": "6f63363e9d3b8e720a925439e944ba7701ac34db17b48d74646390bd07863687",
+    "limitations": [
+      "24-step prefixes; neither episode completed",
+      "mirror_up modifies control only for diagnosis, not a trained-policy repair",
+      "same reset seed 10044, same reward/APF/scenario; later observations diverge after control intervention",
+      "short-prefix return is not ground-truth long-horizon Q or mission success"
+    ]
+  },
+  "learner_latest_refresh": {
+    "checked_at_utc": "2026-10-11T18:18:19.602123+00:00",
+    "scope": "latest available learner rows; configurations at unequal progress",
+    "runs": [
+      {
+        "id": "03db0105",
+        "history_last_step": 22330,
+        "rows_read": 501,
+        "training_records": 223,
+        "learner_latest": {
+          "global_step": 24903680,
+          "train/critic_loss": 0.010974472388625145,
+          "train/alpha_continuous": 0.0005739256157539785,
+          "train/alpha_discrete": 0.11428260058164597,
+          "train/continuous_entropy": -23.010616302490234,
+          "train/actor_grad_norm": 0.014222168363630772,
+          "train/action_accel_x_mean": -0.6020925839742025,
+          "train/action_accel_y_mean": -0.28006215890248615,
+          "train/action_accel_z_mean": 0.6404521465301514,
+          "train/action_motion_saturation_rate": 0.8094482421875,
+          "train/optimizer_updates": 95680,
+          "train/transitions_per_second": 1333.891746785119
+        },
+        "summary": {
+          "global_step": 24903680,
+          "episodes_completed": 16188
+        }
+      },
+      {
+        "id": "0b67697e",
+        "history_last_step": 1450,
+        "rows_read": 501,
+        "training_records": 378,
+        "learner_latest": {
+          "global_step": 5439488,
+          "train/critic_loss": 78.9251480102539,
+          "train/alpha_continuous": 0.0019506324315443635,
+          "train/alpha_discrete": 0.24600850045681,
+          "train/continuous_entropy": -18.480899810791016,
+          "train/actor_grad_norm": 0.1448410004377365,
+          "train/action_accel_x_mean": -0.31293851137161255,
+          "train/action_accel_y_mean": 0.5293376048405966,
+          "train/action_accel_z_mean": 0.08567589521408081,
+          "train/action_motion_saturation_rate": 0.8685302734375,
+          "train/optimizer_updates": 19648,
+          "train/transitions_per_second": 1531.2522020856177
+        },
+        "summary": {
+          "global_step": 5439488,
+          "episodes_completed": 123
+        }
+      },
+      {
+        "id": "1e9c0833",
+        "history_last_step": 1360,
+        "rows_read": 501,
+        "training_records": 389,
+        "learner_latest": {
+          "global_step": 5115904,
+          "train/critic_loss": 13.748092651367188,
+          "train/alpha_continuous": 0.0006371756317093968,
+          "train/alpha_discrete": 0.09840482473373413,
+          "train/continuous_entropy": -25.698108673095703,
+          "train/actor_grad_norm": 0.09732798486948013,
+          "train/action_accel_x_mean": -0.2927828828493754,
+          "train/action_accel_y_mean": -0.5455360809961954,
+          "train/action_accel_z_mean": -0.06118415296077728,
+          "train/action_motion_saturation_rate": 0.6307779947916666,
+          "train/optimizer_updates": 36768,
+          "train/transitions_per_second": 1339.4887409272847
+        },
+        "summary": {
+          "global_step": 5115904,
+          "episodes_completed": 112
+        }
+      },
+      {
+        "id": "f1fa4c42",
+        "history_last_step": 1013,
+        "rows_read": 501,
+        "training_records": 501,
+        "learner_latest": {
+          "global_step": 4153344.0,
+          "train/critic_loss": 6.383012771606445,
+          "train/alpha_continuous": 0.0010224106954410672,
+          "train/alpha_discrete": 0.03173261135816574,
+          "train/continuous_entropy": -23.639196395874023,
+          "train/actor_grad_norm": 0.1274985373020172,
+          "train/action_accel_x_mean": -0.14238067468007407,
+          "train/action_accel_y_mean": -0.3825429677963257,
+          "train/action_accel_z_mean": -0.09911491473515828,
+          "train/action_motion_saturation_rate": 0.49658203125,
+          "train/optimizer_updates": 58496,
+          "train/transitions_per_second": 1091.447531888037
+        },
+        "summary": {
+          "global_step": 4153344,
+          "episodes_completed": 0
+        }
+      },
+      {
+        "id": "8e541a5e",
+        "history_last_step": 725,
+        "rows_read": 501,
+        "training_records": 501,
+        "learner_latest": {
+          "global_step": 2973696.0,
+          "train/critic_loss": 4.187258720397949,
+          "train/alpha_continuous": 0.0013728118501603603,
+          "train/alpha_discrete": 0.10495204478502274,
+          "train/continuous_entropy": -25.629119873046875,
+          "train/actor_grad_norm": 0.2687421441078186,
+          "train/action_accel_x_mean": 0.6208664973576864,
+          "train/action_accel_y_mean": -0.11380277077356975,
+          "train/action_accel_z_mean": -0.23365537325541177,
+          "train/action_motion_saturation_rate": 0.6888427734375,
+          "train/optimizer_updates": 80128,
+          "train/transitions_per_second": 781.8392413323472
+        },
+        "summary": {
+          "global_step": 2973696,
+          "episodes_completed": 0
+        }
+      }
+    ]
+  },
+  "episode_latest_refresh": {
+    "checked_at_utc": "2026-10-11T18:19:01.014789+00:00",
+    "scope": "recent episode means, unequal training progress; no outcome ranking",
+    "runs": [
+      {
+        "id": "03db0105",
+        "rows_read": 2001,
+        "episode_rows_in_window": 1642,
+        "tail_count": 256,
+        "episodes_completed_first": 15940,
+        "episodes_completed_last": 16195,
+        "mean": {
+          "episode/return": -287.67117404937744,
+          "episode/coverage_percent": 16.162462420761585,
+          "episode/target_search_rate_percent": 2.828125,
+          "episode/target_delivery_rate_percent": 0.1015625,
+          "episode/apf_intervention_rate": 0.643745828135011,
+          "episode/apf_boundary_intervention_rate": 0.4950119791814993,
+          "episode/coverage_redundancy_percent": 98.68384412116549,
+          "episode/end_step": 1672.6484375
+        }
+      },
+      {
+        "id": "0b67697e",
+        "rows_read": 1546,
+        "episode_rows_in_window": 209,
+        "tail_count": 209,
+        "episodes_completed_first": 1,
+        "episodes_completed_last": 209,
+        "mean": {
+          "episode/return": 63.23707431355162,
+          "episode/coverage_percent": 42.416268964703576,
+          "episode/target_search_rate_percent": 10.114832535885167,
+          "episode/target_delivery_rate_percent": 5.588516746411483,
+          "episode/apf_intervention_rate": 0.3002720006111811,
+          "episode/apf_boundary_intervention_rate": 0.2483489254915962,
+          "episode/coverage_redundancy_percent": 96.3709922025528,
+          "episode/end_step": 1322.2631578947369
+        }
+      },
+      {
+        "id": "1e9c0833",
+        "rows_read": 1430,
+        "episode_rows_in_window": 172,
+        "tail_count": 172,
+        "episodes_completed_first": 1,
+        "episodes_completed_last": 172,
+        "mean": {
+          "episode/return": 21.175969595132873,
+          "episode/coverage_percent": 53.167919580326526,
+          "episode/target_search_rate_percent": 8.279069767441861,
+          "episode/target_delivery_rate_percent": 4.72093023255814,
+          "episode/apf_intervention_rate": 0.3703630474098134,
+          "episode/apf_boundary_intervention_rate": 0.29230161991433795,
+          "episode/coverage_redundancy_percent": 95.34473863754708,
+          "episode/end_step": 1240.0872093023256
+        }
+      }
+    ]
+  },
+  "latest_periodic_actor_probe": {
+    "source_run_id": "03db0105",
+    "source_checkpoint": "masac_episode_00015106.pt",
+    "checkpoint_sha256": "5b3b5a8ba0c2cf252653395019bacbe2e1832486d63b7c86cad5dd4d188f8766",
+    "training_state": {
+      "global_step": 23584768,
+      "episode_index": 15106,
+      "latest_evaluation": null,
+      "resume_safe": false,
+      "checkpoint_kind": "ddp_model_optimizer"
+    },
+    "evaluation_seed": 10044,
+    "scope": "Initial state only, before any APF/environment step; critic estimates are not actual returns",
+    "deterministic_continuous_actions": [
+      [
+        -0.4721880257129669,
+        -0.44979017972946167,
+        0.7443561553955078,
+        0.9683325290679932
+      ],
+      [
+        -0.47142013907432556,
+        -0.4562816023826599,
+        0.7393366694450378,
+        0.9689297676086426
+      ],
+      [
+        -0.4770826995372772,
+        -0.4579991102218628,
+        0.7364245653152466,
+        0.9720731973648071
+      ],
+      [
+        -0.4723696708679199,
+        -0.4626559615135193,
+        0.7363975644111633,
+        0.9719235301017761
+      ],
+      [
+        -0.47135722637176514,
+        -0.4441140294075012,
+        0.7489407658576965,
+        0.9698505997657776
+      ],
+      [
+        -0.4794793426990509,
+        -0.4404560923576355,
+        0.7467970252037048,
+        0.9714588522911072
+      ]
+    ],
+    "motion_norms": [
+      0.9896154999732971,
+      0.9884576797485352,
+      0.9897940158843994,
+      0.989679217338562,
+      0.9901147484779358,
+      0.9907612204551697
+    ],
+    "pre_squash_means": [
+      [
+        -1.2537834644317627,
+        -1.194311261177063,
+        1.976461410522461,
+        2.0648257732391357
+      ],
+      [
+        -1.2278649806976318,
+        -1.1884350776672363,
+        1.925682783126831,
+        2.074497699737549
+      ],
+      [
+        -1.2707552909851074,
+        -1.2199243307113647,
+        1.9615371227264404,
+        2.128626585006714
+      ],
+      [
+        -1.2556641101837158,
+        -1.2298429012298584,
+        1.9575092792510986,
+        2.1259167194366455
+      ],
+      [
+        -1.262734055519104,
+        -1.189751386642456,
+        2.006361484527588,
+        2.0897741317749023
+      ],
+      [
+        -1.3001012802124023,
+        -1.194290280342102,
+        2.0249292850494385,
+        2.117591619491577
+      ]
+    ],
+    "pre_squash_log_stds": [
+      [
+        -1.0680594444274902,
+        -1.0985119342803955,
+        -0.9215712547302246,
+        -0.6184476613998413
+      ],
+      [
+        -1.0782325267791748,
+        -1.1002070903778076,
+        -0.9288642406463623,
+        -0.6212085485458374
+      ],
+      [
+        -1.0931396484375,
+        -1.114691972732544,
+        -0.9452573657035828,
+        -0.6275904178619385
+      ],
+      [
+        -1.0890583992004395,
+        -1.1063841581344604,
+        -0.9392751455307007,
+        -0.6270824670791626
+      ],
+      [
+        -1.0778374671936035,
+        -1.1128931045532227,
+        -0.9197341799736023,
+        -0.6264560222625732
+      ],
+      [
+        -1.0798633098602295,
+        -1.1217937469482422,
+        -0.9241980314254761,
+        -0.6285930871963501
+      ]
+    ],
+    "discrete_masks": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "critic_to_continuous_gradient_connected": true,
+    "critic_to_continuous_gradient": [
+      [
+        -0.04750260338187218,
+        -0.022423312067985535,
+        0.025835325941443443,
+        0.019491709768772125
+      ],
+      [
+        -0.049333684146404266,
+        -0.02926735393702984,
+        0.08383538573980331,
+        0.025156769901514053
+      ],
+      [
+        -0.047625403851270676,
+        -0.06320061534643173,
+        0.042857103049755096,
+        0.010442858561873436
+      ],
+      [
+        -0.04931604862213135,
+        -0.01473479438573122,
+        0.05772828310728073,
+        0.008528686128556728
+      ],
+      [
+        -0.03823002800345421,
+        -0.03583872318267822,
+        0.06327309459447861,
+        0.0018352580955252051
+      ],
+      [
+        -0.061475690454244614,
+        -0.027744220569729805,
+        0.048207905143499374,
+        0.03742118179798126
+      ]
+    ],
+    "critic_q_for_actor_action": -15.472111701965332,
+    "critic_counterfactual_estimates": {
+      "hover": -15.91629409790039,
+      "positive_x": -16.05638885498047,
+      "negative_x": -15.7761869430542,
+      "positive_y": -16.0072078704834,
+      "negative_y": -15.825379371643066,
+      "up": -15.76227855682373,
+      "down": -16.070308685302734
+    },
+    "alpha_continuous": 0.0010005130898207426,
+    "alpha_discrete": 0.125393345952034
+  },
+  "latest_periodic_cpu_prefix_probe": {
+    "source_checkpoint_sha256": "5b3b5a8ba0c2cf252653395019bacbe2e1832486d63b7c86cad5dd4d188f8766",
+    "training_episodes": 15106,
+    "seed": 10044,
+    "max_prefix_steps": 24,
+    "scope": "24-step prefix of actual deterministic actor in real CPU UavNetSim; not full mission evaluation",
+    "cases": {
+      "actor": {
+        "summary": {
+          "return": -7.00688863525083,
+          "reward_total": -7.00688863525083,
+          "reward_search": -3.3140946790895436,
+          "reward_communication": 0.0,
+          "reward_safety": -3.100000000000001,
+          "reward_energy": -0.35279395616128584,
+          "reward_mission": -0.24000000000000007,
+          "reward_component_information_gain": 0.04210636408235223,
+          "reward_component_coverage_shaping": 0.07465277777777779,
+          "reward_component_communication_progress": 0.0,
+          "reward_component_confirmation": 0.0,
+          "reward_component_delivery": 0.0,
+          "reward_component_false_confirmation": -5.0,
+          "reward_component_blocked_motion": 0.0,
+          "reward_component_boundary": 0.0,
+          "reward_component_expired_report": 0.0,
+          "reward_component_dropped_report": 0.0,
+          "reward_component_energy": -0.35279395616128584,
+          "reward_component_step": -0.24000000000000007,
+          "reward_component_success_bonus": 0.0,
+          "reward_component_investigation_shaping": 1.5691461790503267,
+          "reward_component_apf_intervention": -3.100000000000001,
+          "reward_component_inactive_horizon_makeup": 0.0,
+          "coverage_percent": 1.5208333333333333,
+          "coverage_redundancy_percent": 95.74215436810857,
+          "gcs_contact_graph_reachability_percent": 100.0,
+          "length": 24,
+          "episode_end_step": 24,
+          "success": 0.0,
+          "targets_spawned": 50,
+          "obstacles_spawned": 30,
+          "confirmed_targets": 0,
+          "delivered_targets": 0,
+          "target_search_rate_percent": 0.0,
+          "target_delivery_rate_percent": 0.0,
+          "targets_ever_in_fov_count": 0,
+          "target_encounter_rate": 0.0,
+          "sensing_records": 5895,
+          "positive_observations": 1079,
+          "target_positive_observations": 0,
+          "delivery_rate": 0.0,
+          "confirmation_rate": 0.0,
+          "report_delivery_given_confirmation_rate_percent": 0.0,
+          "distance_total_m": 2087.957163438925,
+          "first_confirmation_observed": 0.0,
+          "all_targets_confirmed": 0.0,
+          "first_delivery_observed": 0.0,
+          "target_confirmation_to_delivery_latency_count": 0,
+          "false_confirmations": 1,
+          "expired_reports": 0,
+          "dropped_reports": 0,
+          "blocked_motion_rate": 0.0,
+          "obstacle_block_rate": 0.0,
+          "peer_safety_block_rate": 0.0,
+          "apf_intervention_rate": 0.6458333333333334,
+          "apf_peer_intervention_rate": 0.09722222222222222,
+          "apf_obstacle_intervention_rate": 0.0,
+          "apf_boundary_intervention_rate": 0.6388888888888888,
+          "boundary_clip_rate": 0.0,
+          "horizontal_boundary_clip_rate": 0.0,
+          "altitude_clip_rate": 0.0,
+          "total_energy_j": 35279.395616128575,
+          "communication_energy_j": 0.0,
+          "battery_remaining_mean_j": 271320.1007306453,
+          "battery_remaining_mean_percent": 97.8788242174045,
+          "depleted_uav_count": 0,
+          "collision_violation_count": 0,
+          "collision_step_count": 0,
+          "information_gain_bits": 404.94404574450886,
+          "action_motion_mean_x": -0.5449555619723268,
+          "action_motion_mean_y": -0.46564459510975414,
+          "action_motion_mean_z": 0.6612105493744215,
+          "action_motion_std_x": 0.08095171804952334,
+          "action_motion_std_y": 0.01385381802606916,
+          "action_motion_std_z": 0.07185346100513719,
+          "action_motion_norm_mean": 0.9812431979672704,
+          "action_motion_saturation_rate": 1.0,
+          "action_destination_silent_rate": 1.0,
+          "action_destination_peer_rate": 0.0,
+          "action_destination_gcs_rate": 0.0,
+          "action_power_mean": 0.9496755231585767,
+          "action_power_std": 0.019471262834156778,
+          "action_tx_power_w_mean": 0.3924513284737866,
+          "network_pdr_percent": 0.0,
+          "network_e2e_delay_ms": 0.0,
+          "network_throughput_kbps": 0.0,
+          "network_average_hops": 0.0,
+          "network_phy_success_percent": 0.0,
+          "network_collisions": 0.0,
+          "network_requests": 0.0,
+          "network_packets_injected": 0.0,
+          "network_packets_delivered": 0.0,
+          "network_packets_failed": 0.0,
+          "network_payload_bytes_injected": 0.0,
+          "network_payload_bytes_delivered": 0.0,
+          "network_payload_bytes_deferred": 0.0,
+          "network_payload_delivery_ratio": 0.0,
+          "network_traffic_active": 0.0
+        },
+        "prefix": [
+          {
+            "step": 1,
+            "reward": -0.014693985335101217,
+            "positions": [
+              [
+                1564.4279998322547,
+                108.89242095465067,
+                1.4887123107910156
+              ],
+              [
+                1388.9213122412461,
+                50.94940416515453,
+                1.4786733388900757
+              ],
+              [
+                1400.7064096390836,
+                210.71283748735289,
+                1.4728491306304932
+              ],
+              [
+                1338.528221586184,
+                134.86999208989738,
+                1.4727951288223267
+              ],
+              [
+                1628.7441649425682,
+                74.44769507322172,
+                1.497881531715393
+              ],
+              [
+                1721.731118929676,
+                131.3555274158639,
+                1.4935940504074097
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.2625952283684683e-08,
+              "coverage_shaping": 0.00309375,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.007787747961053502,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 2,
+            "reward": -0.017482918660519108,
+            "positions": [
+              [
+                1562.5518016596855,
+                107.08112461084727,
+                4.466457962989807
+              ],
+              [
+                1387.047041682889,
+                49.113457962876396,
+                4.436691045761108
+              ],
+              [
+                1398.8143651544683,
+                208.86936476816038,
+                4.421899199485779
+              ],
+              [
+                1336.6537468223137,
+                133.00902254644035,
+                4.421289920806885
+              ],
+              [
+                1626.8702352631744,
+                72.6602683034883,
+                4.493970274925232
+              ],
+              [
+                1719.825980258278,
+                129.58161129056634,
+                4.481670498847961
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 1.1756094430048769e-06,
+              "coverage_shaping": 0.0006562500000000004,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.008140344269962112,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 3,
+            "reward": 1.4387110184792409,
+            "positions": [
+              [
+                1559.757138111216,
+                104.34512627834681,
+                8.933565378189087
+              ],
+              [
+                1384.2542720124025,
+                46.33962236345394,
+                8.873268365859985
+              ],
+              [
+                1396.0026321470373,
+                206.08418455709318,
+                8.84953510761261
+              ],
+              [
+                1333.8670350102943,
+                130.19723982873558,
+                8.84666621685028
+              ],
+              [
+                1624.0790439236816,
+                69.95952403220991,
+                8.987895846366882
+              ],
+              [
+                1716.9890793087998,
+                126.900177612893,
+                8.964104652404785
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.00011658716011798685,
+              "coverage_shaping": 0.002368055555555556,
+              "communication_progress": 0.0,
+              "investigation_shaping": 1.4549543100823759,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.008727934318808578,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 4,
+            "reward": -6.486350333769534,
+            "positions": [
+              [
+                1556.0597933908523,
+                100.66979164595011,
+                14.890478134155273
+              ],
+              [
+                1380.554898647954,
+                42.61416225135906,
+                14.787955403327942
+              ],
+              [
+                1392.2833652555578,
+                202.3449905215631,
+                14.756243109703064
+              ],
+              [
+                1330.1700541166824,
+                126.42487974229454,
+                14.744507908821106
+              ],
+              [
+                1620.3850671041664,
+                66.32740890655379,
+                14.976303219795227
+              ],
+              [
+                1713.2374290349999,
+                123.29193551837625,
+                14.938730478286743
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0001635840566414304,
+              "coverage_shaping": 0.002687499999999999,
+              "communication_progress": 0.0,
+              "investigation_shaping": -1.469650818265026,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -5.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.009550599561148931,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 5,
+            "reward": -0.014927004884022436,
+            "positions": [
+              [
+                1551.473690487963,
+                96.0407651733816,
+                22.337201237678528
+              ],
+              [
+                1375.9640602752465,
+                37.91587595642193,
+                22.177029132843018
+              ],
+              [
+                1387.670131450855,
+                197.63701900829176,
+                22.141691207885742
+              ],
+              [
+                1325.5964655665916,
+                121.67408795419334,
+                22.12614893913269
+              ],
+              [
+                1615.800458608931,
+                61.747711953257124,
+                22.456610918045044
+              ],
+              [
+                1708.5853181007424,
+                118.74025233089151,
+                22.403905987739563
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0006158585266081151,
+              "coverage_shaping": 0.0050659722222222234,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.010608835632852774,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 6,
+            "reward": 2.176827451979779,
+            "positions": [
+              [
+                1546.0079505821288,
+                90.44944102281931,
+                31.274858236312866
+              ],
+              [
+                1370.4904051110047,
+                32.235856160527305,
+                31.041511178016663
+              ],
+              [
+                1382.1744558274381,
+                191.95020082582334,
+                31.007214784622192
+              ],
+              [
+                1320.1481658010048,
+                115.93535007300972,
+                30.98693013191223
+              ],
+              [
+                1610.3365408766922,
+                56.21073150310377,
+                31.430783867836
+              ],
+              [
+                1703.0453502657929,
+                113.22911877929391,
+                31.357728242874146
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0011181588045915513,
+              "coverage_shaping": 0.007076388888888887,
+              "communication_progress": 0.0,
+              "investigation_shaping": 2.1905356842512886,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.0,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.011902779964990477,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 7,
+            "reward": -0.42476233664714047,
+            "positions": [
+              [
+                1539.6403585454048,
+                83.89891398662928,
+                41.69006013870239
+              ],
+              [
+                1364.1371207520265,
+                27.41058952881187,
+                41.39110326766968
+              ],
+              [
+                1375.785819715225,
+                185.27949556697706,
+                41.343411684036255
+              ],
+              [
+                1313.81105957313,
+                109.21957196059822,
+                41.325026988983154
+              ],
+              [
+                1603.9945797312912,
+                49.71583830985884,
+                41.90122652053833
+              ],
+              [
+                1696.6178631308594,
+                106.75495888292016,
+                41.7997362613678
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0015913384626057181,
+              "coverage_shaping": 0.009065972222222222,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.37876314715885345,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.03333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.013323166839781637,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 8,
+            "reward": 0.7793889333842909,
+            "positions": [
+              [
+                1532.382094122988,
+                76.38332093471888,
+                53.589056730270386
+              ],
+              [
+                1356.9054414912957,
+                22.76519143219152,
+                53.22628891468048
+              ],
+              [
+                1368.4957512080305,
+                177.62968161691526,
+                53.14995193481445
+              ],
+              [
+                1306.5871065644783,
+                101.51007391276954,
+                53.134403109550476
+              ],
+              [
+                1596.7405061114487,
+                42.25734436187605,
+                53.84113264083862
+              ],
+              [
+                1689.2878177288094,
+                99.33117438852014,
+                53.72950792312622
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0022722524533180244,
+              "coverage_shaping": 0.008284722222222226,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.8271625508650443,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.03333333333333333,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.014997258822960338,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 9,
+            "reward": -0.4061268701704636,
+            "positions": [
+              [
+                1524.2124347468437,
+                67.89768857473734,
+                66.26799610041037
+              ],
+              [
+                1348.9139055160274,
+                19.80203185505029,
+                65.83133905428248
+              ],
+              [
+                1360.3064647376173,
+                169.00329062332014,
+                65.9157660484099
+              ],
+              [
+                1298.4471835879845,
+                92.8209601766169,
+                65.90473886229587
+              ],
+              [
+                1588.6964361840128,
+                36.537084989655305,
+                66.37639276810796
+              ],
+              [
+                1681.0521101477661,
+                90.94655276834192,
+                66.37067100529178
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0026177787028972108,
+              "coverage_shaping": 0.008197916666666657,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.19091782719177386,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01602473834825361,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 10,
+            "reward": -1.7551939862941224,
+            "positions": [
+              [
+                1515.1044467817842,
+                58.49535092423807,
+                77.437236537133
+              ],
+              [
+                1339.9958924906057,
+                15.909603814770502,
+                76.9270514586657
+              ],
+              [
+                1351.185498824051,
+                159.44919330750585,
+                77.17448547522534
+              ],
+              [
+                1289.4024998522987,
+                83.17688529525371,
+                77.16860284970198
+              ],
+              [
+                1579.728731997569,
+                29.889214556950183,
+                77.39955584953205
+              ],
+              [
+                1671.889555667587,
+                81.63228482692685,
+                77.5029561788865
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0032747741101061146,
+              "coverage_shaping": 0.005704861111111119,
+              "communication_progress": 0.0,
+              "investigation_shaping": -1.538205678619543,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.015967942895796432,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 11,
+            "reward": 0.07669054838632819,
+            "positions": [
+              [
+                1505.2109128706336,
+                50.456755063018676,
+                87.3723271050182
+              ],
+              [
+                1330.324624854436,
+                13.452305144647486,
+                86.8510082646836
+              ],
+              [
+                1341.1039875567344,
+                148.9983630536374,
+                86.92548388633597
+              ],
+              [
+                1279.4299741167335,
+                72.59977523814453,
+                86.92629467427919
+              ],
+              [
+                1570.0289477441775,
+                24.69732908205657,
+                87.26333694981078
+              ],
+              [
+                1661.7692594194498,
+                71.42046872296127,
+                87.12622246531957
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.002598314028884718,
+              "coverage_shaping": 0.003923611111111107,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.29579555318902817,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.015626929942695773,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 12,
+            "reward": -0.5726743050393901,
+            "positions": [
+              [
+                1494.2352401136993,
+                42.80075856748674,
+                95.66955527214395
+              ],
+              [
+                1319.576821293685,
+                11.474202236681228,
+                95.15896945665516
+              ],
+              [
+                1330.0278330880185,
+                137.69768727978487,
+                95.1637207517716
+              ],
+              [
+                1268.3977673751679,
+                62.558158633756626,
+                95.07453847931234
+              ],
+              [
+                1559.5626656725335,
+                20.928207932510606,
+                95.94888939268365
+              ],
+              [
+                1650.5284726203176,
+                61.200325324672214,
+                95.1388973537614
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0026556886032508276,
+              "coverage_shaping": 0.0014722222222222307,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.35143640270568016,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.015365813159182966,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 13,
+            "reward": -0.503272798122337,
+            "positions": [
+              [
+                1482.2736925160482,
+                36.84210535205082,
+                103.58327778356879
+              ],
+              [
+                1307.6689250214854,
+                9.10603008563426,
+                103.19846325934284
+              ],
+              [
+                1317.7465469693316,
+                125.49300168690158,
+                103.3582323499287
+              ],
+              [
+                1256.401153280629,
+                54.266720829454464,
+                103.30519966880733
+              ],
+              [
+                1547.9863096649337,
+                17.024286871677923,
+                102.97626065105695
+              ],
+              [
+                1638.3085114701285,
+                52.667176642846606,
+                103.59346184024375
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.002938992119422769,
+              "coverage_shaping": 0.0007638888888888886,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.2814145784807501,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.015561100649898546,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 14,
+            "reward": 1.1364556315457304,
+            "positions": [
+              [
+                1469.2390560567408,
+                30.247745449634102,
+                109.93355624319105
+              ],
+              [
+                1295.7610287492857,
+                8.737857934587291,
+                111.23795706203053
+              ],
+              [
+                1304.4110974150194,
+                112.51399804609677,
+                110.03974328329619
+              ],
+              [
+                1243.288114772894,
+                45.792731052646616,
+                109.88653635810411
+              ],
+              [
+                1535.4518063058724,
+                14.762137877481376,
+                110.62535382001462
+              ],
+              [
+                1625.101308741379,
+                45.07863902511941,
+                110.58752504184326
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0024735580393885678,
+              "coverage_shaping": 0.002125,
+              "communication_progress": 0.0,
+              "investigation_shaping": 1.3577368671591716,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01587979365282978,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 15,
+            "reward": -0.7391044605536415,
+            "positions": [
+              [
+                1455.1748698831075,
+                25.35442289671792,
+                116.49947171572072
+              ],
+              [
+                1282.846032631355,
+                7.55429387866558,
+                117.75400544653186
+              ],
+              [
+                1290.8773384757853,
+                99.59753222156104,
+                117.11097228385215
+              ],
+              [
+                1229.2091194633445,
+                38.941046257996014,
+                115.80828681202622
+              ],
+              [
+                1521.889473451677,
+                11.710858494312824,
+                116.75101672862772
+              ],
+              [
+                1610.8944449888816,
+                38.41876765759857,
+                116.1193102830922
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0023134993185354707,
+              "coverage_shaping": 0.0010659722222222147,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.5165635033490135,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01592042874538576,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 16,
+            "reward": -0.8819454585050291,
+            "positions": [
+              [
+                1440.2709119826109,
+                21.800843298235655,
+                121.84069446646019
+              ],
+              [
+                1268.8509955910026,
+                6.939773673418496,
+                122.68585033971519
+              ],
+              [
+                1276.842215022304,
+                86.3909955757795,
+                122.45912144680244
+              ],
+              [
+                1214.1853314591522,
+                33.28036595591345,
+                120.43047000611429
+              ],
+              [
+                1508.3271405974817,
+                10.659579111144271,
+                122.87667963724081
+              ],
+              [
+                1595.4757088971355,
+                32.83343602423157,
+                121.7677835741105
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.002253684227020115,
+              "coverage_shaping": 0.0020798611111111105,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.6602083117108838,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.016070692132276517,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 17,
+            "reward": 0.5453942571128882,
+            "positions": [
+              [
+                1424.3252430758039,
+                17.47919111469936,
+                125.6571540606996
+              ],
+              [
+                1253.738034432958,
+                5.094275279531064,
+                126.50641742506926
+              ],
+              [
+                1262.2066735417345,
+                74.87012308810179,
+                126.91394282062271
+              ],
+              [
+                1197.9471228979378,
+                27.469633755808534,
+                126.18070984885775
+              ],
+              [
+                1493.728560980958,
+                8.837254122893004,
+                127.47535815744425
+              ],
+              [
+                1578.9373337624536,
+                27.068882754426134,
+                125.76874722371056
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.002161076125668116,
+              "coverage_shaping": 0.0013645833333333392,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.7684816833541624,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.016613085700275653,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 18,
+            "reward": -0.2145018270921519,
+            "positions": [
+              [
+                1407.4394898509615,
+                14.676208854762843,
+                130.37354872934011
+              ],
+              [
+                1238.6250732749136,
+                5.248776885643632,
+                130.32698451042333
+              ],
+              [
+                1246.444139306744,
+                64.06659288227246,
+                129.880373324357
+              ],
+              [
+                1180.8632646931337,
+                22.990897733378908,
+                130.70185943333894
+              ],
+              [
+                1478.303868974137,
+                8.369119614247987,
+                130.85596177701916
+              ],
+              [
+                1561.383156071362,
+                22.937754717676405,
+                130.3174947489483
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.001867365437325185,
+              "coverage_shaping": 0.0006562499999999971,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.009954851079334859,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.016980293608811894,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 19,
+            "reward": -0.40805725398108805,
+            "positions": [
+              [
+                1389.6646508288745,
+                13.114082524191558,
+                133.79773482050672
+              ],
+              [
+                1223.248567298144,
+                3.42077564801484,
+                134.16260493695435
+              ],
+              [
+                1230.9451498904787,
+                55.245565520184485,
+                132.83175048691436
+              ],
+              [
+                1162.9241674982259,
+                19.837169259519342,
+                133.99300037311937
+              ],
+              [
+                1461.665996105903,
+                7.02024802908287,
+                132.91274728237133
+              ],
+              [
+                1542.7155793578138,
+                18.423677413453817,
+                133.24955044352242
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0018421304154988757,
+              "coverage_shaping": 0.0016736111111111118,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.18432174429015458,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.017251251217543437,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 20,
+            "reward": -0.25067793646743713,
+            "positions": [
+              [
+                1370.8438904544578,
+                10.79053738439236,
+                135.69670292014078
+              ],
+              [
+                1207.8720613213745,
+                3.592774410386048,
+                137.99822536348537
+              ],
+              [
+                1214.826046976803,
+                48.29012908415412,
+                135.41566370982468
+              ],
+              [
+                1143.9274415054053,
+                15.937872608518578,
+                135.75916609373724
+              ],
+              [
+                1444.07206959898,
+                7.1893556365072016,
+                135.85367113143144
+              ],
+              [
+                1523.2596656010803,
+                15.516785524233175,
+                136.8575137796628
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0017106557747099006,
+              "coverage_shaping": 0.0019930555555555587,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.026574880452427674,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.017806767345274904,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 21,
+            "reward": -0.17268906324401911,
+            "positions": [
+              [
+                1351.058759887746,
+                9.984694816511228,
+                138.47121030239214
+              ],
+              [
+                1192.2720383798119,
+                2.3280968913988485,
+                140.46052811772356
+              ],
+              [
+                1199.0139038609348,
+                43.30770557467722,
+                137.88557836176685
+              ],
+              [
+                1124.2370540358722,
+                13.58531999794278,
+                138.35803844807177
+              ],
+              [
+                1425.4392864601655,
+                6.590202024556344,
+                137.26798055727292
+              ],
+              [
+                1503.8037518443468,
+                12.609893635012533,
+                138.4654771158032
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0013464989424181052,
+              "coverage_shaping": 0.0009340277777777732,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.0530561428476925,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01802573281190744,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 22,
+            "reward": -0.0017667517240402934,
+            "positions": [
+              [
+                1331.1503892125645,
+                8.489573335246156,
+                139.66343042293846
+              ],
+              [
+                1176.6720154382492,
+                2.4776329347847437,
+                141.50861730958863
+              ],
+              [
+                1182.7105368272717,
+                39.696175763228396,
+                138.98459931568092
+              ],
+              [
+                1104.483383167699,
+                10.628122482913867,
+                139.38149831000555
+              ],
+              [
+                1405.6583384015044,
+                5.092971983698275,
+                139.8120709851663
+              ],
+              [
+                1483.9976365167486,
+                11.260730566035559,
+                140.89396525519857
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0021028305355487702,
+              "coverage_shaping": 0.0019479166666666603,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.18908121146619938,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.16666666666666666,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.01823204372578845,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 23,
+            "reward": 0.1908281101019227,
+            "positions": [
+              [
+                1311.3823231806437,
+                6.351789169145436,
+                141.8206147490412
+              ],
+              [
+                1160.7524033994746,
+                0.6573927221069802,
+                142.69028909759217
+              ],
+              [
+                1166.7267588908205,
+                38.05442220784323,
+                139.95003767345654
+              ],
+              [
+                1084.7297122995258,
+                9.670924967884954,
+                140.40495817193934
+              ],
+              [
+                1385.8773903428432,
+                5.009955505213301,
+                140.94194785068655
+              ],
+              [
+                1464.1915211891503,
+                9.911567497058584,
+                141.32245339459394
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0017836882392314318,
+              "coverage_shaping": 0.000545138888888904,
+              "communication_progress": 0.0,
+              "investigation_shaping": 0.4166079547572568,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.20000000000000004,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.018108671783454426,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          },
+          {
+            "step": 24,
+            "reward": -0.48695729575097235,
+            "positions": [
+              [
+                1291.6142571487228,
+                5.62821856541781,
+                142.56358551277083
+              ],
+              [
+                1144.8327913607,
+                0.8371525094292167,
+                143.8719608855957
+              ],
+              [
+                1149.445551273545,
+                35.50648248903262,
+                142.04482979290512
+              ],
+              [
+                1064.9094506937931,
+                7.938856265146775,
+                142.44387158091877
+              ],
+              [
+                1366.014777204745,
+                4.0745371057237305,
+                143.0870799548124
+              ],
+              [
+                1444.3621408959182,
+                7.779410859512741,
+                142.8223151413369
+              ]
+            ],
+            "reward_components": {
+              "information_gain": 0.0022868617631679328,
+              "coverage_shaping": 0.0019062499999999982,
+              "communication_progress": 0.0,
+              "investigation_shaping": -0.3961637377771218,
+              "confirmation": 0.0,
+              "delivery": 0.0,
+              "false_confirmation": -0.0,
+              "blocked_motion": -0.0,
+              "apf_intervention": -0.06666666666666667,
+              "boundary": -0.0,
+              "expired_report": -0.0,
+              "dropped_report": -0.0,
+              "energy": -0.018320003070351785,
+              "step": -0.01,
+              "inactive_horizon_makeup": 0.0,
+              "success_bonus": 0.0
+            }
+          }
+        ],
+        "episode_completed": false,
+        "wall_seconds": 61.238715486999354,
+        "prefix_discounted_return_gamma_0_99": -6.444482415942604
+      }
+    },
+    "script_sha256": "c6a0c7fc5154a6a85c03763e8b39c56e9c5e6e314e989bf2790c100183671530"
+  }
+}
