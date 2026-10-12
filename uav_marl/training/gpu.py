@@ -4368,34 +4368,15 @@ class _MASACDDPActorForward(torch.nn.Module):
         self._categorical_sample = project_ns["straight_through_categorical_sample"]
 
     def forward(self, observations, destination_mask):
-        mean, log_std, logits = self.actor(observations)
-        std = torch.exp(log_std)
-        distribution = torch.distributions.Normal(mean, std)
-        pre_tanh = distribution.rsample()
-        motion_action, motion_log_det = self._radial_squash(pre_tanh[..., :3])
-        power_action = torch.tanh(pre_tanh[..., 3:4])
-        continuous_action = torch.cat((motion_action, power_action), dim=-1)
-        power_log_det = torch.distributions.transforms.TanhTransform().log_abs_det_jacobian(
-            pre_tanh[..., 3:4], power_action
-        ).sum(dim=-1, keepdim=True)
-        log_probability = (
-            distribution.log_prob(pre_tanh).sum(dim=-1, keepdim=True)
-            - motion_log_det
-            - power_log_det
-        )
-        discrete = self._categorical_sample(
-            logits,
-            destination_mask,
-            temperature=CONFIG["masac_gumbel_temperature"],
-            deterministic=False,
-        )
+        # Keep local and DDP sampling on the same effective-action contract.
+        sampled = self.actor.sample(observations, destination_mask)
         return (
-            continuous_action,
-            log_probability,
-            discrete["action"],
-            discrete["indices"],
-            discrete["log_probability"],
-            discrete["entropy"],
+            sampled["continuous"],
+            sampled["continuous_log_probability"],
+            sampled["destination_one_hot"],
+            sampled["destination_index"],
+            sampled["destination_log_probability"],
+            sampled["destination_entropy"],
         )
 
 
@@ -4741,6 +4722,9 @@ def _ddp_actor_sample_masac(trainer, actor_ddp, observations, masks):
         "continuous": continuous.reshape(
             batch_size, trainer.num_agents, trainer.continuous_dim
         ),
+        "continuous_action_dimensions": trainer._continuous_action_dimensions(
+            observations, destination_indices.reshape(batch_size, trainer.num_agents),
+        ),
         "continuous_log_probability": continuous_log_probability.reshape(
             batch_size, trainer.num_agents, 1
         ).sum(dim=1),
@@ -4829,6 +4813,23 @@ def _ddp_discrete_entropy_metrics(entropy, target, valid_counts, alpha):
     }
 
 
+def _ddp_continuous_entropy_metrics(entropy, target, dimensions):
+    """Report the same state-dependent objective across all DDP ranks."""
+    import torch.distributed as dist
+    totals = torch.stack((
+        entropy.sum(), target.sum(), dimensions.sum(),
+        entropy.new_tensor(entropy.numel()),
+    ))
+    dist.all_reduce(totals, op=dist.ReduceOp.SUM)
+    means = totals[:3] / totals[3]
+    return {
+        "continuous_entropy": float(means[0].cpu()),
+        "continuous_target_entropy": float(means[1].cpu()),
+        "continuous_action_dimensions": float(means[2].cpu()),
+        "continuous_entropy_error": float((means[0] - means[1]).cpu()),
+    }
+
+
 def _ddp_update_masac(
     trainer,
     replay,
@@ -4846,6 +4847,7 @@ def _ddp_update_masac(
     replay_joint_action = trainer._joint_action_tensor(
         batch["continuous_actions"],
         destination_one_hot,
+        observations=batch["observations"],
     )
 
     with torch.no_grad(), trainer._autocast():
@@ -4857,6 +4859,7 @@ def _ddp_update_masac(
         next_joint_action = trainer._joint_action_tensor(
             next_policy["continuous"],
             next_policy["destination_one_hot"],
+            observations=batch["next_observations"],
         )
         target_q = torch.minimum(
             trainer.target_critic_1(
@@ -4927,6 +4930,7 @@ def _ddp_update_masac(
         policy_joint_action = trainer._joint_action_tensor(
             policy["continuous"],
             policy["destination_one_hot"],
+            observations=batch["observations"],
         )
         policy_q = torch.minimum(
             trainer.critic_1(
@@ -4968,9 +4972,11 @@ def _ddp_update_masac(
     continuous_entropy = -policy[
         "continuous_log_probability"
     ].detach()
-    continuous_target = torch.full_like(
-        continuous_entropy,
-        float(trainer.continuous_target_entropy),
+    continuous_dimensions = policy["continuous_action_dimensions"].detach()
+    continuous_target = (
+        trainer.continuous_target_entropy
+        / (trainer.num_agents * trainer.continuous_dim)
+        * continuous_dimensions
     )
     valid_counts = batch["destination_masks"].sum(
         dim=-1
@@ -4991,10 +4997,9 @@ def _ddp_update_masac(
         * (discrete_entropy - discrete_target)
     ).mean()
 
-    trainer.alpha_continuous_optimizer.zero_grad(set_to_none=True)
-    alpha_continuous_loss.backward()
-    _allreduce_parameter_grad(trainer.log_alpha_continuous)
-    trainer.alpha_continuous_optimizer.step()
+    trainer._update_continuous_temperature(
+        alpha_continuous_loss, continuous_dimensions, distributed=True,
+    )
 
     trainer._update_discrete_temperature(
         alpha_discrete_loss, valid_counts, distributed=True,
@@ -5020,8 +5025,8 @@ def _ddp_update_masac(
         "alpha_discrete": float(
             trainer.alpha_discrete.detach().cpu()
         ),
-        "continuous_entropy": float(
-            continuous_entropy.mean().cpu()
+        **_ddp_continuous_entropy_metrics(
+            continuous_entropy, continuous_target, continuous_dimensions,
         ),
         **_ddp_discrete_entropy_metrics(
             discrete_entropy, discrete_target, valid_counts, trainer.alpha_discrete,

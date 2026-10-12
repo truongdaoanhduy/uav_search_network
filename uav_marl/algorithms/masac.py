@@ -367,17 +367,6 @@ class HybridMASACActor(nn.Module):
             dim=-1,
             keepdim=True,
         )
-        log_probability = (
-            distribution.log_prob(
-                pre_tanh
-            ).sum(
-                dim=-1,
-                keepdim=True,
-            )
-            - motion_log_det
-            - power_log_det
-        )
-
         discrete = (
             straight_through_categorical_sample(
                 logits,
@@ -387,6 +376,21 @@ class HybridMASACActor(nn.Module):
                 ],
                 deterministic=deterministic,
             )
+        )
+
+        # Motion is ignored after depletion; power is ignored on the silent
+        # branch. Marginalize these unused controls out of the SAC objective.
+        active = (observations[..., 7:8] > 0.5).to(continuous_action.dtype)
+        transmitting = 1.0 - discrete["action"][..., :1]
+        motion_log_probability = (
+            distribution.log_prob(pre_tanh)[..., :3].sum(dim=-1, keepdim=True)
+            - motion_log_det
+        )
+        power_log_probability = (
+            distribution.log_prob(pre_tanh)[..., 3:4] - power_log_det
+        )
+        log_probability = active * (
+            motion_log_probability + transmitting * power_log_probability
         )
 
         return {
@@ -1473,6 +1477,7 @@ class HybridMASAC:
         self,
         continuous_actions,
         destination_one_hot,
+        observations=None,
     ):
         if continuous_actions.ndim != 3:
             raise ValueError(
@@ -1484,6 +1489,19 @@ class HybridMASAC:
             raise ValueError(
                 "destination_one_hot must "
                 "have rank 3"
+            )
+
+        if observations is not None:
+            active = (observations[..., 7:8] > 0.5).to(continuous_actions.dtype)
+            continuous_actions = torch.cat((
+                continuous_actions[..., :3] * active,
+                continuous_actions[..., 3:4] * active
+                * (1.0 - destination_one_hot[..., :1]),
+            ), dim=-1)
+            silent = torch.zeros_like(destination_one_hot)
+            silent[..., 0] = 1.0
+            destination_one_hot = torch.where(
+                active.bool(), destination_one_hot, silent,
             )
 
         combined = torch.cat(
@@ -1498,6 +1516,11 @@ class HybridMASAC:
             combined.shape[0],
             -1,
         )
+
+    def _continuous_action_dimensions(self, observations, destination_indices):
+        active = (observations[..., 7] > 0.5).to(observations.dtype)
+        transmitting = (destination_indices != 0).to(observations.dtype)
+        return (active * (3.0 + transmitting)).sum(dim=1, keepdim=True)
 
     def _sample_joint_policy(
         self,
@@ -1596,6 +1619,9 @@ class HybridMASAC:
 
         return {
             "continuous": continuous,
+            "continuous_action_dimensions": self._continuous_action_dimensions(
+                observations, destination_indices,
+            ),
             "destination_one_hot": (
                 destination_one_hot
             ),
@@ -1712,21 +1738,33 @@ class HybridMASAC:
                         * source_parameter
                     )
 
-    def _update_discrete_temperature(self, loss, valid_counts, *, distributed=False):
-        """Do not advance Adam when the batch contains no communication choice."""
-        has_choice = (valid_counts > 1).any().to(torch.int32)
+    def _update_temperature(self, loss, eligible, parameter, optimizer, *, distributed=False):
+        """An empty objective must not advance Adam, including its momentum."""
+        has_choice = eligible.any().to(torch.int32)
         if distributed:
             import torch.distributed as dist
-            # Every rank must take the same branch, including an all-silent rank.
+            # All ranks take the same branch even if only one has controls.
             dist.all_reduce(has_choice, op=dist.ReduceOp.MAX)
-        self.alpha_discrete_optimizer.zero_grad(set_to_none=True)
+        optimizer.zero_grad(set_to_none=True)
         if not bool(has_choice.item()):
             return
         loss.backward()
         if distributed:
-            dist.all_reduce(self.log_alpha_discrete.grad, op=dist.ReduceOp.SUM)
-            self.log_alpha_discrete.grad.div_(dist.get_world_size())
-        self.alpha_discrete_optimizer.step()
+            dist.all_reduce(parameter.grad, op=dist.ReduceOp.SUM)
+            parameter.grad.div_(dist.get_world_size())
+        optimizer.step()
+
+    def _update_discrete_temperature(self, loss, valid_counts, *, distributed=False):
+        self._update_temperature(
+            loss, valid_counts > 1, self.log_alpha_discrete,
+            self.alpha_discrete_optimizer, distributed=distributed,
+        )
+
+    def _update_continuous_temperature(self, loss, dimensions, *, distributed=False):
+        self._update_temperature(
+            loss, dimensions > 0, self.log_alpha_continuous,
+            self.alpha_continuous_optimizer, distributed=distributed,
+        )
 
     def update(
         self,
@@ -1774,6 +1812,7 @@ class HybridMASAC:
                     "continuous_actions"
                 ],
                 destination_one_hot,
+                observations=batch["observations"],
             )
         )
 
@@ -1798,6 +1837,7 @@ class HybridMASAC:
                     next_policy[
                         "destination_one_hot"
                     ],
+                    observations=batch["next_observations"],
                 )
             )
 
@@ -1928,6 +1968,7 @@ class HybridMASAC:
                     policy[
                         "destination_one_hot"
                     ],
+                    observations=batch["observations"],
                 )
             )
 
@@ -1995,11 +2036,11 @@ class HybridMASAC:
             "continuous_log_probability"
         ].detach()
 
-        continuous_target = torch.full_like(
-            continuous_entropy,
-            float(
-                self.continuous_target_entropy
-            ),
+        continuous_dimensions = policy["continuous_action_dimensions"].detach()
+        continuous_target = (
+            self.continuous_target_entropy
+            / (self.num_agents * self.continuous_dim)
+            * continuous_dimensions
         )
 
         valid_counts = (
@@ -2042,11 +2083,9 @@ class HybridMASAC:
             )
         ).mean()
 
-        self.alpha_continuous_optimizer.zero_grad(
-            set_to_none=True
+        self._update_continuous_temperature(
+            alpha_continuous_loss, continuous_dimensions,
         )
-        alpha_continuous_loss.backward()
-        self.alpha_continuous_optimizer.step()
 
         self._update_discrete_temperature(alpha_discrete_loss, valid_counts)
 
@@ -2088,6 +2127,11 @@ class HybridMASAC:
                 continuous_entropy
                 .mean()
                 .cpu()
+            ),
+            "continuous_target_entropy": float(continuous_target.mean().cpu()),
+            "continuous_action_dimensions": float(continuous_dimensions.mean().cpu()),
+            "continuous_entropy_error": float(
+                (continuous_entropy - continuous_target).mean().cpu()
             ),
             "discrete_entropy": float(
                 discrete_entropy

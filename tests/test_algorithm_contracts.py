@@ -340,7 +340,9 @@ def test_masac_saturated_power_keeps_entropy_gradient(ddp_forward):
         actor.log_std_head.weight.zero_()
         actor.log_std_head.bias.zero_()
     observations = torch.zeros(2, observation_dim)
-    masks = torch.ones(2, 7)
+    observations[:, 7] = 1.0  # Active UAVs using a transmitting branch.
+    masks = torch.zeros(2, 7)
+    masks[:, 1] = 1.0
     if ddp_forward:
         wrapper = _MASACDDPActorForward(actor, {
             "radial_squash_motion_action": radial_squash_motion_action,
