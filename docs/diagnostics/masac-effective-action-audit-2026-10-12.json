@@ -14626,5 +14626,27 @@
   "source_sha256": {
     "uav_marl/algorithms/masac.py": "fe0ffcd527d4b3e95c444a557e7e3cec451d7b78ca1fa31aa66da39a13274928",
     "uav_marl/training/gpu.py": "b1629f54ec79c39cfaed8384b3cd9c16b8d369eb51934054a814f0020a5f6c92"
+  },
+  "latest_u128_observation": {
+    "queried_at_utc": "2026-10-12T05:26:23.227921+00:00",
+    "run_id": "8e541a5e",
+    "wandb_state": "crashed",
+    "wandb_episodes_completed": 18262,
+    "wandb_global_step": 26787840,
+    "kaggle_kernel_ref": "saoling1234/uav-masac20k-b512-u128-20261011",
+    "kaggle_state": "KernelWorkerStatus.CANCEL_ACKNOWLEDGED",
+    "log_last_elapsed_seconds": 43210.600675058,
+    "log_sha256": "8994ceb7bc087c40d06f72b1654bb29ac717cf2b44431e2269ea7fcdcccdfc29",
+    "traceback_runtime_error_floating_point_error_oom_patterns": 0,
+    "inference": "Cancellation close to 12 hours is consistent with a session time budget. The service status and downloaded log do not specify who or what initiated cancellation.",
+    "note": "W&B history comparison remains the original 11:48\u201311:49 snapshot; downloaded logs contain additional unsynced episode messages."
+  },
+  "peak_bin_return": {
+    "03db0105": -58.780907429754734,
+    "a9542e80": 21.85023357346654,
+    "0b67697e": 68.38296765461564,
+    "1e9c0833": 106.41309130191803,
+    "f1fa4c42": 93.29837168753147,
+    "8e541a5e": 320.4530469328165
   }
 }

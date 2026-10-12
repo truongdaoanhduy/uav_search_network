@@ -97,3 +97,13 @@ Lượt training tiếp theo cần pin source mới, dùng cùng config/seed là
 - Regression: `tests/test_masac_effective_actions.py`.
 - [SAC objective và Bellman target, OpenAI Spinning Up](https://spinningup.openai.com/en/latest/algorithms/sac.html).
 - [Replay capacity/replay ratio, Fedus et al., ICML 2020](https://proceedings.mlr.press/v119/fedus20a.html). Kết quả paper không chứng minh buffer là nguyên nhân của run này.
+
+## Cập nhật kiểm tra cuối, 12:26 UTC+7
+
+`8e541a5e` đã chuyển từ running sang crashed trên W&B: **18.262 episode**, global_step26.787.840, chưa đạt20k. Xác thực đúng account sở hữu rồi kiểm tra Kaggle: trạng thái **KernelWorkerStatus.CANCEL_ACKNOWLEDGED**. Log tải được kết thúc tại elapsed43.210,60 giây, xấp xỉ12 giờ; không thấy các pattern Traceback/FloatingPointError/RuntimeError/CUDA out of memory. Việc hủy gần12h phù hợp với giả thuyết giới hạn phiên; status và log chưa chỉ rõ ai/cơ chế nào yêu cầu hủy. Không kết luận đây là lỗi numerical của MASAC và không tính run đã hoàn tất20k.
+
+Các bảng/biểu đồ phía trên vẫn giữ snapshot11:48–11:49 với16.666 episode W&B của U128. Một số messages cuối trong Kaggle log chưa đồng bộ vào W&B; không cộng chúng vào bảng như các bản ghi W&B đã có.
+
+U32/U64/U128 đều có đỉnh meanreturn theo bin cao hơn cuối snapshot: khoảng106→10,93→10,320→100. Vì thế “tốt hơn giai đoạn đầu” không có nghĩa “luôn tốt lên khi train tiếp”, và checkpoint cuối không được mặc nhiên xem là checkpoint tốt nhất.
+
+Bản sửa learner đã kiểm thử và đồng bộ: [12626aa](https://github.com/truongdaoanhduy/uav_search_network/commit/12626aab144852cfbc7d3bd6d36eade39d359caf). Chưa khởi chạy fresh training bằng source mới trong công việc này.
